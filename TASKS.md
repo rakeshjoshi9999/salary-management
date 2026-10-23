@@ -32,7 +32,7 @@ No domain logic in this phase. A health endpoint and a page that reads it, wired
       CI job for `ng test`
 - [x] **1.6** Neon Postgres instance; connection wiring via env vars
 - [x] **1.7** Backend `Dockerfile`; deploy to Render with env vars
-- [ ] **1.8** Deploy frontend to Vercel; configure API URL per environment
+- [x] **1.8** Deploy frontend to Vercel; configure API URL per environment
 - [ ] **1.9** CORS restricted to the frontend origin, origins supplied by env var (Vercel previews get
       generated URLs, so this cannot be hardcoded)
 - [ ] **1.10** Live health page green end to end; note Render cold-start behaviour in `README.md`
