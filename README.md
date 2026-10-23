@@ -4,6 +4,26 @@ Web app for an HR Manager to manage salary data for ~10,000 employees across cou
 
 > Work in progress. See [`TASKS.md`](TASKS.md) for the build roadmap.
 
+## Live
+
+| | |
+|---|---|
+| App | https://salary-management-ivory-psi.vercel.app |
+| API health | https://salary-management-api-tzf8.onrender.com/actuator/health |
+
+**The first request can take up to a minute.** The API runs on Render's free tier, which
+stops the container after about 15 minutes of inactivity; the next request waits for it to
+start again. The database autosuspends on Neon's free tier too, so a cold start can pay
+both at once. Subsequent requests are fast — any performance figure quoted for this project
+is a warm one, and says so.
+
+This is a deliberate trade, recorded in [ADR-004](docs/DECISIONS.md). The app says what is
+happening while it waits rather than showing an unexplained spinner, because a reviewer who
+assumes it is broken stops being a reviewer.
+
+The API serves exactly one endpoint today. A 404 at any other path, including `/`, is
+correct: domain endpoints arrive in phase 3.
+
 ## Docs
 - [Requirements](REQUIREMENTS.md) — goal, scope, assumptions, and what's deliberately left out
 - [Engineering workflow](docs/WORKFLOW.md) — how this was built, from requirement to shipped

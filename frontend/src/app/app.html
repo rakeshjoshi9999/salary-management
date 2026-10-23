@@ -1,22 +1,16 @@
 <!--
-  Scaffold shell only. It exists to prove three things compile and compose:
-  PrimeNG components, Tailwind utilities, and PrimeNG's theme tokens surfaced
-  through tailwindcss-primeui (the surface-* classes below). The health page
-  that reads the backend arrives in task 1.10.
+  Application shell: product identity lives here, routed views render into the
+  outlet and own their own content. Keeping the single h1 in the shell means a
+  routed page cannot accidentally introduce a second one.
 -->
-<main class="min-h-screen bg-surface-50 p-10 text-surface-900">
-  <h1 class="text-2xl font-semibold tracking-tight">{{ title() }}</h1>
-
-  <p class="mt-2 max-w-prose text-sm text-surface-600">
-    Walking skeleton — no domain features yet.
-  </p>
-
-  <div class="mt-6 flex flex-wrap items-center gap-3">
-    <p-button label="PrimeNG" />
-    <code class="rounded bg-surface-100 px-2 py-1 text-xs text-surface-700">
-      API: {{ apiBaseUrl() }}
-    </code>
-  </div>
+<div class="min-h-screen bg-surface-50 pb-16">
+  <header class="mx-auto max-w-2xl px-6 pt-16">
+    <h1 class="text-2xl font-semibold tracking-tight text-surface-900">{{ title() }}</h1>
+    <p class="mt-2 text-sm text-surface-600">
+      Walking skeleton — no features yet. This page exists to prove the browser can reach the API,
+      and the API its database.
+    </p>
+  </header>
 
   <router-outlet />
-</main>
+</div>
