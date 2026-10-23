@@ -23,7 +23,7 @@ the night before submission. Design (phase 2) then happens against a pipeline th
 ## Phase 1 — Walking skeleton: local and deployed
 No domain logic in this phase. A health endpoint and a page that reads it, wired end to end.
 
-- [ ] **1.1** Scaffold Spring Boot 3 / Java 21 (web, validation, data-jpa, flyway, actuator, postgres)
+- [x] **1.1** Scaffold Spring Boot 4 / Java 21 (webmvc, validation, data-jpa, flyway, actuator, postgres)
 - [ ] **1.2** `docker-compose.yml` for local Postgres; config via env vars
 - [ ] **1.3** Testcontainers base test class; smoke test that boots the context and proves Flyway ran
       (no migration files yet — the history table alone proves connectivity and write access)

@@ -53,6 +53,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-003 | Direct cross-origin calls, env-driven CORS | Accepted | 2026-10-23 |
 | ADR-004 | Accept Render free-tier cold starts | Accepted | 2026-10-23 |
 | ADR-005 | Tailwind + PrimeNG | Accepted | 2026-10-23 |
+| ADR-006 | Spring Boot 4 over Spring Boot 3 | Accepted | 2026-10-23 |
 
 ---
 
@@ -214,12 +215,47 @@ Option A, Tailwind + PrimeNG.
 
 ---
 
+## ADR-006 — Spring Boot 4 rather than Spring Boot 3
+
+- **Date:** 2026-10-23
+- **Status:** Accepted
+- **Task:** 1.1
+
+### Context
+Every planning document in this repo specified Spring Boot 3. Scaffolding revealed that Spring
+Initializr no longer offers any 3.x version: the available lines are 4.0.9, 4.1.2 (default) and
+4.2.0-RC1. Boot 3.5 was the final 3.x line and its free support window has closed, so 3.x receives no
+further upstream security patches. Boot 4 also renamed the starters - `spring-boot-starter-web` became
+`spring-boot-starter-webmvc`, Flyway gained its own starter, and each starter has a matching `-test`
+artifact.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A - Spring Boot 4.1.2** | The only line still receiving security patches; what Initializr generates, so the scaffold is unmodified; Java 21, Flyway, JPA and Testcontainers all work unchanged | Thinner tutorial and StackOverflow coverage; API removals to navigate, notably `@MockBean`; contradicts the planning docs until they are corrected |
+| **B - Pin Spring Boot 3.5.x by hand** | Matches the documents as written; deepest body of community material | Initializr cannot generate it, so the dependency block is hand-written with the old starter names; ships a stack with no upstream security support, which a reviewer may reasonably question |
+
+### Decision
+Option A. Shipping a framework version that no longer receives security patches is a worse answer to
+"how would you build this properly" than updating a planning document written before the constraint
+was known.
+
+### Consequences
+- The stack line in `REQUIREMENTS.md`, `CLAUDE.md`, `README.md` and `TASKS.md` now reads Spring Boot 4.
+  This is the one change made to `REQUIREMENTS.md` since it was committed, and it was explicitly approved.
+- `@MockBean` no longer exists; slice tests use `@MockitoBean`. Recorded in CLAUDE.md's testing
+  standards so later sessions do not rediscover it.
+- Starter names differ from most Boot 3 material found online; the pom is the reference, not blog posts.
+- Boot 4 requires Java 17+ and runs on the installed Java 21, so no toolchain change.
+
+---
+
 ### Still pending
 
 _Phase 2 (`TASKS.md` task 2.3) is where these get decided and written up. Each needs the
 options-and-trade-offs conversation above before anything is recorded:_
 
-- Stack choice — Java 21 / Spring Boot 3 + Angular
+- Stack choice — Java 21 / Spring Boot 4 + Angular
 - PostgreSQL over SQLite
 - `BigDecimal` for money, with the rounding rule
 - Aggregations in SQL rather than in Java

@@ -55,4 +55,4 @@ Replace ACME's spreadsheet-based salary tracking with a web app where the HR Man
 - Publicly deployed: Angular on Vercel, Spring Boot on Render.
 
 ## Tech choices (details in `DECISIONS.md`)
-Java 21 + Spring Boot 3 · PostgreSQL + Flyway · Angular (standalone, signals) · JUnit 5, Mockito, Testcontainers · Vercel + Render.
+Java 21 + Spring Boot 4 · PostgreSQL + Flyway · Angular (standalone, signals) · JUnit 5, Mockito, Testcontainers · Vercel + Render.

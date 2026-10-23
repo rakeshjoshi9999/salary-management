@@ -8,7 +8,7 @@ It is also the AI working agreement: the human engineer owns every decision; AI 
 Salary management app for an HR Manager handling ~10,000 employees across countries.
 Read `REQUIREMENTS.md` before any task. Do not build anything listed under "Deliberately out of scope".
 
-- `backend/` — Java 21, Spring Boot 3, PostgreSQL, Flyway, JUnit 5, Mockito, AssertJ, Testcontainers
+- `backend/` — Java 21, Spring Boot 4, PostgreSQL, Flyway, JUnit 5, Mockito, AssertJ, Testcontainers
 - `frontend/` — Angular (standalone components, signals), component library per `docs/DECISIONS.md`
 - `docs/` — workflow, decisions (ADRs), AI usage log, prompts
 
@@ -71,6 +71,7 @@ When you scaffold a phase, record the real commands here, replacing the expected
 - Tests are fast, deterministic, and independent: no real clock, randomness, or network in unit tests (inject `Clock`, use fixed seeds).
 - Test names describe behavior: `rejectsSalaryOfZero`, `returnsMedianForEvenCount`.
 - Structure: Arrange / Act / Assert. One behavior per test.
+- Spring Boot 4 removed `@MockBean`; use `@MockitoBean` (and `@MockitoSpyBean`) in slice tests.
 - Pyramid: mostly unit tests (domain + service with fakes); slice tests (`@WebMvcTest`, repository tests with Testcontainers); one or two E2E happy paths.
 
 ## Backend conventions

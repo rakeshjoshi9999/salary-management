@@ -13,7 +13,7 @@ Web app for an HR Manager to manage salary data for ~10,000 employees across cou
 
 ## Structure
 ```
-backend/    Spring Boot 3 (Java 21) REST API
+backend/    Spring Boot 4 (Java 21) REST API
 frontend/   Angular web app
 docs/       Workflow, decisions, architecture, AI usage, prompts
 ```
