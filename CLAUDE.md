@@ -34,14 +34,27 @@ When you scaffold a phase, record the real commands here, replacing the expected
 ## How we work
 1. **One slice per session.** Work only on the task named in the prompt — slices are the numbered tasks in
    `TASKS.md`. If something else needs changing, stop and say so.
-2. **Test first, always.**
+2. **Decide before building — interrogate me first.** Do not start a task by writing code. Open with the
+   decisions the task actually forces, and keep asking until they are settled:
+   - Name each decision point, including the ones I have not thought of.
+   - For each, give **at least two real options** — not a strawman and a favourite.
+   - State the **trade-offs** concretely: performance, complexity, testability, operational cost,
+     what it makes hard later. Say what each option *costs*, not just what it gives.
+   - Give a **recommendation and the reason for it**, and name what would change your mind.
+   - Flag anything `REQUIREMENTS.md` leaves ambiguous rather than picking for me.
+   - Then **stop and wait** for my call. I choose; you do not decide architecture by default.
+   Err on the side of too many questions. A wrong assumption is more expensive than an extra question.
+3. **Record the decision.** Once I choose, write it up as an ADR in `docs/DECISIONS.md` using the format
+   in that file — context, options considered, decision, consequences — including the options I rejected
+   and why. A decision that is not written down will be re-litigated.
+4. **Test first, always.**
    - Write the failing test(s) first and stop. Wait for review before implementing.
    - Then write the *minimum* code to make them pass.
    - Refactor only with all tests green.
-3. **Small diffs.** Prefer many small changes over one large one.
-4. **Explain non-obvious choices** in a short note after the change, not in code comments.
-5. **Ask, don't assume.** If a requirement is ambiguous, ask a question instead of guessing.
-6. **Leave a paper trail.** The prompt that drove a slice goes in `docs/prompts/<task-id>-<short-name>.md`
+5. **Small diffs.** Prefer many small changes over one large one.
+6. **Explain non-obvious choices** in a short note after the change, not in code comments.
+7. **Ask, don't assume.** If a requirement is ambiguous, ask a question instead of guessing.
+8. **Leave a paper trail.** The prompt that drove a slice goes in `docs/prompts/<task-id>-<short-name>.md`
    with a one-line outcome; notable AI interactions get a row in `docs/AI_USAGE.md`, including what the
    engineer corrected. `docs/WORKFLOW.md` describes the full requirement→shipped loop.
 
@@ -49,7 +62,9 @@ When you scaffold a phase, record the real commands here, replacing the expected
 - No new dependencies without asking first and stating why.
 - Never edit or delete existing tests to make them pass. If a test seems wrong, say so.
 - Never commit secrets; config comes from environment variables.
-- Do not touch `REQUIREMENTS.md` or `docs/DECISIONS.md` unless asked.
+- Do not touch `REQUIREMENTS.md` unless asked.
+- `docs/DECISIONS.md` is append-only: add an ADR once I have approved a decision (see "How we work" 3).
+  Never rewrite or delete an existing ADR — supersede it with a new one that links back.
 - Run the relevant tests before declaring a task done, and report the result honestly.
 
 ## Testing standards
