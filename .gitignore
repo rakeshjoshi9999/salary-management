@@ -1,0 +1,23 @@
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Backend (Maven / Java)
+backend/target/
+*.class
+*.log
+
+# Frontend (Angular / Node)
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/coverage/
+frontend/test-results/
+frontend/playwright-report/
