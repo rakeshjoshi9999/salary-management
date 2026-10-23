@@ -1,0 +1,23 @@
+# Local Postgres for development only.
+# Tests do not use this: Testcontainers starts its own container per run.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: salary-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-salary}
+      POSTGRES_USER: ${POSTGRES_USER:-salary}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-salary}
+    ports:
+      # Host 5433: this machine already runs Postgres on 5432.
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - salary-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-salary} -d ${POSTGRES_DB:-salary}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  salary-pgdata:
