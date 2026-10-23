@@ -30,7 +30,7 @@ No domain logic in this phase. A health endpoint and a page that reads it, wired
 - [x] **1.4** GitHub Actions CI: run backend tests on every push
 - [x] **1.5** Scaffold Angular (standalone, signals) + Tailwind + PrimeNG, routing, environment config,
       CI job for `ng test`
-- [ ] **1.6** Neon Postgres instance; connection wiring via env vars
+- [x] **1.6** Neon Postgres instance; connection wiring via env vars
 - [ ] **1.7** Backend `Dockerfile`; deploy to Render with env vars
 - [ ] **1.8** Deploy frontend to Vercel; configure API URL per environment
 - [ ] **1.9** CORS restricted to the frontend origin, origins supplied by env var (Vercel previews get
