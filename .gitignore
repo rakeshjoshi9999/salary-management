@@ -4,10 +4,9 @@
 .vscode/
 *.iml
 
-# Env
+# Env - never tracked, including the example. The variable contract lives in README.md.
 .env
 .env.*
-!.env.example
 
 # Backend (Maven / Java)
 backend/target/
