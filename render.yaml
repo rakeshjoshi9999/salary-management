@@ -1,0 +1,44 @@
+# Render Blueprint.
+#
+# Create the service once from this file: Dashboard -> New -> Blueprint ->
+# select this repository. Everything except the secret values lives here,
+# version-controlled and reviewable, rather than clicked into a dashboard
+# where nobody can audit it later.
+services:
+  - type: web
+    name: salary-management-api
+    runtime: docker
+
+    # Monorepo: the Dockerfile and its build context both live under backend/.
+    rootDir: backend
+
+    # Must match the Neon region. A mismatch puts an ocean between the API and
+    # its database on every single query.
+    region: singapore
+
+    plan: free
+    branch: main
+
+    # Render polls this to decide whether a deploy succeeded. The status
+    # aggregates the datasource health indicator, so it cannot report UP while
+    # the database is unreachable.
+    healthCheckPath: /actuator/health
+
+    envVars:
+      # sync: false means Render prompts for the value during Blueprint
+      # creation and keeps it itself. No credential enters this repository.
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+      # Read by the CORS configuration in task 1.9. Set it to the Vercel
+      # production origin. Deliberately not hardcoded: preview deployments get
+      # generated hostnames, so the allowlist has to be configurable.
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+
+    # PORT is deliberately absent. Render injects it and the app reads it;
+    # setting it by hand pins the container to the wrong port.
