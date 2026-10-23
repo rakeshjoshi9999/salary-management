@@ -54,6 +54,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-004 | Accept Render free-tier cold starts | Accepted | 2026-10-23 |
 | ADR-005 | Tailwind + PrimeNG | Accepted | 2026-10-23 |
 | ADR-006 | Spring Boot 4 over Spring Boot 3 | Accepted | 2026-10-23 |
+| ADR-007 | Angular 21 over Angular 20 (Vitest advisories) | Accepted | 2026-10-23 |
 
 ---
 
@@ -247,6 +248,56 @@ was known.
   standards so later sessions do not rediscover it.
 - Starter names differ from most Boot 3 material found online; the pom is the reference, not blog posts.
 - Boot 4 requires Java 17+ and runs on the installed Java 21, so no toolchain change.
+
+---
+
+## ADR-007 — Angular 21, after Angular 20 proved a security dead end
+
+- **Date:** 2026-10-23
+- **Status:** Accepted
+- **Task:** 1.5
+
+### Context
+Angular 20 was chosen first because it matched the installed CLI. Resolving the actual packages
+contradicted that choice. Angular 20's `@angular/build` peers `vitest ^3.1.1`, and that line carries two
+critical advisories with no reachable fix:
+
+| Package | Severity | Issue | Fixed in |
+|---|---|---|---|
+| tinypool 1.1.1 | critical | prototype pollution gadget to RCE | >= 2.1.2 |
+| vitest 3.2.7 | critical | path traversal / arbitrary file read via `@vitest/mocker` | >= 4.1.11 |
+
+Neither is attainable under Angular 20: `vitest >= 4.1.11` violates its `^3.1.1` peer, and vitest 3
+declares `tinypool ^1.1.1`, so forcing 2.1.2 crosses a major inside Vitest's own dependency. Angular 21
+peers `vitest ^4.0.8` and requires Node `^20.19 || ^22.12 || >=24`, which the installed Node 22.17.0
+already satisfies.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A - Angular 21 + PrimeNG 21 + Vitest 4** | Both criticals cleared; no Node change needed; one major from latest | Re-scaffolding, though nothing had been committed yet |
+| **B - Angular 20 + Karma** | Pulls none of the vulnerable tree | Karma is deprecated and needs a headless browser in CI |
+| **C - Angular 20 + Vitest 3, accepted** | No rework | `npm audit` reports two criticals on an assessment a reviewer may audit |
+| **D - Angular 20 + an npm override on tinypool** | Removes the RCE | Leaves the path traversal, and may break Vitest |
+
+### Decision
+Option A. These are dev dependencies, so nothing vulnerable ships to the browser - but the exposure is
+the developer machine and the CI runner, and "it only affects the build" is a poor answer when a
+supported version with no advisories costs one afternoon of rework. `npm audit` now reports zero
+vulnerabilities.
+
+### Consequences
+- Angular 21 scaffolds **zoneless** by default and makes Vitest the default runner, both of which match
+  the signals and `OnPush` conventions already in `CLAUDE.md`.
+- PrimeNG 21 dropped the `@angular/animations` peer. On 20 that package was both deprecated and
+  required, and `^20` resolved to a version pinning `@angular/common` exactly, which failed to install
+  at all.
+- Still one major behind Angular 22, which needs Node >= 22.22.3. Moving later is a Node patch bump plus
+  `ng update`, not a migration.
+- The Tailwind and PrimeNG layer order is configured but only observable at runtime; it is asserted
+  here, not yet seen. Phase 7 is where real components will prove it.
+- Supersedes nothing formally - the Angular 20 choice was never recorded as an ADR, which is precisely
+  why this one exists.
 
 ---
 

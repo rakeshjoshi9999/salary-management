@@ -28,7 +28,7 @@ No domain logic in this phase. A health endpoint and a page that reads it, wired
 - [x] **1.3** Testcontainers base test class; smoke test that boots the context and proves Flyway ran
       (no migration files yet — the history table alone proves connectivity and write access)
 - [x] **1.4** GitHub Actions CI: run backend tests on every push
-- [ ] **1.5** Scaffold Angular (standalone, signals) + Tailwind + PrimeNG, routing, environment config,
+- [x] **1.5** Scaffold Angular (standalone, signals) + Tailwind + PrimeNG, routing, environment config,
       CI job for `ng test`
 - [ ] **1.6** Neon Postgres instance; connection wiring via env vars
 - [ ] **1.7** Backend `Dockerfile`; deploy to Render with env vars
