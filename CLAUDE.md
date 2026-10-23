@@ -25,7 +25,7 @@ No build exists yet. As phases land, the expected entry points are:
 |---|---|
 | Backend tests | `cd backend && ./mvnw test` |
 | One backend test | `./mvnw test -Dtest=EmployeeServiceTest#rejectsSalaryOfZero` |
-| Local Postgres | `docker compose up -d` (task 2.2) |
+| Local Postgres | `docker compose up -d` (task 1.2) |
 | Frontend tests | `cd frontend && npm test` |
 | Frontend dev server | `cd frontend && npm start` |
 

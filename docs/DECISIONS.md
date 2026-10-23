@@ -54,7 +54,7 @@ Option X, because … (the reason, not a restatement of the option).
 
 ## Decisions
 
-_Phase 1 (`TASKS.md` task 1.3) is where these get decided and written up. Pending, each needing the
+_Phase 2 (`TASKS.md` task 2.3) is where these get decided and written up. Pending, each needing the
 options-and-trade-offs conversation above before anything is recorded:_
 
 - Stack choice — Java 21 / Spring Boot 3 + Angular

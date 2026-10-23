@@ -3,46 +3,63 @@
 Each task = one focused AI session + its own commits. Finish a phase before starting the next.
 Build tasks follow the TDD loop: `test:` (failing) → `feat:` (pass) → `refactor:` (optional).
 
+**Build order:** the environment comes first. Phase 1 puts a health-check-only app live on both tiers —
+local Postgres, CI, Neon, Render, Vercel — *before* any domain code exists. Deployment and database
+connectivity are where this kind of project actually breaks, so they fail loudly on day one rather than
+the night before submission. Design (phase 2) then happens against a pipeline that already works.
+
 ---
 
 ## Phase 0 — Foundation
-- [ ] **0.1** Create repo (`backend/`, `frontend/`, `docs/`), add `.gitignore`, `README.md` stub
-- [ ] **0.2** Commit `REQUIREMENTS.md`
-- [ ] **0.3** Commit `docs/WORKFLOW.md` and `CLAUDE.md`
-- [ ] **0.4** Add `docs/AI_USAGE.md`, `docs/prompts/`, this `TASKS.md`
+- [x] **0.1** Create repo (`backend/`, `frontend/`, `docs/`), add `.gitignore`, `README.md` stub
+- [x] **0.2** Commit `REQUIREMENTS.md`
+- [x] **0.3** Commit `docs/WORKFLOW.md` and `CLAUDE.md`
+- [x] **0.4** Add `docs/AI_USAGE.md`, `docs/prompts/`, this `TASKS.md`
 
 **Done when:** repo explains *how* you'll work before any code exists.
 
 ---
 
-## Phase 1 — Design
-- [ ] **1.1** Data model: `employee` table, columns, constraints, indexes; supported countries + currencies
-- [ ] **1.2** API contract: endpoints, request/response shapes, error format → `docs/api.md` (or `openapi.yaml`)
-- [ ] **1.3** ADRs in `docs/DECISIONS.md`: stack, Postgres over SQLite, BigDecimal money, SQL aggregations, optimistic locking, monorepo, hosting
-- [ ] **1.4** Architecture diagram → `docs/ARCHITECTURE.md`
+## Phase 1 — Walking skeleton: local and deployed
+No domain logic in this phase. A health endpoint and a page that reads it, wired end to end.
+
+- [ ] **1.1** Scaffold Spring Boot 3 / Java 21 (web, validation, data-jpa, flyway, actuator, postgres)
+- [ ] **1.2** `docker-compose.yml` for local Postgres; config via env vars
+- [ ] **1.3** Testcontainers base test class; smoke test that boots the context and proves Flyway ran
+      (no migration files yet — the history table alone proves connectivity and write access)
+- [ ] **1.4** GitHub Actions CI: run backend tests on every push
+- [ ] **1.5** Scaffold Angular (standalone, signals) + Tailwind + PrimeNG, routing, environment config,
+      CI job for `ng test`
+- [ ] **1.6** Neon Postgres instance; connection wiring via env vars
+- [ ] **1.7** Backend `Dockerfile`; deploy to Render with env vars
+- [ ] **1.8** Deploy frontend to Vercel; configure API URL per environment
+- [ ] **1.9** CORS restricted to the frontend origin, origins supplied by env var (Vercel previews get
+      generated URLs, so this cannot be hardcoded)
+- [ ] **1.10** Live health page green end to end; note Render cold-start behaviour in `README.md`
+
+**Done when:** a push to `main` reaches production on both tiers and the live page proves the backend
+can reach its database.
+
+---
+
+## Phase 2 — Design
+- [ ] **2.1** Data model: `employee` table, columns, constraints, indexes; supported countries + currencies
+- [ ] **2.2** API contract: endpoints, request/response shapes, error format → `docs/api.md` (or `openapi.yaml`)
+- [ ] **2.3** ADRs in `docs/DECISIONS.md`: stack, Postgres over SQLite, BigDecimal money, SQL aggregations, optimistic locking, monorepo, hosting
+- [ ] **2.4** Architecture diagram → `docs/ARCHITECTURE.md`
 
 **Done when:** Claude Code could build the backend from the docs alone.
 
 ---
 
-## Phase 2 — Backend skeleton
-- [ ] **2.1** Scaffold Spring Boot 3 / Java 21 (web, validation, data-jpa, flyway, actuator, postgres)
-- [ ] **2.2** `docker-compose.yml` for local Postgres; config via env vars
-- [ ] **2.3** Flyway `V1__create_employee.sql` (table + indexes)
-- [ ] **2.4** Testcontainers base test class; one smoke test that boots the context
-- [ ] **2.5** GitHub Actions CI: run backend tests on every push
-
-**Done when:** `mvn test` is green locally and in CI.
-
----
-
 ## Phase 3 — Employee CRUD (one slice per task)
-- [ ] **3.1** Create employee — validation rules (required fields, email format, salary > 0, hire date not future, supported country); currency derived from country
-- [ ] **3.2** Duplicate email → 409
-- [ ] **3.3** Get employee by id; missing → 404
-- [ ] **3.4** Update employee with optimistic locking (`version`); stale update → 409
-- [ ] **3.5** Delete employee → 204; subsequent get → 404
-- [ ] **3.6** Global error handling: RFC 7807 Problem Details, malformed JSON → 400, no stack traces
+- [ ] **3.1** Flyway `V1__create_employee.sql` (table + indexes)
+- [ ] **3.2** Create employee — validation rules (required fields, email format, salary > 0, hire date not future, supported country); currency derived from country
+- [ ] **3.3** Duplicate email → 409
+- [ ] **3.4** Get employee by id; missing → 404
+- [ ] **3.5** Update employee with optimistic locking (`version`); stale update → 409
+- [ ] **3.6** Delete employee → 204; subsequent get → 404
+- [ ] **3.7** Global error handling: RFC 7807 Problem Details, malformed JSON → 400, no stack traces
 
 **Done when:** all CRUD scenarios from the test bank pass.
 
@@ -72,34 +89,26 @@ Build tasks follow the TDD loop: `test:` (failing) → `feat:` (pass) → `refac
 - [ ] **6.1** Deterministic generator (fixed random seed): realistic names, titles, departments, country-appropriate salary ranges
 - [ ] **6.2** Idempotent seed runner: exactly 10,000 rows, rerun creates no duplicates
 - [ ] **6.3** Batch inserts; measure and record seed time in `docs/PERFORMANCE.md`
+- [ ] **6.4** Run the seed once against the production database
 
 ---
 
-## Phase 7 — Frontend
-- [ ] **7.1** Scaffold Angular (standalone, signals), component library, routing, environment config, CI job for `ng test`
-- [ ] **7.2** API client services + typed models
-- [ ] **7.3** Employee list: server-side paging, debounced search, filters, sorting, filters synced to URL
-- [ ] **7.4** Employee form (create/edit): validation mirroring backend, 409 conflict handling
-- [ ] **7.5** Delete with confirmation
-- [ ] **7.6** Insights dashboard: country picker, stats cards, by-job-title chart/table, department headcount
-- [ ] **7.7** Loading, empty and error states everywhere
-- [ ] **7.8** One or two Playwright E2E happy paths
+## Phase 7 — Frontend features
+- [ ] **7.1** API client services + typed models
+- [ ] **7.2** Employee list: server-side paging, debounced search, filters, sorting, filters synced to URL
+- [ ] **7.3** Employee form (create/edit): validation mirroring backend, 409 conflict handling
+- [ ] **7.4** Delete with confirmation
+- [ ] **7.5** Insights dashboard: country picker, stats cards, by-job-title chart/table, department headcount
+- [ ] **7.6** Loading, empty and error states everywhere — including an honest message while Render wakes
+- [ ] **7.7** One or two Playwright E2E happy paths
 
 ---
 
-## Phase 8 — Deploy
-- [ ] **8.1** Backend `Dockerfile`; managed Postgres (e.g. Neon)
-- [ ] **8.2** Deploy backend to Render; env vars; run seed once
-- [ ] **8.3** Deploy frontend to Vercel; configure API URL
-- [ ] **8.4** CORS restricted to the frontend origin
-- [ ] **8.5** Smoke test the live app end to end; note cold-start behavior in README
-
----
-
-## Phase 9 — Docs & submission
-- [ ] **9.1** `README.md`: what it is, live links, run locally, run tests, seed
-- [ ] **9.2** Finalize `docs/PERFORMANCE.md` and `docs/DECISIONS.md`
-- [ ] **9.3** Finalize `docs/AI_USAGE.md`: how AI was used, prompts, where it was wrong and how you caught it
-- [ ] **9.4** Record ~3-min demo video; link in README
-- [ ] **9.5** Read the commit history top to bottom as a reviewer would
-- [ ] **9.6** Reply to the original email with the repo link
+## Phase 8 — Docs & submission
+- [ ] **8.1** `README.md`: what it is, live links, run locally, run tests, seed
+- [ ] **8.2** Finalize `docs/PERFORMANCE.md` and `docs/DECISIONS.md`
+- [ ] **8.3** Finalize `docs/AI_USAGE.md`: how AI was used, prompts, where it was wrong and how you caught it
+- [ ] **8.4** Smoke test the live app end to end as a reviewer would
+- [ ] **8.5** Record ~3-min demo video; link in README
+- [ ] **8.6** Read the commit history top to bottom as a reviewer would
+- [ ] **8.7** Reply to the original email with the repo link
