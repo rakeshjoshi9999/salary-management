@@ -78,3 +78,5 @@ When you scaffold a phase, record the real commands here, replacing the expected
 ## Commits
 Conventional commits, one logical change each:
 `test:` failing tests · `feat:` implementation · `refactor:` no behavior change · `docs:` · `chore:` · `fix:`
+- No `Co-Authored-By` trailer and no AI attribution in commit messages. The commit history is the
+  engineer's; AI involvement is recorded in `docs/AI_USAGE.md` instead.
