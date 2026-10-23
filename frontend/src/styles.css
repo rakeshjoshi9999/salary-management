@@ -1,0 +1,14 @@
+/*
+ * Tailwind 4 is configured in CSS, not a JS config file.
+ *
+ * tailwindcss-primeui exposes PrimeNG's theme tokens as Tailwind utilities,
+ * so `bg-surface-50` and `text-primary` follow the active PrimeNG preset
+ * instead of being a second, drifting palette.
+ *
+ * Layer order is declared in app.config.ts via PrimeNG's cssLayer option:
+ * Tailwind emits `theme, base, components, utilities`, and primeng is
+ * inserted after base so a Tailwind utility can always override a
+ * component style rather than losing to it by source order.
+ */
+@import "tailwindcss";
+@plugin "tailwindcss-primeui";
