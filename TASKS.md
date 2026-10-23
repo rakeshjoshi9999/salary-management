@@ -24,10 +24,10 @@ the night before submission. Design (phase 2) then happens against a pipeline th
 No domain logic in this phase. A health endpoint and a page that reads it, wired end to end.
 
 - [x] **1.1** Scaffold Spring Boot 4 / Java 21 (webmvc, validation, data-jpa, flyway, actuator, postgres)
-- [ ] **1.2** `docker-compose.yml` for local Postgres; config via env vars
-- [ ] **1.3** Testcontainers base test class; smoke test that boots the context and proves Flyway ran
+- [x] **1.2** `docker-compose.yml` for local Postgres; config via env vars
+- [x] **1.3** Testcontainers base test class; smoke test that boots the context and proves Flyway ran
       (no migration files yet — the history table alone proves connectivity and write access)
-- [ ] **1.4** GitHub Actions CI: run backend tests on every push
+- [x] **1.4** GitHub Actions CI: run backend tests on every push
 - [ ] **1.5** Scaffold Angular (standalone, signals) + Tailwind + PrimeNG, routing, environment config,
       CI job for `ng test`
 - [ ] **1.6** Neon Postgres instance; connection wiring via env vars
