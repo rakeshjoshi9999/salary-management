@@ -42,3 +42,30 @@ jobs:
           path: backend/target/surefire-reports/
           retention-days: 7
           if-no-files-found: warn
+
+  frontend:
+    name: Frontend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # Vitest runs in jsdom, so no browser binary is needed on the runner.
+      - name: Run tests
+        working-directory: frontend
+        run: npx ng test --watch=false
+
+      - name: Build
+        working-directory: frontend
+        run: npx ng build
