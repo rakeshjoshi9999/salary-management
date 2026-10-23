@@ -4,8 +4,7 @@
  */
 export const environment = {
   production: true,
-  // TODO(task 1.7): replace once the Render service URL exists.
-  // Deliberately an invalid host so a forgotten value fails loudly
-  // instead of silently issuing same-origin requests.
-  apiBaseUrl: 'https://REPLACE-ME-TASK-1-7.onrender.com',
+  // Render appends a random suffix when a service name is already taken
+  // globally, so this is not derivable from the service name alone.
+  apiBaseUrl: 'https://salary-management-api-tzf8.onrender.com',
 };
