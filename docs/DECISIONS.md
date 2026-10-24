@@ -66,6 +66,13 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-016 | List query: page/size, single sort, one search box | Accepted | 2026-10-24 |
 | ADR-017 | One combined insights call; exact median | Accepted | 2026-10-24 |
 | ADR-018 | Problem Details with stable codes | Accepted | 2026-10-24 |
+| ADR-019 | Stack: Java 21, Spring Boot 4, Angular | Accepted | 2026-10-24 |
+| ADR-020 | PostgreSQL over SQLite and MySQL | Accepted | 2026-10-24 |
+| ADR-021 | Money as plain `BigDecimal` with one rounding helper | Accepted | 2026-10-24 |
+| ADR-022 | Aggregations in SQL through `JdbcClient` | Accepted | 2026-10-24 |
+| ADR-023 | Optimistic locking: `@Version` plus an explicit check | Accepted | 2026-10-24 |
+| ADR-024 | Monorepo | Accepted | 2026-10-24 |
+| ADR-025 | Render and Vercel for hosting | Accepted | 2026-10-24 |
 
 ---
 
@@ -702,17 +709,211 @@ As chosen above. The codes are listed in the `Problem` schema in [`openapi.yaml`
 
 ---
 
-### Still pending
+## ADR-019 — Stack: Java 21, Spring Boot 4, Angular
 
-_Phase 2 (`TASKS.md` task 2.3) is where these get decided and written up. Each needs the
-options-and-trade-offs conversation above before anything is recorded:_
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.3
 
-- Stack choice — Java 21 / Spring Boot 4 + Angular
-- PostgreSQL over SQLite
-- `BigDecimal` for money, with the rounding rule
-- Aggregations in SQL rather than in Java
-- Optimistic locking for concurrent edits
-- Monorepo over split repositories
+### Context
+The assessment brief specified Java with Spring Boot for the backend and Angular for the frontend. This
+ADR records that as a given constraint, and the version choices made inside it.
 
-_Hosting is already settled by ADR-002, ADR-003 and ADR-004. The stack line in `REQUIREMENTS.md`
-records what was chosen; the ADR is where the reasoning and the rejected alternatives belong._
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Backend | **Java + Spring Boot (from the brief)** · Kotlin + Spring Boot · Node + NestJS | Java + Spring Boot |
+| Frontend | **Angular (from the brief)** · React · Vue | Angular |
+| Java version | **21 (LTS, installed)** · 25 (current LTS since September 2025, supported by Boot 4) | 21 |
+
+### Decision
+Java 21 + Spring Boot 4 (ADR-006) + Angular 21 (ADR-007). The language and frameworks come from the brief.
+**Java 21 was chosen because it is the JDK already installed** (21.0.9), and CI and the Docker image
+already use it. That is a toolchain reason, not a brief requirement.
+
+### Consequences
+- Alternatives were not evaluated on merit, because the brief removed the choice.
+- Java 21 is a supported LTS, so nothing is forced. Moving to 25 touches `pom.xml`, CI, the `Dockerfile`
+  and the local JDK. That would be its own `chore:` change, not a migration.
+- Revisit Java 25 if a feature or library needs it, or once 21's free support window nears its end.
+
+---
+
+## ADR-020 — PostgreSQL over SQLite and MySQL
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.3
+
+### Context
+By the end of 2.1 and 2.2, the design depends on database features, not just on storing rows. The
+backend also runs on Render, whose container disk is ephemeral.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A - PostgreSQL** | `pg_trgm` partial-match search (ADR-012); partial indexes for soft delete (ADR-011); exact `numeric` aggregates and window functions for the median (ADR-017); managed free hosting (Neon, ADR-002); Testcontainers runs the same major version as production | A server to run locally (Docker Compose) and in tests (Testcontainers) |
+| **B - SQLite** | Zero setup; one file | The file is lost on every Render deploy or restart; single writer; no trigram search; weak `NUMERIC` typing |
+| **C - MySQL** | Widely hosted, mature | No partial indexes, so soft-delete uniqueness needs workarounds; full-text search instead of trigram for "contains"; fewer good free managed tiers |
+
+### Decision
+Option A, on features and hosting together: the schema as designed cannot be built on B, and only
+awkwardly on C.
+
+### Consequences
+- The app is Postgres-specific (extensions, partial indexes, SQL in ADR-022). Changing database would
+  mean redesigning, not reconfiguring. Accepted knowingly.
+- Local development needs Docker. Already true since task 1.2.
+- Postgres 18 everywhere: local, CI (Testcontainers) and Neon.
+
+---
+
+## ADR-021 — Money as plain `BigDecimal` with one rounding helper
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.3
+
+### Context
+`CLAUDE.md` requires `BigDecimal` and 2dp `HALF_EVEN`. The column (`NUMERIC(14,2)`, ADR-009) and the JSON
+form (number, ADR-015) are settled. What remains is how money looks in Java code.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A - Plain `BigDecimal`, plus one rounding helper** | Least code; maps directly to JPA, JDBC and Jackson | Nothing stops adding two different currencies, though no code path does |
+| **B - Own `Money(amount, currency)` value object** | Scale and currency enforced by type | An embeddable plus JSON mapping, for a protection nothing needs: currency is derived from the country and insights are per country |
+| **C - JSR 354 (Moneta)** | Standard currency arithmetic | New dependency, heavier types, JPA and Jackson converters |
+| **D - `long` minor units** | Fast and exact | Contradicts ADR-009 and the `BigDecimal` convention |
+
+### Decision
+Option A. One helper (for example, `MoneyRounding.toMoney(BigDecimal)`) is the only place
+`setScale(2, RoundingMode.HALF_EVEN)` appears.
+
+### Consequences
+- **Rounding applies only to computed values** (averages, the median). Input is never rounded; more than
+  2 decimals is rejected (ADR-014).
+- `BigDecimal.equals` compares scale (`2.0` ≠ `2.00`). Code uses `compareTo`, and tests use AssertJ
+  `isEqualByComparingTo`.
+- Jackson reads JSON numbers straight into `BigDecimal` fields, never through `double` (ADR-015).
+- Revisit B if cross-currency features arrive (they are out of scope in `REQUIREMENTS.md`).
+
+---
+
+## ADR-022 — Aggregations in SQL through `JdbcClient`
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.3, 5.1-5.3
+
+### Context
+`CLAUDE.md` puts aggregations in SQL, not Java loops: loading 10,000 rows to compute a mean would break
+the 1-second insight target on a cold instance. The exact median (ADR-017) needs window functions, which
+JPQL does not have.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A - `JdbcClient` in a separate `InsightsRepository`** | Full Postgres SQL, readable multi-line queries, record mappers; already on the classpath through Spring Boot | Two data-access styles in one app (JPA for CRUD) |
+| **B - Native `@Query` on JPA repositories** | One data-access style | SQL in annotation strings; projections through interfaces or `Object[]` |
+| **C - jOOQ** | Type-safe SQL generated from the schema | New dependency and a code-generation build step for three queries |
+| **D - Aggregate in Java** | Simple code | Moves every row over the network; ruled out by `CLAUDE.md` |
+
+### Decision
+Option A. JPA for employee CRUD; `JdbcClient` with plain SQL for insights.
+
+### Consequences
+- Insight queries are tested against real Postgres (Testcontainers) with a hand-calculated fixture (5.x),
+  since no type checker sees inside the SQL strings.
+- Every insight query states `deleted_at IS NULL` (ADR-011).
+- How the dynamic list query is built (JPA Specifications or `JdbcClient`) is a separate decision, left
+  to phase 4.
+
+---
+
+## ADR-023 — Optimistic locking: `@Version` plus an explicit version check
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.3, 3.5
+
+### Context
+A stale update must be rejected with 409 (`REQUIREMENTS.md`, ADR-014). JPA `@Version` alone does not do
+this for a REST PUT: the service loads the entity, copies the request onto it and saves. Hibernate then
+compares the version **it just loaded**, so a client holding an old version overwrites silently.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A - `@Version` plus an explicit comparison** | Service compares `request.version` with the loaded version (409 if different); `@Version` still guards the race between load and commit | Two paths to test |
+| **B - Conditional `UPDATE ... WHERE id = ? AND version = ?`** | One atomic statement | Bypasses JPA for writes; 0 rows needs a follow-up query to choose 404 or 409 |
+| **C - Pessimistic lock (`SELECT ... FOR UPDATE`)** | No lost updates between concurrent requests | Blocks rather than rejects, and still does not detect a stale form; fails the requirement |
+
+### Decision
+Option A.
+
+### Consequences
+- Two tests in 3.5: a stale request version gives 409 `STALE_VERSION`, and a concurrent commit
+  (`OptimisticLockException`) also gives 409 `STALE_VERSION`.
+- The response carries `currentVersion` (ADR-018). On the explicit path this is the loaded version.
+- Editing an employee that is already deleted gives 404, because deleted rows are invisible. Soft delete
+  also increments `version` (ADR-011), so an edit that commits while a delete is in progress fails with 409.
+
+---
+
+## ADR-024 — Monorepo
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.3 (structure since 0.1)
+
+### Context
+The backend, frontend and docs are one system, built by one engineer and judged by a reviewer from one link.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A - One repo: `backend/`, `frontend/`, `docs/`** | One link and one commit history for the reviewer; API and UI changes land in one commit; one CI file | Both CI jobs run on every push; hosts need a root-directory setting |
+| **B - Separate repos** | Independent deploys, permissions and histories | Gains matter for multiple teams, not one engineer; cross-repo changes and two review links |
+
+### Decision
+Option A. It gives the reviewer one link and one history to read.
+
+### Consequences
+- CI has no path filters, so a docs-only push runs both test jobs. Accepted until CI time matters.
+- Render and Vercel are configured with root directories (`backend/`, `frontend/`). Done in 1.7 and 1.8.
+
+---
+
+## ADR-025 — Render and Vercel for hosting
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.3 (deployed in 1.7, 1.8)
+
+### Context
+`REQUIREMENTS.md` names Vercel for the frontend and Render for the backend, so this is a given, recorded
+for completeness. The trade-offs that follow from it are already decided: Neon for the database
+(ADR-002), direct cross-origin calls (ADR-003) and accepted cold starts (ADR-004).
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A - Vercel + Render (named in the requirements)** | Free tiers; Vercel previews per push; Render runs the Docker image | Two vendors plus Neon; Render free tier sleeps (ADR-004) |
+| **B - Fly.io or Railway for the backend** | Faster wake, or no sleep, on some plans | Free tiers changed or removed; not what the requirements name |
+| **C - One host serving both (Spring serving the built Angular app)** | Same origin, so no CORS; one deploy | Loses Vercel's CDN and previews; contradicts the requirements |
+
+### Decision
+Option A, as specified.
+
+### Consequences
+- See ADR-002, ADR-003 and ADR-004.
+- Both hosts deploy from `main`, so every merge is live (ADR-001).
+
+---
+
+### Previously pending
+
+_All decided in task 2.3. Stack: ADR-019. PostgreSQL: ADR-020. `BigDecimal` and rounding: ADR-021.
+SQL aggregations: ADR-022. Optimistic locking: ADR-023. Monorepo: ADR-024. Hosting: ADR-025, with
+ADR-002 to ADR-004._

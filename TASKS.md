@@ -45,7 +45,7 @@ can reach its database.
 ## Phase 2 — Design
 - [x] **2.1** Data model: `employee` table, columns, constraints, indexes; supported countries + currencies → `docs/DATA_MODEL.md`
 - [x] **2.2** API contract: endpoints, request/response shapes, error format → `docs/openapi.yaml`
-- [ ] **2.3** ADRs in `docs/DECISIONS.md`: stack, Postgres over SQLite, BigDecimal money, SQL aggregations, optimistic locking, monorepo, hosting
+- [x] **2.3** ADRs in `docs/DECISIONS.md`: stack, Postgres over SQLite, BigDecimal money, SQL aggregations, optimistic locking, monorepo, hosting
 - [ ] **2.4** Architecture diagram → `docs/ARCHITECTURE.md`
 
 **Done when:** Claude Code could build the backend from the docs alone.
