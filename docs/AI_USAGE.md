@@ -16,6 +16,7 @@ Newest first. One entry per notable AI interaction. Prompts are saved verbatim i
 
 | Date | Task | What AI did | What I changed / caught | Why |
 |---|---|---|---|---|
+| 2026-10-24 | 2.1 | Listed 13 data-model decisions with options and trade-offs, then asked them one at a time; wrote ADR-008 to ADR-012 and `DATA_MODEL.md` | **Pushed back on independent titles; AI changed its recommendation to dependent.** Also chose soft delete, sort indexes now, a 1950 hire-date floor, and five countries over AI's eight | The batched list was too much to answer at once; one question at a time surfaced follow-ups it had missed |
 | 2026-10-23 | docs | Backfilled nine prompt files and this table | **Caught that 1.1–1.8 had shipped with no prompt file and no log row** | AI wrote rule 6 into `CLAUDE.md` and then did not follow its own rule for eight slices |
 | 2026-10-23 | 1.9 | Found that Spring keeps two unrelated CORS configurations, put the choice up, wrote failing tests, stopped, then implemented | Chose both surfaces from one property rather than the actuator one alone | A half-configured CORS surface would block phase 3's first controller with an opaque browser error |
 | 2026-10-23 | 1.8 | Checked Vercel's full `vercel.json` property table, committed the build config, verified the deployed bundle | Set Root Directory by hand and supplied the real URL | `rootDirectory` is not a `vercel.json` property, and AI had guessed the hostname wrongly |

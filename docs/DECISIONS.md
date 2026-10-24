@@ -55,6 +55,11 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-005 | Tailwind + PrimeNG | Accepted | 2026-10-23 |
 | ADR-006 | Spring Boot 4 over Spring Boot 3 | Accepted | 2026-10-23 |
 | ADR-007 | Angular 21 over Angular 20 (Vitest advisories) | Accepted | 2026-10-23 |
+| ADR-008 | Reference data in tables, joined by natural keys | Accepted | 2026-10-24 |
+| ADR-009 | Employee keys and column types | Accepted | 2026-10-24 |
+| ADR-010 | Validation in both layers; hire-date rules | Accepted | 2026-10-24 |
+| ADR-011 | Soft delete with `deleted_at` | Accepted | 2026-10-24 |
+| ADR-012 | Indexes created up front, all partial | Accepted | 2026-10-24 |
 
 ---
 
@@ -298,6 +303,206 @@ vulnerabilities.
   here, not yet seen. Phase 7 is where real components will prove it.
 - Supersedes nothing formally - the Angular 20 choice was never recorded as an ADR, which is precisely
   why this one exists.
+
+---
+
+## ADR-008 — Reference data in tables, joined by natural keys
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.1
+
+### Context
+`REQUIREMENTS.md` says "supported countries only" and "currency is derived from the country". Filters
+(4.3), insights (5.2, 5.3) and the dropdown reference endpoint (5.5) all list or group by country, job
+title and department. If these are free text, "Engineer" and "engineer " become two groups and the
+insights quietly fragment. The requirements name no list of countries.
+
+### Options considered
+Countries:
+| Option | For | Against |
+|---|---|---|
+| **A - `country` table, FK from `employee`** | Database enforces the supported set; 5.5 reads it; SQL insight queries can return currency via a join | One more table and join; adding a country is a migration |
+| **B - Java enum + `CHECK`** | Compile-time safety, no join | The list lives in two places that drift; currency is only known in Java |
+| **C - Java enum only** | Simplest | The database accepts any string |
+
+Currency: **derive it through the country** vs **store it on each employee** (no join, but redundant and
+able to disagree with the country).
+
+Job titles and departments:
+| Option | For | Against |
+|---|---|---|
+| **A - Lookup tables, FK on the name** | Clean grouping; dropdowns come from the tables; no join just to display a value | New titles need a migration; a rename cascades |
+| **B - Lookup tables, numeric ids** | Classic normalisation, cheap renames | A join on every list and insight query, plus mapping work |
+| **C - Free text, trimmed** | Nothing to maintain | Spelling and casing variants fragment insights |
+
+Relationship: **titles independent of departments** (flat lists, any combination) vs **each title belongs
+to a department**. If dependent: title names **unique globally** vs **unique per department** ("Manager" in
+several departments, so 5.2 would have to group by department and title). And whether `employee` still
+stores department when the title already implies it.
+
+### Decision
+- **Countries:** option A. Five countries: US (USD), GB (GBP), IN (INR), DE (EUR), FR (EUR). DE and FR
+  sharing EUR proves the rule is "one currency per country", not "one country per currency". Every
+  currency has 2 decimals, so the global 2dp `HALF_EVEN` rule holds. JPY (0 decimals) was considered and
+  left out for that reason.
+- **Currency:** derived through the country, never stored on `employee`. One source of truth.
+- **Titles and departments:** option A, keyed by name.
+- **Each title belongs to exactly one department, and title names are unique globally.** The AI first
+  recommended independent lists for simplicity; the engineer argued dependent titles are more
+  predictable. With natural-key FKs the cost is one composite FK, so the recommendation changed.
+  Global uniqueness keeps "average salary by title" (5.2) unambiguous.
+- **`employee` stores both `department` and `job_title`**, kept consistent by the composite FK
+  `(department, job_title) → job_title(department, name)`. The redundancy buys join-free department
+  filters and headcounts, and a direct `(country_code, department)` index.
+- Reference data: 6 departments and 18 titles, listed in [`DATA_MODEL.md`](DATA_MODEL.md).
+
+### Consequences
+- The database itself rejects an unsupported country or a title outside its department, including
+  from the seed script and manual SQL.
+- Adding a country, department or title is a Flyway migration. There is no admin UI, by design.
+- The employee form (7.3) needs a title dropdown that depends on the department; changing department
+  clears the title.
+- Whether the title filter (4.3) narrows when a department is picked is a UX question left to 7.2.
+- Revisit if HR needs to create titles themselves: that means an admin feature, which is out of scope.
+
+---
+
+## ADR-009 — Employee keys and column types
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.1
+
+### Context
+The `employee` table needs a key that suits a 10,000-row seed (6.2, 6.3, under 10 seconds), a salary type
+that matches the `BigDecimal` convention in `CLAUDE.md`, and a case-insensitive unique email.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Primary key | **`BIGINT` from a sequence, increment 50** (Hibernate can batch inserts) · `BIGINT IDENTITY` (simplest SQL, but Hibernate turns off insert batching for identity keys) · UUID v7 (unguessable; 16 bytes, uglier URLs, no benefit without auth) | Sequence |
+| Salary | **`NUMERIC(14,2)`** (up to about 1 trillion; maps straight to `BigDecimal`) · `BIGINT` minor units (exact and fast, but every layer converts, against the 2dp convention) | `NUMERIC(14,2)` |
+| Salary ceiling | **None beyond `> 0`** · a per-country maximum (catches typos; a rule not in the requirements) · one global cap (meaningless across currencies) | None |
+| Email uniqueness | **Unique index on `lower(email)`** (keeps the typed casing) · lowercase on write (loses casing) · `citext` (an extension and a type mapping for one column) | `lower(email)` |
+| Name | **Single `full_name`** (matches the requirement; works for every naming culture) · first and last names (sort by surname, but a forced split that fails for mononyms) | `full_name` |
+| Text lengths | **`VARCHAR` with limits:** name 200, email 254, title and department 100 · unbounded `TEXT` with app limits only (no database backstop) | `VARCHAR(n)` |
+| Timestamps | **None** (nothing in scope reads them) · `created_at` and `updated_at` · `created_at` only | None |
+
+### Decision
+As chosen above. Optimistic locking uses `version BIGINT NOT NULL DEFAULT 0` (decided in `CLAUDE.md`).
+
+### Consequences
+- The sequence increment must equal the JPA `allocationSize` (50). Any insert path outside JPA (6.3 may
+  use JDBC batching) must take ids from the same sequence. Task 3.1 proves the mapping with a test.
+- IDs jump in steps when blocks of 50 are reserved and not used. Harmless, but visible in URLs.
+- A 10x salary typo is not caught. Accepted: the requirements only ask for `> 0`.
+- A unique email is unique only among active employees (ADR-011).
+- Revisit timestamps if "recently added" sorting or debugging needs appear. `deleted_at` already
+  brings in the injected `Clock`, so adding them later is cheap.
+
+---
+
+## ADR-010 — Validation in both layers, and the hire-date rules
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.1
+
+### Context
+The requirements specify required fields, a valid email, salary > 0, a hire date not in the future,
+and supported countries only. Rows can arrive through the API, the seed script (phase 6) or manual SQL.
+"Not in the future" depends on the current date, and the current date depends on a timezone.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Where rules live | **Both:** database constraints as a backstop, Bean Validation in the app for friendly 400s (rules stated twice) · app only (seed and SQL can insert bad rows) | Both |
+| "Not in the future" | **App only, with an injected `Clock`** · also a database `CHECK (hire_date <= current_date)` (not immutable, which Postgres docs advise against; can disagree with the app at timezone edges) | App only |
+| Whose "today" | **UTC** · the employee's country zone (needs a zone per country, and multi-zone countries need a pick) · UTC plus one day of grace | UTC |
+| Earliest date | No lower bound (requirement as written) · **not before 1950-01-01** (catches century typos) | 1950-01-01 |
+
+### Decision
+- The database enforces `NOT NULL`, `CHECK (salary > 0)`, `CHECK (hire_date >= DATE '1950-01-01')`, the
+  foreign keys (ADR-008) and the unique active email (ADR-011).
+- The app checks everything, including "hire date ≤ today in UTC", using an injected `Clock`.
+- **The 1950 lower bound is a rule added beyond `REQUIREMENTS.md`**, chosen by the engineer to catch
+  typos such as 1025 for 2025. Being a fixed date, it is safe as a database `CHECK`.
+
+### Consequences
+- Tests pin the `Clock`, so "today" is deterministic.
+- Near midnight UTC, a hire entered as "today" from a zone ahead of UTC (India, for example) can be
+  rejected for a few hours. Accepted for simplicity. Revisit if HR reports it.
+- Rules appear twice. A database constraint violation that slips past the app must still become a
+  Problem Details response, never a 500 with a stack trace (3.7).
+
+---
+
+## ADR-011 — Soft delete with `deleted_at`
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.1, 3.6
+
+### Context
+Task 3.6 requires delete → 204, then get → 404. The question is whether the row survives.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A - Hard delete** | Simplest; no filtering anywhere | Unrecoverable: a mis-click loses the record |
+| **B - Soft delete, `deleted_at TIMESTAMPTZ`** | A safety net: rows can be recovered with SQL | Every query, insight and unique index must exclude deleted rows, and forgetting one is the classic soft-delete bug |
+
+Follow-ups: whether a deleted employee's email can be reused (**unique among active only**, partial index;
+or unique forever, which gives HR a 409 for someone they cannot see). And whether restore is exposed
+(**no, recovery by SQL only**; a restore endpoint; or restore plus a "deleted" list view).
+
+### Decision
+Option B, chosen by the engineer over the AI's recommendation of A, for recoverability. Emails are unique
+among active employees only. There is no restore API or UI. Recovery is a database operation.
+
+### Consequences
+- **Every read filters `deleted_at IS NULL`**: get, list, search, filters, insights and the duplicate-email
+  check. Each of these gets a test proving deleted rows are invisible.
+- Indexes are partial (ADR-012). Queries must state `deleted_at IS NULL` literally, or the planner
+  cannot use them.
+- `deleted_at` is set from the injected `Clock`. A delete also bumps `version`.
+- Get and delete of an already-deleted employee return 404.
+- Deleted rows stay in the table, so the seed's "exactly 10,000 rows" (6.2) means active rows.
+- Restore can be added later. It must handle a restored email that is now taken (409).
+
+---
+
+## ADR-012 — Indexes created up front, all partial
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.1, 4.5
+
+### Context
+The requirements set list queries under about 200 ms and insights under 1 second, at 10,000 employees.
+At that size Postgres often prefers a full scan anyway. Task 4.5 checks the query plans.
+
+### Options considered
+| Need | Options | Chosen |
+|---|---|---|
+| Partial, case-insensitive search (4.2) | **`pg_trgm` GIN** (supports `ILIKE '%x%'`; needs the extension, which Neon supports) · no index (a scan of 10k rows takes a few ms) · prefix-only btree (changes "partial" to "starts with") | `pg_trgm` |
+| Filters and insights (4.3, 5.x) | **Composite per query:** `(country_code, salary)`, `(country_code, job_title)`, `(country_code, department)` · single columns · `country_code` only | Composite |
+| Sorting (4.4) | Wait for 4.5 and measure (AI's recommendation) · **add now** | Add now |
+
+### Decision
+As chosen, all partial on `WHERE deleted_at IS NULL` (ADR-011). Sort indexes on `full_name`, `salary` and
+`hire_date` are created now at the engineer's call. 4.5 will report whether the planner uses them.
+
+### Consequences
+- One extension, `pg_trgm`, is created by migration.
+- Search must use `ILIKE` on the raw column to hit the trigram index. `lower(col) LIKE` would not.
+- Partial indexes cannot serve foreign-key checks, which do not filter on `deleted_at`. Updating or
+  deleting a country or title row therefore scans `employee`. Accepted: reference data changes only by
+  migration.
+- Pagination needs a tiebreaker (`id`). Whether the sort indexes widen to `(column, id)` is decided in 4.4.
+- Nine indexes slow inserts slightly. 6.3 measures the seed against the 10-second target.
+- Unused indexes found in 4.5 are dropped by a new migration and recorded.
 
 ---
 
