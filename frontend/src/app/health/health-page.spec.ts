@@ -83,4 +83,12 @@ describe('HealthPage', () => {
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(environment.apiBaseUrl);
   });
+
+  it('shows which environment it is running in', async () => {
+    http.expectOne(healthUrl).flush({ status: 'UP' });
+    await fixture.whenStable();
+
+    // Exact match: 'local' is also a substring of the local API URL.
+    expect(query('health-environment')?.textContent?.trim()).toBe(environment.name);
+  });
 });
