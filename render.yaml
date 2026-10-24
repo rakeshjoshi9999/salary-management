@@ -19,6 +19,10 @@ services:
     plan: free
     branch: main
 
+    # Deploy only once CI is green on the commit (ADR-034), as stage does. A red
+    # commit that reaches main stays undeployed instead of replacing a working API.
+    autoDeployTrigger: checksPass
+
     # Render polls this to decide whether a deploy succeeded. The status
     # aggregates the datasource health indicator, so it cannot report UP while
     # the database is unreachable.
