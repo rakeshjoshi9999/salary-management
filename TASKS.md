@@ -47,8 +47,11 @@ can reach its database.
 - [x] **2.2** API contract: endpoints, request/response shapes, error format → `docs/openapi.yaml`
 - [x] **2.3** ADRs in `docs/DECISIONS.md`: stack, Postgres over SQLite, BigDecimal money, SQL aggregations, optimistic locking, monorepo, hosting
 - [ ] **2.4** Architecture diagram → `docs/ARCHITECTURE.md`
+- [ ] **2.5** UI design → `docs/UI_DESIGN.md`: Mermaid user-flow diagrams (find and update a salary in
+      under 30 s, add, delete, view insights, 409 and error paths), low-fidelity wireframes per screen,
+      and the loading, empty, error and cold-start states each screen shows
 
-**Done when:** Claude Code could build the backend from the docs alone.
+**Done when:** Claude Code could build the backend and the frontend from the docs alone.
 
 ---
 
