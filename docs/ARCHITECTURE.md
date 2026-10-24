@@ -25,7 +25,7 @@ flowchart LR
     end
 
     gh["GitHub · main"]
-    ci["GitHub Actions<br/>backend + frontend tests"]
+    ci["GitHub Actions<br/>backend + frontend tests, frontend lint"]
 
     hr -- "loads app" --> spa
     hr -- "JSON over HTTPS<br/>cross-origin, CORS allowlist" --> api

@@ -1342,6 +1342,15 @@ review: `@angular-eslint/prefer-on-push-component-change-detection` and `@angula
 The alternative, the recommended sets only, left both conventions to the reviewer. If `prefer-signals`
 proves noisy, turning it off is a new ADR.
 
+### Correction (same day, from the slice review)
+- The Context and the first Consequence overstate which deploys a style failure holds back. Render waits
+  for green CI (`checksPass`, ADR-031, ADR-034); Vercel does not. So a lint or format failure **does not**
+  stop the frontend reaching Vercel. It holds back the stage or production *backend* deploy, even when the
+  problem is only in `frontend/`.
+- `main`'s ruleset gets `Frontend lint` as a required check, so a promotion PR cannot merge with it red.
+- `ng add angular-eslint` also installed `@eslint/js`, the base ESLint rules `eslint.config.js` imports.
+  It belongs with the three packages the Decision names.
+
 ---
 
 ### Previously pending
