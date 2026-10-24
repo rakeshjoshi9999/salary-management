@@ -82,6 +82,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-032 | Creating the stage Render service through `main` | Accepted | 2026-10-24 |
 | ADR-033 | Stage stays behind Vercel's login | Accepted | 2026-10-24 |
 | ADR-034 | Production deploys only after CI passes | Accepted | 2026-10-24 |
+| ADR-035 | Lint, format and coverage checks in CI | Accepted | 2026-10-24 |
 
 ---
 
