@@ -36,7 +36,7 @@ No domain logic in this phase. A health endpoint and a page that reads it, wired
 - [x] **1.9** CORS restricted to the frontend origin, origins supplied by env var (Vercel previews get
       generated URLs, so this cannot be hardcoded)
 - [x] **1.10** Live health page green end to end; note Render cold-start behaviour in `README.md`
-- [ ] **1.11** Stage environment (ADR-030): `stage` branch; Neon branch database; second Render service
+- [x] **1.11** Stage environment (ADR-030): `stage` branch; Neon branch database; second Render service
       tracking `stage`; Angular `stage` configuration chosen by the Vercel build; stage CORS origin; ruleset on
       `main` (PR + green CI + linear history, admin bypass); stage health page green end to end
 

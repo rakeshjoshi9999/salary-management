@@ -80,6 +80,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-030 | A deployed `stage` branch in front of `main` | Accepted | 2026-10-24 |
 | ADR-031 | Building the stage environment | Accepted | 2026-10-24 |
 | ADR-032 | Creating the stage Render service through `main` | Accepted | 2026-10-24 |
+| ADR-033 | Stage stays behind Vercel's login | Accepted | 2026-10-24 |
 
 ---
 
@@ -1220,6 +1221,34 @@ commit instead of merging `main` back, so `stage` stays a plain fast-forward of 
 - `main` gains one commit that changes no production setting: the new entry is a separate service.
 - Later `render.yaml` changes for stage still only take effect once they reach `main`. Stage service
   settings therefore change at promotion, or through another hotfix.
+
+---
+
+## ADR-033 — Stage stays behind Vercel's login
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 1.11. Follows ADR-031 (stage alias).
+
+### Context
+Vercel protects preview deployments with Vercel Authentication by default, and the stage alias is a
+preview. Opening it without a Vercel login redirects to `vercel.com/sso-api`, so automated checks (`curl`)
+cannot read the deployed stage page or bundle.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| A - Turn protection off for previews | Stage checkable by anyone, including scripts | Anyone with the URL can write to the stage database; hotfix previews become public |
+| B - Keep it on, use the "Protection Bypass for Automation" secret | Private, and the deployed bundle stays checkable | A secret to create and keep out of the repo; Hobby availability unconfirmed |
+| **C - Keep it on; the engineer checks the stage page in a browser, the AI checks a local `stage` build** | Private, no secret, no setting change | The deployed bundle is not inspected directly; a local/Vercel build difference would only show as a wrong environment name on the page |
+
+### Decision
+Option C.
+
+### Consequences
+- Stage verification after each slice includes a browser check by the engineer.
+- Reviewers of the submission cannot open stage. They use production, which is public.
+- Revisit if stage checks need automating (for example, an E2E run against stage in phase 8).
 
 ---
 

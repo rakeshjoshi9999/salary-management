@@ -16,6 +16,7 @@ Newest first. One entry per notable AI interaction. Prompts are saved verbatim i
 
 | Date | Task | What AI did | What I changed / caught | Why |
 |---|---|---|---|---|
+| 2026-10-24 | 1.11 | Listed eleven open decisions in one message; after correction asked thirteen one at a time (ADR-031); found mid-build that Render Blueprints read `render.yaml` only from `main` and that tests cannot read a replaced environment file, and stopped to ask each time (ADR-032, ADR-033) | Asked for questions one by one; approved one push to `main`, a force-push of `stage`, and the ruleset | Each of those acts on shared state the engineer owns; the reviewer also caught a test that would have passed vacuously and a mis-encoded character that would have shown on both live pages |
 | 2026-10-24 | process | Asked ten branching decisions one at a time and wrote ADR-030; flagged that GitHub cannot fast-forward a PR merge, which conflicts with requiring PRs on `main` | Chose promotion once per phase (AI had recommended per slice), and an admin bypass so fast-forward and required PRs can coexist | Two of the engineer's answers were incompatible on GitHub; raising the conflict before building avoided discovering it at the first promotion |
 | 2026-10-24 | process | Compared `WORKFLOW.md` with actual practice, found eight gaps, asked them one at a time; wrote the reviewer agent and updated `CLAUDE.md`, `WORKFLOW.md`, `REQUIREMENTS.md` and `TASKS.md` | **Replaced approve-every-commit with a reviewer-agent loop, keeping two human gates: the test list and every push** | Per-commit approval cost the engineer's time without adding judgment; the push gate stays because `main` auto-deploys |
 | 2026-10-24 | 2.5 | Asked UI decisions one at a time; wrote `UI_DESIGN.md` (wireframes, flows, states) and ADR-027 to ADR-029 | **Redirected twice mid-question:** Insights as landing with a "Catalog" section; backend Settings for a default country (IN); real charts (approved `chart.js`, doughnut); full phone support | The AI recommended a list landing, `localStorage` and no chart library; the engineer chose for the demo and for cross-device use, and the extra scope is now recorded as tasks 5.6 and 7.8 |
@@ -41,6 +42,9 @@ Newest first. One entry per notable AI interaction. Prompts are saved verbatim i
 Kept deliberately specific, because a list of successes proves nothing about how the tool
 was supervised.
 
+- **Batched eleven decisions into one message in 1.11**, which the engineer had to stop ("Always ask me
+  questions one by one"). It also wrote a `·` through a script using the Windows default encoding,
+  which would have shown as `�` on both health pages had the reviewer not caught it.
 - **Ran five slices (2.1 to 2.5) in one session**, against the one-slice-per-session guardrail it had
   helped write. It was caught only when the engineer asked for a workflow check before phase 3.
 - **Offered two technically wrong options in 2.2 and only caught them after they were answered.**
