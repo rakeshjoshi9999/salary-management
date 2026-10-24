@@ -32,6 +32,9 @@ One entry per completed phase of [`TASKS.md`](TASKS.md), newest first. Format ba
   second Render service and a Neon branch database. The health page now names its environment.
 - A ruleset on `main`: PR, green CI and linear history required, with an admin bypass for promotion.
 
+### Changed
+- The production API deploys only after CI passes on the commit, as stage does (ADR-034).
+
 ## Phase 0 — Foundation (2026-10-23)
 
 ### Added

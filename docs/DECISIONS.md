@@ -81,6 +81,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-031 | Building the stage environment | Accepted | 2026-10-24 |
 | ADR-032 | Creating the stage Render service through `main` | Accepted | 2026-10-24 |
 | ADR-033 | Stage stays behind Vercel's login | Accepted | 2026-10-24 |
+| ADR-034 | Production deploys only after CI passes | Accepted | 2026-10-24 |
 
 ---
 
@@ -1249,6 +1250,42 @@ Option C.
 - Stage verification after each slice includes a browser check by the engineer.
 - Reviewers of the submission cannot open stage. They use production, which is public.
 - Revisit if stage checks need automating (for example, an E2E run against stage in phase 8).
+
+---
+
+## ADR-034 — Production deploys only after CI passes
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 1.12. Extends ADR-031's stage choice to production.
+
+### Context
+Stage deploys only after green CI (`autoDeployTrigger: checksPass`, ADR-031). Production still deploys
+every commit to `main`, so a commit whose CI fails would replace a working production API. The ruleset
+on `main` requires green CI for PRs, but the admin bypass lets a push to `main` through without enforcing
+that check, so only the promotion procedure, not GitHub, guarantees green CI.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Route to `main` | **Commit on `stage`, promote at once** (normal tools; `stage` equalled `main`, so only this task's commits move; off the once-per-phase rhythm) · `hotfix/*` from `main` (stretches "hotfix" again) · wait for the Phase 3 promotion (prod keeps deploying red commits meanwhile) | Promote at once |
+| Verification | **Render dashboard setting plus watching deploys** · also push a deliberately red commit (a red commit on `main`, or a throwaway promotion) · setting only | Setting plus watched deploys |
+| Tracking | **Task 1.12 in `TASKS.md`** (findable; reopens a promoted phase by one line) · a `process-*` prompt file only | Task 1.12 |
+
+### Decision
+`autoDeployTrigger: checksPass` on `salary-management-api`, promoted at once as an exception to ADR-030's
+once-per-phase rhythm, justified because `stage` held nothing else.
+
+### Consequences
+- Every production deploy waits about 5 minutes for CI after a promotion push.
+- Vercel still deploys the production frontend without waiting, so for a few minutes after a promotion the
+  frontend can be newer than the API. While the backend has no endpoints the frontend depends on, this is
+  harmless. From phase 3 it can briefly show errors, and promotions should be smoke-tested once both tiers
+  are up.
+- Render does not document whether the blueprint sync applies before the deploy of the same push, so the
+  push that delivers this setting may deploy under the old one. The evidence is the dashboard showing
+  production's trigger as waiting for checks, then the next promotion's production deploy starting only
+  after that push's CI run finishes.
 
 ---
 
