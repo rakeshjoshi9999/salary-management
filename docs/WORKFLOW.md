@@ -18,28 +18,39 @@
    - Me: pick one and write down why.
    - Output: data model, API contract, ADRs in `docs/DECISIONS.md`.
 4. **Slice**
-   - Break the work into thin vertical slices, each with acceptance criteria.
-   - Output: `TASKS.md` — the commit roadmap.
+   - Break the work into thin vertical slices.
+   - Output: `TASKS.md` — the commit roadmap. Acceptance criteria are set per slice in step 5.
 5. **Build each slice (TDD loop)**
-   - I write the test list for the slice.
-   - AI writes the failing tests; I review them. Commit `test: …`
-   - AI writes the minimum code to pass. Commit `feat: …`
+   - AI drafts the test list from the requirements and design docs; **I edit and approve it.** The approved
+     list is the slice's acceptance criteria, saved with the slice's prompt in `docs/prompts/`.
+   - AI writes the failing tests. A **reviewer agent** (a subagent with no memory of writing them,
+     `.claude/agents/reviewer.md`) checks them against the list; AI fixes its findings. Commit `test: …`
+   - AI writes the minimum code to pass. The reviewer checks the diff; AI fixes and re-runs the suite. Commit `feat: …`
    - Refactor with tests green. Commit `refactor: …`
-   - Rule: I review every diff and never commit code I can't explain.
+   - At most two review rounds per step. Unresolved findings, disagreements and tests that look wrong
+     come to me.
+   - Rule: I read the end-of-slice summary and the diff **before anything is pushed**, and never let code
+     I can't explain reach `main`, which auto-deploys.
 6. **Verify**
-   - Full test suite, lint, coverage, then a manual check.
-   - A fresh AI session reviews the diff as a strict reviewer, with no memory of writing it.
+   - Full test suite, lint (ESLint, Prettier check), coverage (JaCoCo), all in CI, then a manual check.
+   - The reviewer agent's findings and how each was resolved go in the slice summary.
 7. **Ship**
-   - Deploy, smoke test, update README and changelog.
+   - I approve the push; then the deploy, a smoke test and the README.
+   - When a phase is finished, add its entry to `CHANGELOG.md`.
 8. **Reflect**
    - Log in `docs/AI_USAGE.md` what AI sped up, what it got wrong, and how I caught it.
 
 ## Guardrails
 - **`CLAUDE.md` project rules:** test first, small diffs, no new dependencies without asking, follow existing structure.
-- **One slice per AI session:** small context, fewer hallucinations.
+- **One slice per AI session:** small context, fewer hallucinations. The design docs carry everything a
+  fresh session needs.
+- **Nothing pushed without my OK:** `main` deploys to production on every push.
 - **Prompts saved in `docs/prompts/`:** reviewers can see exactly how AI was directed.
 - **Conventional commits** (`test` / `feat` / `refactor` / `docs` / `chore` / `fix`): the history reads like a story.
 
 ## Tools
-- **Claude Code** — builds each slice inside the repo: runs tests, iterates, proposes diffs I review and commit.
+- **Claude Code** — builds each slice inside the repo: runs tests, iterates, commits after the reviewer
+  agent passes it, and stops before pushing.
+- **Reviewer agent** (`.claude/agents/reviewer.md`) — a read-only subagent that reviews each slice's tests
+  and implementation before they are committed.
 - **Claude (chat)** — design discussions, slice prompts, and independent review of diffs it didn't write.

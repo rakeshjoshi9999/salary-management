@@ -13,11 +13,15 @@ Read `REQUIREMENTS.md` before any task. Do not build anything listed under "Deli
 - `docs/` — workflow, decisions (ADRs), AI usage log, prompts
 
 ## Repo state
-Phases 0 and 1 are done: a walking skeleton (health endpoint + health page) is live on Vercel → Render →
-Neon, with CI on every push. There is **no domain code yet** — no migrations, entities or API beyond
-`/actuator/health`. `TASKS.md` is the authoritative roadmap and names the next phase. Do not assume a
-schema or an API exists: check first. `docs/DECISIONS.md` holds ADR-001 to ADR-007 (environment and
-stack); data model, API and domain decisions are still open.
+Phases 0–2 are done: a walking skeleton (health endpoint + health page) is live on Vercel → Render → Neon,
+with CI on every push, and the design is complete. There is **no domain code yet** — no migrations,
+entities or API beyond `/actuator/health`. `TASKS.md` is the authoritative roadmap and names the next task.
+Do not assume a schema or an API exists in code: check first.
+
+The design docs are the source of truth for building — read the ones a slice touches before proposing tests:
+`docs/DATA_MODEL.md` (schema), `docs/openapi.yaml` (API contract), `docs/ARCHITECTURE.md` (structure),
+`docs/UI_DESIGN.md` (screens), and `docs/DECISIONS.md` (ADR-001 to ADR-029, the reasons). A slice that
+contradicts them stops and asks; a change to them is a new ADR, not a quiet edit.
 
 ## Commands
 
@@ -49,16 +53,25 @@ On Windows, use `mvnw.cmd` from cmd/PowerShell. When a phase adds an entry point
 3. **Record the decision.** Once I choose, write it up as an ADR in `docs/DECISIONS.md` using the format
    in that file — context, options considered, decision, consequences — including the options I rejected
    and why. A decision that is not written down will be re-litigated.
-4. **Test first, always.**
-   - Write the failing test(s) first and stop. Wait for review before implementing.
-   - Then write the *minimum* code to make them pass.
-   - Refactor only with all tests green.
+4. **Test first, always — the slice loop.** After the decisions are settled:
+   1. **Test list (my gate).** Draft a numbered list of behaviours to test — test name plus one line each —
+      from `REQUIREMENTS.md` and the design docs. Stop until I approve or edit it. The approved list *is*
+      the slice's acceptance criteria; save it in the slice's prompt file.
+   2. **Failing tests.** Write them, run them, and confirm each fails for the right reason. Spawn the
+      `reviewer` subagent (`.claude/agents/reviewer.md`) on the diff, fix its findings, then commit `test:`.
+   3. **Minimum code.** Make the tests pass, run the full suite, then spawn `reviewer` on the diff, fix the
+      findings and re-run the suite. Commit `feat:`, and `refactor:` (only with all tests green) if needed.
+   4. **Limits.** At most two review rounds per step. A finding still open after that, a disagreement with
+      the reviewer, or a test that looks wrong comes to me. Never weaken a test to make it pass.
+   5. **Report, then wait for push.** End with one summary: the commits, test results, reviewer findings
+      and how each was resolved. **Never push without my OK** — `main` auto-deploys to production.
 5. **Small diffs.** Prefer many small changes over one large one.
 6. **Explain non-obvious choices** in a short note after the change, not in code comments.
 7. **Ask, don't assume.** If a requirement is ambiguous, ask a question instead of guessing.
 8. **Leave a paper trail.** The prompt that drove a slice goes in `docs/prompts/<task-id>-<short-name>.md`
-   with a one-line outcome; notable AI interactions get a row in `docs/AI_USAGE.md`, including what the
-   engineer corrected. `docs/WORKFLOW.md` describes the full requirement→shipped loop.
+   with the approved test list and a one-line outcome; notable AI interactions get a row in
+   `docs/AI_USAGE.md`, including what the engineer or the reviewer corrected. When a phase is finished,
+   add its entry to `CHANGELOG.md`. `docs/WORKFLOW.md` describes the full requirement→shipped loop.
 
 ## Rules
 - No new dependencies without asking first and stating why.
@@ -68,6 +81,7 @@ On Windows, use `mvnw.cmd` from cmd/PowerShell. When a phase adds an entry point
 - `docs/DECISIONS.md` is append-only: add an ADR once I have approved a decision (see "How we work" 3).
   Never rewrite or delete an existing ADR — supersede it with a new one that links back.
 - Run the relevant tests before declaring a task done, and report the result honestly.
+- Never `git push` without the engineer's explicit OK for that push.
 
 ## Testing standards
 - Tests are fast, deterministic, and independent: no real clock, randomness, or network in unit tests (inject `Clock`, use fixed seeds).

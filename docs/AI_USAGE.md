@@ -16,6 +16,7 @@ Newest first. One entry per notable AI interaction. Prompts are saved verbatim i
 
 | Date | Task | What AI did | What I changed / caught | Why |
 |---|---|---|---|---|
+| 2026-10-24 | process | Compared `WORKFLOW.md` with actual practice, found eight gaps, asked them one at a time; wrote the reviewer agent and updated `CLAUDE.md`, `WORKFLOW.md`, `REQUIREMENTS.md` and `TASKS.md` | **Replaced approve-every-commit with a reviewer-agent loop, keeping two human gates: the test list and every push** | Per-commit approval cost the engineer's time without adding judgment; the push gate stays because `main` auto-deploys |
 | 2026-10-24 | 2.5 | Asked UI decisions one at a time; wrote `UI_DESIGN.md` (wireframes, flows, states) and ADR-027 to ADR-029 | **Redirected twice mid-question:** Insights as landing with a "Catalog" section; backend Settings for a default country (IN); real charts (approved `chart.js`, doughnut); full phone support | The AI recommended a list landing, `localStorage` and no chart library; the engineer chose for the demo and for cross-device use, and the extra scope is now recorded as tasks 5.6 and 7.8 |
 | 2026-10-24 | 2.4 | Checked the roadmap for UI design (none), added task 2.5; then asked seven structure decisions and drew five Mermaid diagrams plus ADR-026 | Asked for a UI design and flow step that the AI's roadmap had missed | Phase 2's "Done when" covered only the backend, so the frontend would have been designed while it was being built |
 | 2026-10-24 | 2.3 | Asked eight decisions one at a time, asked for the real reasons instead of inventing them, wrote ADR-019 to ADR-025 | Recorded that the stack came from the brief and Java 21 is kept only because it is installed | Found open design questions inside "already decided" items: `@Version` alone ignores a stale client version, and JPQL cannot do the exact median |
@@ -39,6 +40,8 @@ Newest first. One entry per notable AI interaction. Prompts are saved verbatim i
 Kept deliberately specific, because a list of successes proves nothing about how the tool
 was supervised.
 
+- **Ran five slices (2.1 to 2.5) in one session**, against the one-slice-per-session guardrail it had
+  helped write. It was caught only when the engineer asked for a workflow check before phase 3.
 - **Offered two technically wrong options in 2.2 and only caught them after they were answered.**
   `percentile_cont` computes in double precision, and Postgres `round()` is not HALF_EVEN. Both were
   corrected in ADR-017 before any code was written, but they should have been checked before being offered.
