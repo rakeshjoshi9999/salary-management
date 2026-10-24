@@ -60,6 +60,12 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-010 | Validation in both layers; hire-date rules | Accepted | 2026-10-24 |
 | ADR-011 | Soft delete with `deleted_at` | Accepted | 2026-10-24 |
 | ADR-012 | Indexes created up front, all partial | Accepted | 2026-10-24 |
+| ADR-013 | Hand-written OpenAPI contract under `/api/v1` | Accepted | 2026-10-24 |
+| ADR-014 | Write semantics: PUT, version in body, strict input | Accepted | 2026-10-24 |
+| ADR-015 | Money as a JSON number | Accepted | 2026-10-24 |
+| ADR-016 | List query: page/size, single sort, one search box | Accepted | 2026-10-24 |
+| ADR-017 | One combined insights call; exact median | Accepted | 2026-10-24 |
+| ADR-018 | Problem Details with stable codes | Accepted | 2026-10-24 |
 
 ---
 
@@ -503,6 +509,196 @@ As chosen, all partial on `WHERE deleted_at IS NULL` (ADR-011). Sort indexes on 
 - Pagination needs a tiebreaker (`id`). Whether the sort indexes widen to `(column, id)` is decided in 4.4.
 - Nine indexes slow inserts slightly. 6.3 measures the seed against the 10-second target.
 - Unused indexes found in 4.5 are dropped by a new migration and recorded.
+
+---
+
+## ADR-013 — Hand-written OpenAPI contract under `/api/v1`
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.2
+
+### Context
+Phase 2 is done when "Claude Code could build the backend from the docs alone". The contract must exist
+before the code, and must be precise enough to test against.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Format | **Hand-written `openapi.yaml`** (machine-readable, written first, can drive tests and typed models; verbose, can drift) · Markdown `api.md` (fast and readable, not checkable) · springdoc generated from code (never drifts, but a new dependency, and the contract only exists after the code) | `openapi.yaml` |
+| Base path | **`/api/v1`** (separate from `/actuator`, room for v2) · `/api` unversioned (simplest; frontend and backend deploy together) · header versioning (overkill for one client) | `/api/v1` |
+
+### Decision
+[`openapi.yaml`](openapi.yaml), OpenAPI 3.1, served under `/api/v1`.
+
+### Consequences
+- The contract can drift from the code. Slice tests in phases 3 to 5 assert the shapes it defines.
+  Automated contract checking would need a new dependency and is not planned.
+- Typed Angular models (7.1) can be generated from it or written by hand. That is decided in 7.1.
+
+---
+
+## ADR-014 — Write semantics: PUT, version in the body, strict input
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.2, 3.2-3.6
+
+### Context
+The HR manager edits through a form that always holds the whole record. Concurrent edits must fail with
+409 (`REQUIREMENTS.md`). Currency must never come from the client (`CLAUDE.md`).
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Update | **PUT, full replace** (same validation as create) · PATCH merge (fits quick salary edits; null-vs-absent handling) · both (two code paths) | PUT |
+| Version transport | **`version` field in the body** · ETag / `If-Match` (HTTP-standard, but 412/428 instead of the 409 in `TASKS.md`, and headers need CORS exposure) | Body |
+| Delete | **By id only** · `?version=N` required (little benefit with one user; soft delete already makes it recoverable) | By id |
+| Create response | **201 + `Location` + body** · 201 + `Location` only (an extra GET on a cold server) | With body |
+| More than 2 decimals | **Reject (400)** · round `HALF_EVEN` (silently changes someone's pay) | Reject |
+| Surrounding whitespace | **Trim, then validate** · reject · store as sent (`" a@x.com"` would bypass uniqueness) | Trim |
+| Unknown fields | **Reject (400)** · ignore (a sent `currency` would be silently dropped) | Reject |
+
+### Decision
+As chosen above. An unknown field is reported as `VALIDATION_FAILED` with the field's name, so the same
+`errors[]` shape covers it.
+
+### Consequences
+- Every PUT carries every field, which suits the form.
+- `id` and `currency` in a request body are 400s, so "currency is never accepted" is enforced, not just ignored.
+- Adding a request field later means changing client and server together. Fine with one frontend.
+- A delete can remove a record someone else has just edited. Accepted: one user, and recoverable.
+
+---
+
+## ADR-015 — Money as a JSON number
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.2
+
+### Context
+Money is `BigDecimal` in the backend. JSON can carry it as a number or a string. JavaScript parses
+numbers into binary floating point.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A - String, `"2400000.00"`** | Exact end to end; always shows 2 decimals | Unconventional; the frontend parses for charts and sends strings back |
+| **B - Number, `2400000.00`** | Conventional; works directly in charts and forms | JS float: trailing zeros vanish, and UI arithmetic can drift |
+
+### Decision
+Option B, chosen by the engineer over the AI's recommendation of A, for convention and simpler frontend
+code. Values here (at most 12 integer digits plus 2 decimals) stay below 2^53, so display is exact.
+
+### Consequences
+- **The frontend never does arithmetic on money.** It formats with `Intl.NumberFormat` and the currency,
+  so the 2 decimals reappear on display.
+- The backend parses JSON numbers straight into `BigDecimal` (no `double` step), so input stays exact.
+- Revisit if the frontend ever needs to calculate (for example, a raise preview). That calculation
+  would then belong in the backend.
+
+---
+
+## ADR-016 — List query: page/size, a single sort, one search box
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.2, 4.1-4.4
+
+### Context
+`REQUIREMENTS.md` asks for a server-side paginated list, search by name or email, filters by country,
+title and department, sorting by name, salary or hire date, and filters kept in the URL.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Pagination | **`page`/`size`, 0-based, own envelope** · 1-based (off-by-one translation) · cursor (no page jumps or totals, which the paginator expects) | 0-based, own envelope |
+| Size limits | **Default 20, max 100, reject above** · clamp silently · default 50, max 200 | Reject above 100 |
+| Sort syntax | **`sort=salary,desc`** · `sortBy` + `direction` · `sort=-salary` | Spring style |
+| Default sort | **`fullName` asc** · `id` · `hireDate` desc | `fullName` asc |
+| Search | **One `q`, name OR email, at least 2 characters** · separate `name` and `email` · one `q`, any length | One `q`, at least 2 |
+| Filters | **One value each, AND-combined** · multi-value | One value each |
+
+### Decision
+As chosen above. The envelope is `{items, page, size, totalItems, totalPages}`, a DTO of our own rather
+than Spring's `Page` JSON, whose format Spring itself warns is not stable. Sorting always appends `id`
+as a tiebreaker (the open question left by ADR-012). Filter values must exist in the reference data,
+or 400.
+
+### Consequences
+- Deep pages use `OFFSET`. Fine at 10k rows; keyset paging would be the fix at much larger scale.
+- A 1-character search is a 400, so the debounced UI (7.2) must not send it.
+- `%` and `_` in `q` are escaped and match literally.
+- "IN or DE" cannot be asked in one query. Revisit if HR needs it.
+- 4.4 decides whether the sort indexes widen to `(column, id)`.
+
+---
+
+## ADR-017 — One combined insights call, with an exact median
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.2, 5.1-5.5
+
+### Context
+The dashboard shows three per-country views and must load in under 1 second, warm. Render and Neon cold
+starts (ADR-002, ADR-004) make every extra round trip expensive.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Endpoint shape | **One combined `GET /insights/countries/{code}`** · three endpoints (one per task, three round trips) · both | Combined |
+| Even-count median | **Mean of the two middle values** · lower middle value (`percentile_disc`; always a real salary, but non-standard) | Mean |
+| No employees | **200, headcount 0, null stats, empty lists** · `salary: null` · 404 (conflates "no data" with "unsupported") | 200 with nulls |
+| Unsupported or lowercase code | **404** · 400 · normalise case, then 404 | 404 |
+| List contents and order | **Non-empty groups only, value desc, then name** · all groups alphabetical · non-empty alphabetical | Value desc |
+| Reference data | **One `GET /reference`** with titles nested under departments · separate resources | One call |
+
+### Decision
+As chosen above. **Two corrections to the option text the AI presented:**
+- The median option was written as `percentile_cont(0.5)`. In Postgres that function computes in
+  `double precision`, so the median is instead computed exactly in `numeric` SQL, as the average of the
+  middle one or two rows. The meaning chosen is unchanged.
+- Postgres `round(numeric, 2)` rounds ties away from zero, not `HALF_EVEN`. Aggregation stays in SQL
+  (`CLAUDE.md`); the final 2dp rounding of averages and the median happens in Java with
+  `setScale(2, RoundingMode.HALF_EVEN)`.
+
+### Consequences
+- One call fills the dashboard: three queries in one read-only transaction.
+- One section cannot be fetched or cached alone. Revisit if any section becomes slow.
+- The UI handles null stats with an empty state (7.6).
+- `/reference` is cacheable (`max-age=3600`), since it changes only by migration.
+- 5.4's hand-calculated fixture must include a tie at the half-cent (for example, a mean of x.005) to
+  prove `HALF_EVEN`.
+
+---
+
+## ADR-018 — RFC 7807 Problem Details with stable codes
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.2, 3.7
+
+### Context
+`CLAUDE.md` requires RFC 7807 errors and no stack traces. The frontend has to tell two 409s apart
+(duplicate email vs stale version) and mark every invalid form field.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Field errors | **`errors[]` of `{field, message}`**, all at once · a map of field → messages · first error only | `errors[]` |
+| `type` | **Relative URI plus a stable `code` extension** · `about:blank`, status only (cannot tell the 409s apart) · absolute docs URLs (ties the API to a URL that may move) | Relative + `code` |
+| Stale-update body | **Problem with `currentVersion`; client re-fetches** · problem plus the current employee (bigger contract for a rare case) | Problem only |
+
+### Decision
+As chosen above. The codes are listed in the `Problem` schema in [`openapi.yaml`](openapi.yaml).
+
+### Consequences
+- The frontend branches on `code`, never on `status` or message text.
+- Every error path in 3.7 has a test asserting its `code`, and asserting that no stack trace or
+  exception class appears in the body.
+- The `type` URIs do not resolve. Accepted; `code` is the contract.
 
 ---
 

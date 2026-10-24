@@ -16,6 +16,7 @@ Newest first. One entry per notable AI interaction. Prompts are saved verbatim i
 
 | Date | Task | What AI did | What I changed / caught | Why |
 |---|---|---|---|---|
+| 2026-10-24 | 2.2 | Asked 26 API-contract decisions one at a time; wrote `openapi.yaml` and ADR-013 to ADR-018 | Chose money as a JSON number over AI's string recommendation | **AI caught its own errors after the answers:** it had offered `percentile_cont` (double precision) for an exact median, and assumed Postgres `round()` is HALF_EVEN (it rounds ties away from zero) |
 | 2026-10-24 | 2.1 | Listed 13 data-model decisions with options and trade-offs, then asked them one at a time; wrote ADR-008 to ADR-012 and `DATA_MODEL.md` | **Pushed back on independent titles; AI changed its recommendation to dependent.** Also chose soft delete, sort indexes now, a 1950 hire-date floor, and five countries over AI's eight | The batched list was too much to answer at once; one question at a time surfaced follow-ups it had missed |
 | 2026-10-23 | docs | Backfilled nine prompt files and this table | **Caught that 1.1–1.8 had shipped with no prompt file and no log row** | AI wrote rule 6 into `CLAUDE.md` and then did not follow its own rule for eight slices |
 | 2026-10-23 | 1.9 | Found that Spring keeps two unrelated CORS configurations, put the choice up, wrote failing tests, stopped, then implemented | Chose both surfaces from one property rather than the actuator one alone | A half-configured CORS surface would block phase 3's first controller with an opaque browser error |
@@ -35,6 +36,9 @@ Newest first. One entry per notable AI interaction. Prompts are saved verbatim i
 Kept deliberately specific, because a list of successes proves nothing about how the tool
 was supervised.
 
+- **Offered two technically wrong options in 2.2 and only caught them after they were answered.**
+  `percentile_cont` computes in double precision, and Postgres `round()` is not HALF_EVEN. Both were
+  corrected in ADR-017 before any code was written, but they should have been checked before being offered.
 - **Broke a deploy with its own placeholder convention.** The setup guide wrote
   `<SM_PGHOST>`; the angle brackets were pasted into `DB_URL` and Render failed with
   `UnknownHostException` on a bracketed hostname.

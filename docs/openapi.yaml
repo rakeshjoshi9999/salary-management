@@ -1,0 +1,413 @@
+openapi: 3.1.0
+info:
+  title: Salary Management API
+  version: 1.0.0
+  description: |
+    Contract for v1, designed in task 2.2 before any code exists. Decisions and rejected options:
+    ADR-013 to ADR-018 in docs/DECISIONS.md. Schema: docs/DATA_MODEL.md.
+
+    Conventions that apply everywhere:
+    - JSON field names are camelCase. Dates are ISO-8601 (`2021-04-12`).
+    - Money is a JSON **number** with at most 2 decimals, in the country's currency (ADR-015).
+      The frontend formats money and never does arithmetic on it.
+    - Request bodies are strict. Unknown fields are rejected (400), including `id` and `currency`.
+    - Text fields are trimmed before validation.
+    - Soft-deleted employees are invisible everywhere: 404 by id, absent from lists and insights.
+    - Every error is `application/problem+json` (RFC 7807) with a stable `code` (ADR-018).
+servers:
+  - url: /api/v1
+tags:
+  - name: Employees
+  - name: Insights
+  - name: Reference
+
+paths:
+  /employees:
+    get:
+      tags: [Employees]
+      operationId: listEmployees
+      summary: Paginated, searchable, filterable list of active employees
+      description: |
+        Filters combine with AND. Each filter value must exist in the reference data, or the request
+        is rejected with 400. A valid combination that matches nobody returns an empty page.
+        A page past the end returns `items: []` with the correct totals.
+        Results are always ordered by the requested sort, then by `id`, so pages never overlap.
+      parameters:
+        - name: page
+          in: query
+          description: 0-based page index.
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: size
+          in: query
+          description: Page size. Above 100 is rejected, not clamped.
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: sort
+          in: query
+          description: "`field,direction`. Fields: fullName, salary, hireDate. Direction: asc or desc (default asc). One sort field only."
+          schema:
+            type: string
+            pattern: '^(fullName|salary|hireDate)(,(asc|desc))?$'
+            default: fullName,asc
+        - name: q
+          in: query
+          description: |
+            Partial, case-insensitive match on full name OR email. Trimmed; blank means no search.
+            After trimming, 1 character is rejected (400). `%` and `_` match literally.
+          schema: { type: string, minLength: 2, maxLength: 254 }
+        - name: country
+          in: query
+          description: Country code, exact (e.g. `IN`).
+          schema: { $ref: '#/components/schemas/CountryCode' }
+        - name: department
+          in: query
+          schema: { type: string, maxLength: 100 }
+        - name: jobTitle
+          in: query
+          schema: { type: string, maxLength: 100 }
+      responses:
+        '200':
+          description: One page of employees.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeePage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+    post:
+      tags: [Employees]
+      operationId: createEmployee
+      summary: Create an employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmployeeCreateRequest' }
+      responses:
+        '201':
+          description: Created. Body is the new employee, with `version` 0.
+          headers:
+            Location:
+              description: "`/api/v1/employees/{id}`"
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Employee' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/DuplicateEmail' }
+
+  /employees/{id}:
+    parameters:
+      - $ref: '#/components/parameters/EmployeeId'
+    get:
+      tags: [Employees]
+      operationId: getEmployee
+      summary: Get one active employee
+      responses:
+        '200':
+          description: The employee.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Employee' }
+        '404': { $ref: '#/components/responses/EmployeeNotFound' }
+    put:
+      tags: [Employees]
+      operationId: updateEmployee
+      summary: Replace an employee (optimistic locking)
+      description: |
+        Full replacement: every field is required. `version` must equal the stored version.
+        Otherwise the response is 409 `STALE_VERSION` and nothing is written. On success,
+        `version` goes up by one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmployeeUpdateRequest' }
+      responses:
+        '200':
+          description: Updated employee, with the new version.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Employee' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/EmployeeNotFound' }
+        '409':
+          description: "`STALE_VERSION` (body carries `currentVersion`) or `DUPLICATE_EMAIL`."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              examples:
+                stale:
+                  value:
+                    type: /problems/stale-version
+                    title: Employee was changed by someone else
+                    status: 409
+                    code: STALE_VERSION
+                    detail: You sent version 3, but the current version is 4. Reload and try again.
+                    instance: /api/v1/employees/101
+                    currentVersion: 4
+    delete:
+      tags: [Employees]
+      operationId: deleteEmployee
+      summary: Soft-delete an employee
+      description: No version check. A later get returns 404, and so does a second delete.
+      responses:
+        '204': { description: Deleted. }
+        '404': { $ref: '#/components/responses/EmployeeNotFound' }
+
+  /insights/countries/{countryCode}:
+    get:
+      tags: [Insights]
+      operationId: getCountryInsights
+      summary: Salary insights for one country, in its local currency
+      description: |
+        All aggregation runs in SQL over active employees. Averages and the median are rounded
+        to 2 decimals with HALF_EVEN in Java. Postgres `round()` rounds ties away from zero,
+        so it is not used for this.
+        The median is the mean of the two middle salaries for an even headcount. It is computed
+        exactly in numeric, not with `percentile_cont`, which works in double precision.
+        A supported country with no employees returns 200 with headcount 0, null stats and
+        empty lists.
+      parameters:
+        - name: countryCode
+          in: path
+          required: true
+          description: Exact uppercase code. Unsupported codes, or lowercase ones, return 404.
+          schema: { $ref: '#/components/schemas/CountryCode' }
+      responses:
+        '200':
+          description: Insights.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CountryInsights' }
+        '404': { $ref: '#/components/responses/CountryNotFound' }
+
+  /reference:
+    get:
+      tags: [Reference]
+      operationId: getReferenceData
+      summary: Supported countries, departments and their job titles, for dropdowns
+      description: |
+        Countries are sorted by name, departments by name, and titles by name within each department.
+        Changes only through a migration, so it is served with `Cache-Control: public, max-age=3600`.
+      responses:
+        '200':
+          description: Reference data.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReferenceData' }
+
+components:
+  parameters:
+    EmployeeId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+
+  responses:
+    BadRequest:
+      description: "`VALIDATION_FAILED` (with `errors`) or `MALFORMED_REQUEST`."
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            validation:
+              value:
+                type: /problems/validation-failed
+                title: Invalid request
+                status: 400
+                code: VALIDATION_FAILED
+                detail: 2 fields are invalid
+                instance: /api/v1/employees
+                errors:
+                  - { field: salary, message: must be greater than 0 }
+                  - { field: email, message: must be a valid email address }
+            malformed:
+              value:
+                type: /problems/malformed-request
+                title: Request body could not be read
+                status: 400
+                code: MALFORMED_REQUEST
+                detail: The request body is not valid JSON.
+                instance: /api/v1/employees
+    EmployeeNotFound:
+      description: "`EMPLOYEE_NOT_FOUND`: no active employee with this id."
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    CountryNotFound:
+      description: "`COUNTRY_NOT_FOUND`: the country is not supported."
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    DuplicateEmail:
+      description: "`DUPLICATE_EMAIL`: another active employee has this email (case-insensitive)."
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    CountryCode:
+      type: string
+      pattern: '^[A-Z]{2}$'
+      examples: [IN]
+
+    Money:
+      type: number
+      exclusiveMinimum: 0
+      maximum: 999999999999.99
+      multipleOf: 0.01
+      description: At most 12 integer digits and 2 decimals. More decimals are rejected, not rounded.
+      examples: [2400000.00]
+
+    EmployeeFields:
+      type: object
+      required: [fullName, email, jobTitle, department, countryCode, salary, hireDate]
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 200, description: Trimmed; blank is rejected. }
+        email: { type: string, format: email, maxLength: 254, description: Trimmed; unique among active employees, case-insensitive. }
+        jobTitle: { type: string, maxLength: 100, description: Must belong to `department`. }
+        department: { type: string, maxLength: 100 }
+        countryCode: { $ref: '#/components/schemas/CountryCode' }
+        salary: { $ref: '#/components/schemas/Money' }
+        hireDate:
+          type: string
+          format: date
+          description: Between 1950-01-01 and today in UTC, inclusive.
+
+    EmployeeCreateRequest:
+      allOf: [{ $ref: '#/components/schemas/EmployeeFields' }]
+      unevaluatedProperties: false
+
+    EmployeeUpdateRequest:
+      allOf:
+        - { $ref: '#/components/schemas/EmployeeFields' }
+        - type: object
+          required: [version]
+          properties:
+            version: { type: integer, format: int64, minimum: 0 }
+      unevaluatedProperties: false
+
+    Employee:
+      type: object
+      required: [id, fullName, email, jobTitle, department, countryCode, currency, salary, hireDate, version]
+      properties:
+        id: { type: integer, format: int64 }
+        fullName: { type: string }
+        email: { type: string }
+        jobTitle: { type: string }
+        department: { type: string }
+        countryCode: { $ref: '#/components/schemas/CountryCode' }
+        currency: { type: string, pattern: '^[A-Z]{3}$', description: Derived from the country. }
+        salary: { $ref: '#/components/schemas/Money' }
+        hireDate: { type: string, format: date }
+        version: { type: integer, format: int64 }
+      examples:
+        - id: 101
+          fullName: Asha Rao
+          email: asha.rao@acme.com
+          jobTitle: Software Engineer
+          department: Engineering
+          countryCode: IN
+          currency: INR
+          salary: 2400000.00
+          hireDate: '2021-04-12'
+          version: 3
+
+    EmployeePage:
+      type: object
+      required: [items, page, size, totalItems, totalPages]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Employee' } }
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer, format: int64 }
+        totalPages: { type: integer }
+
+    SalaryStats:
+      type: object
+      required: [headcount, min, max, average, median]
+      description: With headcount 0, every statistic is null.
+      properties:
+        headcount: { type: integer }
+        min: { oneOf: [{ $ref: '#/components/schemas/Money' }, { type: 'null' }] }
+        max: { oneOf: [{ $ref: '#/components/schemas/Money' }, { type: 'null' }] }
+        average: { oneOf: [{ $ref: '#/components/schemas/Money' }, { type: 'null' }] }
+        median: { oneOf: [{ $ref: '#/components/schemas/Money' }, { type: 'null' }] }
+
+    CountryInsights:
+      type: object
+      required: [countryCode, currency, salary, averageByJobTitle, headcountByDepartment]
+      properties:
+        countryCode: { $ref: '#/components/schemas/CountryCode' }
+        currency: { type: string }
+        salary: { $ref: '#/components/schemas/SalaryStats' }
+        averageByJobTitle:
+          type: array
+          description: Only titles with at least one employee in the country. Sorted by average desc, then title asc.
+          items:
+            type: object
+            required: [jobTitle, department, headcount, average]
+            properties:
+              jobTitle: { type: string }
+              department: { type: string }
+              headcount: { type: integer }
+              average: { $ref: '#/components/schemas/Money' }
+        headcountByDepartment:
+          type: array
+          description: Only departments with at least one employee in the country. Sorted by headcount desc, then name asc.
+          items:
+            type: object
+            required: [department, headcount]
+            properties:
+              department: { type: string }
+              headcount: { type: integer }
+
+    ReferenceData:
+      type: object
+      required: [countries, departments]
+      properties:
+        countries:
+          type: array
+          items:
+            type: object
+            required: [code, name, currency]
+            properties:
+              code: { $ref: '#/components/schemas/CountryCode' }
+              name: { type: string }
+              currency: { type: string }
+        departments:
+          type: array
+          items:
+            type: object
+            required: [name, jobTitles]
+            properties:
+              name: { type: string }
+              jobTitles: { type: array, items: { type: string } }
+
+    Problem:
+      type: object
+      description: |
+        RFC 7807 Problem Details. Never contains a stack trace or exception class.
+        Codes: VALIDATION_FAILED, MALFORMED_REQUEST (400) · EMPLOYEE_NOT_FOUND, COUNTRY_NOT_FOUND,
+        NOT_FOUND (404, unknown route) · METHOD_NOT_ALLOWED (405) · DUPLICATE_EMAIL, STALE_VERSION (409) ·
+        INTERNAL_ERROR (500).
+      required: [type, title, status, code]
+      properties:
+        type: { type: string, description: 'Relative URI, e.g. /problems/duplicate-email. It does not resolve.' }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string, description: Stable machine-readable code; the frontend branches on this. }
+        detail: { type: string }
+        instance: { type: string }
+        errors:
+          type: array
+          description: Present only for VALIDATION_FAILED. Every invalid field, body or query parameter.
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: { type: string, description: JSON property or query parameter name. }
+              message: { type: string }
+        currentVersion:
+          type: integer
+          format: int64
+          description: Present only for STALE_VERSION.
