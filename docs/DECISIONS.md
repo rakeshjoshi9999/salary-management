@@ -1336,6 +1336,12 @@ formatter (Spotless; not in the approved scope).
 - The run-summary step parses JaCoCo's CSV columns; a JaCoCo format change breaks the step loudly, not
   silently.
 
+### Addendum (same day, before any code)
+Two rules beyond the recommended sets enforce the `CLAUDE.md` frontend conventions in CI rather than by
+review: `@angular-eslint/prefer-on-push-component-change-detection` and `@angular-eslint/prefer-signals`.
+The alternative, the recommended sets only, left both conventions to the reviewer. If `prefer-signals`
+proves noisy, turning it off is a new ADR.
+
 ---
 
 ### Previously pending
