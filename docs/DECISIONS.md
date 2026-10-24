@@ -77,6 +77,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-027 | UI: Insights landing, Catalog with a drawer, responsive | Accepted | 2026-10-24 |
 | ADR-028 | Backend settings for the default country (scope addition) | Accepted | 2026-10-24 |
 | ADR-029 | Chart.js for the department doughnut | Accepted | 2026-10-24 |
+| ADR-030 | A deployed `stage` branch in front of `main` | Accepted | 2026-10-24 |
 
 ---
 
@@ -1081,6 +1082,59 @@ job title stays a table with CSS bars. **The engineer explicitly approved `chart
 - A canvas chart is invisible to screen readers and DOM tests. The legend is real DOM, so it carries the
   numbers for both. Unit tests check the data passed to the chart, not the pixels.
 - Revisit if a second chart is wanted: the dependency is now paid for.
+
+---
+
+## ADR-030 — A deployed `stage` branch in front of `main`
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** process (built in 1.11). Amends the push rule in `CLAUDE.md`; builds on ADR-001 to ADR-004.
+
+### Context
+Every push to `main` deploys to production (ADR-001), so production is the first place a change can be
+clicked. The engineer wants a testing branch that every change passes through before `main`.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| What stage is | **Branch plus a full deployed copy** (Vercel branch deploy, a second Render service, its own database) · branch with CI only (no manual check) · Vercel preview against the production API (test writes hit real data) | Full deployed copy |
+| Stage database | **Neon branch of production** (own data, free; migrations hit stage first) · a separate Neon project · the production database | Neon branch |
+| Promotion rhythm | After each slice (AI's recommendation) · **once per phase** · whenever the engineer chooses | Per phase |
+| Promotion method | **PR stage → main, fast-forward only** · PR with a merge commit · squash merge (loses the test-first commit story) | Fast-forward |
+| Who pushes | **The AI pushes a finished slice to stage after its summary; promotion to main needs the engineer's OK** · both need the OK · the AI pushes every commit to stage (half-finished slices would deploy) | AI to stage, engineer gates main |
+| Production bug mid-phase | **`hotfix/*` from main**, PR to main, then merge main back into stage · fix on stage and promote early (ships half a phase) · wait for the phase end | `hotfix/*` |
+| Stage frontend config | **An Angular `stage` build configuration**, chosen by the Vercel build command when `VERCEL_GIT_COMMIT_REF=stage` · runtime `config.json` (an extra startup request) · a Vercel dashboard env var (hidden from review) | Build configuration |
+| Protecting main | **A ruleset: PR and green CI required, linear history** · protect stage as well (a PR per slice) · none (rule only) | Ruleset on main |
+| PR vs fast-forward | **PR and CI required, with the repo admin on the bypass list for the fast-forward push** · merge commits instead · CI required but no PR | Admin bypass |
+
+### Decision
+As chosen above. **Promotion procedure, once per phase:**
+1. Open a PR from `stage` to `main`. This gives one diff for the whole phase, and CI must be green.
+2. After the engineer's OK, run `git push origin stage:main`. That is a fast-forward, so `main` gets
+   exactly stage's commits, and GitHub marks the PR as merged.
+3. Add the phase's `CHANGELOG.md` entry, and smoke test production.
+
+**Why a bypass is needed:** GitHub's PR merge buttons cannot fast-forward. "Rebase and merge" re-creates
+the commits with new IDs, so `stage` and `main` would diverge. The admin bypass lets the PR exist for
+review and CI while the merge itself stays a true fast-forward.
+
+### Consequences
+- Every slice is clickable on stage before it reaches production, and stage migrations run against a
+  copy of production's schema and data first.
+- **Production lags stage by up to a phase.** A bug in production waits for the phase end unless it
+  goes through `hotfix/*`.
+- After a hotfix, `main` is merged back into `stage`. That merge commit is the only one stage ever gets,
+  and stage still fast-forwards onto main.
+- The bypass covers anything pushed with the engineer's credentials, including the AI's pushes. GitHub
+  does not stop an AI push to `main`; the `CLAUDE.md` rule does. Accepted knowingly.
+- A second Render free service shares the workspace's free-hours budget and cold-starts too (ADR-004).
+  Stage's CORS allowlist is the stage Vercel URL (ADR-003).
+- One-time dashboard setup by the engineer in 1.11: the Neon branch, the Render stage service's env
+  vars, and checking the Vercel stage branch URL.
+- The seed (6.4) runs on stage first, then on production.
+- Until 1.11 is done there is no stage, so the old rule applies: nothing is pushed without the
+  engineer's OK.
 
 ---
 

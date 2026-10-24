@@ -36,6 +36,9 @@ No domain logic in this phase. A health endpoint and a page that reads it, wired
 - [x] **1.9** CORS restricted to the frontend origin, origins supplied by env var (Vercel previews get
       generated URLs, so this cannot be hardcoded)
 - [x] **1.10** Live health page green end to end; note Render cold-start behaviour in `README.md`
+- [ ] **1.11** Stage environment (ADR-030): `stage` branch; Neon branch database; second Render service
+      tracking `stage`; Angular `stage` configuration chosen by the Vercel build; stage CORS origin; ruleset on
+      `main` (PR + green CI + linear history, admin bypass); stage health page green end to end
 
 **Done when:** a push to `main` reaches production on both tiers and the live page proves the backend
 can reach its database.
@@ -96,7 +99,7 @@ can reach its database.
 - [ ] **6.1** Deterministic generator (fixed random seed): realistic names, titles, departments, country-appropriate salary ranges
 - [ ] **6.2** Idempotent seed runner: exactly 10,000 rows, rerun creates no duplicates
 - [ ] **6.3** Batch inserts; measure and record seed time in `docs/PERFORMANCE.md`
-- [ ] **6.4** Run the seed once against the production database
+- [ ] **6.4** Run the seed against the stage database, then once against production
 
 ---
 

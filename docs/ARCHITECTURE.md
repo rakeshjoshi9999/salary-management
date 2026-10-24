@@ -43,6 +43,7 @@ flowchart LR
 | Database | Free tier; autosuspends; pooled endpoint because of connection limits; same region as the API | ADR-002 |
 | Config | Every secret and URL is an env var (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `CORS_ALLOWED_ORIGINS`, `PORT`) | `CLAUDE.md` |
 | Health | `/actuator/health` includes the datasource, so UP proves the whole chain. Render uses it to gate deploys | 1.10 |
+| Stage | The same three tiers again for the `stage` branch: a Vercel branch deploy, a second Render service, and a Neon branch database. Promoted to `main` once per phase | ADR-030, 1.11 |
 
 ## 2. Backend components
 

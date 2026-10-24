@@ -34,9 +34,12 @@
 6. **Verify**
    - Full test suite, lint (ESLint, Prettier check), coverage (JaCoCo), all in CI, then a manual check.
    - The reviewer agent's findings and how each was resolved go in the slice summary.
-7. **Ship**
-   - I approve the push; then the deploy, a smoke test and the README.
-   - When a phase is finished, add its entry to `CHANGELOG.md`.
+7. **Ship** (ADR-030)
+   - Each finished slice is pushed to `stage`, which deploys to the stage environment (its own API and a
+     Neon branch database). I try it there.
+   - Once per phase: a PR from `stage` to `main`, green CI, **my OK**, then a fast-forward push. Production
+     deploys; smoke test it; update the README and the phase's `CHANGELOG.md` entry.
+   - Production bugs mid-phase: a `hotfix/*` branch from `main`, then merged back into `stage`.
 8. **Reflect**
    - Log in `docs/AI_USAGE.md` what AI sped up, what it got wrong, and how I caught it.
 
@@ -44,7 +47,8 @@
 - **`CLAUDE.md` project rules:** test first, small diffs, no new dependencies without asking, follow existing structure.
 - **One slice per AI session:** small context, fewer hallucinations. The design docs carry everything a
   fresh session needs.
-- **Nothing pushed without my OK:** `main` deploys to production on every push.
+- **Stage before production:** slices land on `stage`; nothing reaches `main`, which deploys to
+  production, without my OK.
 - **Prompts saved in `docs/prompts/`:** reviewers can see exactly how AI was directed.
 - **Conventional commits** (`test` / `feat` / `refactor` / `docs` / `chore` / `fix`): the history reads like a story.
 

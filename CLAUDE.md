@@ -20,7 +20,7 @@ Do not assume a schema or an API exists in code: check first.
 
 The design docs are the source of truth for building — read the ones a slice touches before proposing tests:
 `docs/DATA_MODEL.md` (schema), `docs/openapi.yaml` (API contract), `docs/ARCHITECTURE.md` (structure),
-`docs/UI_DESIGN.md` (screens), and `docs/DECISIONS.md` (ADR-001 to ADR-029, the reasons). A slice that
+`docs/UI_DESIGN.md` (screens), and `docs/DECISIONS.md` (ADR-001 to ADR-030, the reasons). A slice that
 contradicts them stops and asks; a change to them is a new ADR, not a quiet edit.
 
 ## Commands
@@ -63,8 +63,10 @@ On Windows, use `mvnw.cmd` from cmd/PowerShell. When a phase adds an entry point
       findings and re-run the suite. Commit `feat:`, and `refactor:` (only with all tests green) if needed.
    4. **Limits.** At most two review rounds per step. A finding still open after that, a disagreement with
       the reviewer, or a test that looks wrong comes to me. Never weaken a test to make it pass.
-   5. **Report, then wait for push.** End with one summary: the commits, test results, reviewer findings
-      and how each was resolved. **Never push without my OK** — `main` auto-deploys to production.
+   5. **Report, then push to stage.** End with one summary: the commits, test results, reviewer findings
+      and how each was resolved. Then push the slice to `stage`, which deploys to the stage environment
+      for me to try. **Never push to `main`.** Promotion (`stage` → `main`, once per phase) and hotfixes
+      wait for my explicit OK (ADR-030). Until task 1.11 creates `stage`, nothing is pushed without my OK.
 5. **Small diffs.** Prefer many small changes over one large one.
 6. **Explain non-obvious choices** in a short note after the change, not in code comments.
 7. **Ask, don't assume.** If a requirement is ambiguous, ask a question instead of guessing.
@@ -81,7 +83,14 @@ On Windows, use `mvnw.cmd` from cmd/PowerShell. When a phase adds an entry point
 - `docs/DECISIONS.md` is append-only: add an ADR once I have approved a decision (see "How we work" 3).
   Never rewrite or delete an existing ADR — supersede it with a new one that links back.
 - Run the relevant tests before declaring a task done, and report the result honestly.
-- Never `git push` without the engineer's explicit OK for that push.
+- Branches (ADR-030):
+  - Slices are committed on `stage` and pushed there after the slice summary.
+  - `main` changes only by promotion: a PR from `stage`, green CI, the engineer's OK, then
+    `git push origin stage:main` (fast-forward only).
+  - A production fix goes on `hotfix/<name>` from `main`, through a PR with the engineer's OK, and is then
+    merged back into `stage`.
+  - Never push to `main` without the engineer's explicit OK for that push. GitHub's admin bypass does
+    not stop it; this rule does.
 
 ## Testing standards
 - Tests are fast, deterministic, and independent: no real clock, randomness, or network in unit tests (inject `Clock`, use fixed seeds).
