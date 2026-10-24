@@ -58,7 +58,8 @@ jobs:
         if: ${{ !cancelled() && hashFiles('backend/target/site/jacoco/jacoco.csv') != '' }}
         working-directory: backend/target/site/jacoco
         run: |
-          head -1 jacoco.csv | grep -q '^GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,'             || { echo "::error::Unexpected jacoco.csv columns"; exit 1; }
+          head -1 jacoco.csv | grep -q '^GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,' \
+            || { echo "::error::Unexpected jacoco.csv columns"; exit 1; }
           awk -F, 'NR > 1 { bm += $6; bc += $7; lm += $8; lc += $9 }
             function pct(c, m) { return (c + m) ? sprintf("%.1f%% (%d/%d)", 100 * c / (c + m), c, c + m) : "n/a" }
             END {
