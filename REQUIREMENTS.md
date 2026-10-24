@@ -32,10 +32,16 @@ Replace ACME's spreadsheet-based salary tracking with a web app where the HR Man
 **4. Data seeding**
 - A deterministic, idempotent seed script that creates 10,000 realistic employees across all supported countries.
 
+**5. Settings** *(added 2026-10-24 during UI design; see ADR-028 in `docs/DECISIONS.md`)*
+- The HR Manager can choose the default country that the Insights dashboard opens on (India until
+  changed). The currency shown follows the country.
+
 ## Assumptions
 - **Currency:** each country uses one currency, and insights are shown per country in that currency. Cross-country comparison is not needed; if added later, it would use a fixed conversion-rate table.
 - **Salary** means current annual gross base pay. Bonuses, equity and allowances are excluded.
 - **One HR user**, trusted, with no login.
+- **Settings are app-wide**, not per user: without a login, anyone with the URL changes them for everyone.
+  *(Added 2026-10-24, ADR-028.)*
 
 ## Deliberately out of scope
 
