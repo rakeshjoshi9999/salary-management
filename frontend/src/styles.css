@@ -10,5 +10,5 @@
  * inserted after base so a Tailwind utility can always override a
  * component style rather than losing to it by source order.
  */
-@import "tailwindcss";
+@import 'tailwindcss';
 @plugin "tailwindcss-primeui";
