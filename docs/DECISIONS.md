@@ -1287,6 +1287,55 @@ once-per-phase rhythm, justified because `stage` held nothing else.
   production's trigger as waiting for checks, then the next promotion's production deploy starting only
   after that push's CI run finishes.
 
+## ADR-035 — Lint, format and coverage checks in CI
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 3.0. Scope approved in the workflow check (`docs/prompts/process-workflow-check.md`).
+
+### Context
+Before any domain code, the workflow check added JaCoCo, angular-eslint and a Prettier check, all run in
+CI. Nothing enforced style or measured coverage: Prettier was installed by the scaffold but never run, and
+20 frontend files failed it. 14 failed only on line endings: git stores every file as LF, but a Windows
+checkout with `core.autocrlf=true` writes CRLF, which Prettier rejects. The other 6 had cosmetic
+differences. Stage and production deploy only after CI passes (ADR-031, ADR-034), so any check that fails
+CI also holds back a deploy.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| CI gating | **Fail CI** (style cannot drift; a style slip blocks a deploy, fixed by one command) · warn only (never blocks; warnings pile up unread) | Fail CI |
+| Line endings | **`.gitattributes`: `* text=auto eol=lf`, `*.cmd eol=crlf`** (every checkout LF, local check matches CI, any tool; repo-wide, one re-checkout) · Prettier `endOfLine: auto` (frontend-only; hides the mismatch) | `.gitattributes` |
+| Existing unformatted files | **Reformat all 6 in one `chore:` commit** (all formatted from day one; an `ng update` may need a re-run) · `.prettierignore` for tool-owned JSON configs (no `ng update` friction; those files never checked) | Reformat all |
+| ESLint rules | **Recommended sets plus template accessibility** (catches unlabelled inputs, missing `alt`, mouse-only handlers; rare PrimeNG false positive) · recommended only (least friction, no a11y) · plus typescript-eslint strict type-checked (more bugs caught; slower, noisy with Angular) | Recommended + a11y |
+| Coverage visibility | **CI artifact plus line and branch % in the GitHub run summary**, read from JaCoCo's CSV by a short shell step (visible on every run; ~10 lines of shell) · artifact only (nobody downloads it) · marketplace PR-comment action (third-party, token access, runs only at promotion) | Artifact + summary |
+| CI layout | **Separate `frontend-lint` job** (style and tests fail independently; extra `npm ci`) · steps in the `frontend` job (fewer minutes; first failure hides the rest) | Separate job |
+| Frontend coverage | **Add in 3.0 with `@vitest/coverage-v8`** (both tiers measured alike; one dev dependency, widens approved scope) · leave out (scope as approved) · defer to phase 7 (measure once code exists; easy to forget) | Add in 3.0 |
+
+Not adopted, by scope: pre-commit hooks (husky, a new dependency; CI already enforces) and a backend
+formatter (Spotless; not in the approved scope).
+
+### Decision
+- Backend: the JaCoCo Maven plugin instruments `mvn test` (unit and Testcontainers tests alike) and writes
+  HTML, XML and CSV reports in the `test` phase, so CI's command is unchanged. No threshold.
+- Frontend: `ng add angular-eslint` (`eslint`, `angular-eslint`, `typescript-eslint`) with the recommended
+  TypeScript, Angular and template sets plus template accessibility; `npm run lint` and
+  `npm run format:check` (`prettier --check .`). `ng test --coverage` with `@vitest/coverage-v8`.
+- CI: a new `frontend-lint` job runs lint and the format check in parallel with the tests. Both test jobs
+  upload their coverage HTML as an artifact and write total line and branch coverage to the run summary.
+- A repo-root `.gitattributes` makes every checkout LF, with `*.cmd` kept CRLF for `mvnw.cmd`.
+
+### Consequences
+- An unformatted file or a lint error turns CI red and holds back stage and production deploys until
+  `npm run format` or `npx ng lint --fix` is run and pushed.
+- Existing Windows checkouts need one re-checkout to switch to LF; stored files do not change.
+- A future `ng update` may rewrite generated config in a style Prettier rejects, needing a `--write`.
+- A disabled ESLint rule (for example a PrimeNG false positive) is turned off for that line or file only,
+  with the reason in the commit message.
+- Coverage is reported, never enforced. A threshold would be a new ADR.
+- The run-summary step parses JaCoCo's CSV columns; a JaCoCo format change breaks the step loudly, not
+  silently.
+
 ---
 
 ### Previously pending
