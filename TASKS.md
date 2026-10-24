@@ -39,7 +39,7 @@ No domain logic in this phase. A health endpoint and a page that reads it, wired
 - [x] **1.11** Stage environment (ADR-030): `stage` branch; Neon branch database; second Render service
       tracking `stage`; Angular `stage` configuration chosen by the Vercel build; stage CORS origin; ruleset on
       `main` (PR + green CI + linear history, admin bypass); stage health page green end to end
-- [ ] **1.12** Production Render service deploys only after CI passes (`autoDeployTrigger: checksPass`,
+- [x] **1.12** Production Render service deploys only after CI passes (`autoDeployTrigger: checksPass`,
       ADR-034), as stage does
 
 **Done when:** a push to `main` reaches production on both tiers and the live page proves the backend
