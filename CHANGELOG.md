@@ -19,7 +19,7 @@ One entry per completed phase of [`TASKS.md`](TASKS.md), newest first. Format ba
 - Working agreement: the engineer approves each slice's test list and every push; a reviewer agent
   checks tests and code before each commit (`CLAUDE.md`, `docs/WORKFLOW.md`).
 
-## Phase 1 — Walking skeleton (2026-10-23)
+## Phase 1 — Walking skeleton (2026-10-23, stage added 2026-10-24)
 
 ### Added
 - Spring Boot 4 / Java 21 backend with Flyway, local Postgres through Docker Compose, and
@@ -28,6 +28,9 @@ One entry per completed phase of [`TASKS.md`](TASKS.md), newest first. Format ba
 - GitHub Actions CI for the backend and frontend tests.
 - Deployed to Neon (database), Render (API) and Vercel (frontend); CORS restricted to the configured origin.
 - A live health page proving browser → API → database end to end.
+- A deployed stage environment in front of production (ADR-030 to ADR-033): a `stage` branch, a
+  second Render service and a Neon branch database. The health page now names its environment.
+- A ruleset on `main`: PR, green CI and linear history required, with an admin bypass for promotion.
 
 ## Phase 0 — Foundation (2026-10-23)
 
