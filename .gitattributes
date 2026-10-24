@@ -1,0 +1,10 @@
+# Every checkout uses LF, Windows included, so local checks match CI (ADR-035).
+* text=auto eol=lf
+
+# Windows batch scripts need CRLF to run.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+*.ico binary
+*.png binary
+*.jar binary
