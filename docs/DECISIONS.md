@@ -79,6 +79,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-029 | Chart.js for the department doughnut | Accepted | 2026-10-24 |
 | ADR-030 | A deployed `stage` branch in front of `main` | Accepted | 2026-10-24 |
 | ADR-031 | Building the stage environment | Accepted | 2026-10-24 |
+| ADR-032 | Creating the stage Render service through `main` | Accepted | 2026-10-24 |
 
 ---
 
@@ -1190,6 +1191,35 @@ The Repository admin role is on the bypass list.
   Hence the layout above. A wrong production replacement would point production at localhost; C5 checks it.
 - Production's Render service still deploys on every push to `main`. Making it wait for checks is a
   separate item.
+
+---
+
+## ADR-032 — Creating the stage Render service through `main`
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 1.11. Follows ADR-031 (stage service defined in `render.yaml`).
+
+### Context
+A Render Blueprint reads `render.yaml` only from the branch it is linked to, which is `main`. A service
+entry added on `stage` would not exist until the phase promotion, so there would be no stage API and no
+URL for `environment.stage.ts`. A per-service `branch: stage` is supported once the entry is on `main`.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A - Ship only the `render.yaml` entry to `main` first, via `hotfix/stage-render-service`** | Documented behaviour; the blueprint owns the service from day one | `main` changes before promotion, using the hotfix path for something that is not a fix; needs the engineer's OK for that push |
+| B - Engineer creates the service by hand; the blueprint adopts it at promotion | `main` untouched until promotion | Adoption is undocumented: possible duplicate service or sync error; settings live only in the dashboard until then |
+| C - Re-link the Blueprint to `stage` | `render.yaml` changes apply from `stage` | Production's Render settings would change from `stage`, bypassing ADR-030's gate on `main` |
+
+### Decision
+Option A. Because `stage` had not been pushed yet, the local `stage` commits were rebased onto the hotfix
+commit instead of merging `main` back, so `stage` stays a plain fast-forward of `main`.
+
+### Consequences
+- `main` gains one commit that changes no production setting: the new entry is a separate service.
+- Later `render.yaml` changes for stage still only take effect once they reach `main`. Stage service
+  settings therefore change at promotion, or through another hotfix.
 
 ---
 
