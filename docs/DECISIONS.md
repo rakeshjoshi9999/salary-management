@@ -83,6 +83,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-033 | Stage stays behind Vercel's login | Accepted | 2026-10-24 |
 | ADR-034 | Production deploys only after CI passes | Accepted | 2026-10-24 |
 | ADR-035 | Lint, format and coverage checks in CI | Accepted | 2026-10-24 |
+| ADR-036 | First migrations: two files, named constraints, schema tested two ways | Accepted | 2026-10-24 |
 
 ---
 
@@ -1351,6 +1352,75 @@ proves noisy, turning it off is a new ADR.
 - `main`'s ruleset gets `Frontend lint` as a required check, so a promotion PR cannot merge with it red.
 - `ng add angular-eslint` also installed `@eslint/js`, the base ESLint rules `eslint.config.js` imports.
   It belongs with the three packages the Decision names.
+
+---
+
+## ADR-036 — First migrations: two files, named constraints, schema tested two ways
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 3.1
+- **Amends:** ADR-009 (first consequence: the `allocationSize` test moves to 3.2) and the target DDL in
+  [`DATA_MODEL.md`](DATA_MODEL.md) (constraints gain names)
+
+### Context
+Task 3.1 turns the target DDL in [`DATA_MODEL.md`](DATA_MODEL.md) into Flyway migrations. Besides the
+`employee` table and its indexes, the DDL needs the `pg_trgm` extension, the `country`, `department` and
+`job_title` tables with their rows (the employee foreign keys point at them), and `employee_id_seq`.
+`DATA_MODEL.md` left open whether reference data shares a migration with the tables. ADR-009 says 3.1
+proves the sequence matches the JPA `allocationSize`, but no entity exists yet. ADR-018 needs a database
+rule that fails past the app checks (for example two simultaneous creates with one email) to become a
+specific Problem `code`, and the constraint name is the only reliable clue to which rule failed.
+`app_settings` stays in task 5.6.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| File split | One file with tables, indexes and rows (matches the task name; one atomic step) · **schema in `V1`, reference rows in `V2`** (later reference-data migrations copy `V2`'s shape; a failed `V2` leaves empty tables, but startup still stops) · one file per table (FK-ordered, no gain) | Two files |
+| JPA entity in 3.1 | Minimal `Employee` entity and repository now (proves `allocationSize` = 50 and turns on `ddl-auto=validate` drift detection; pulls 3.2 design, such as `String` vs association for `country_code`, forward without the create flow) · **SQL only: assert the sequence increments by 50; the entity and its id-allocation test move to 3.2** | SQL only |
+| Constraint names | **Explicit `<table>_<what>_<kind>` names, pinned by a test** (3.7 maps chosen names to codes; a rename breaks a test, not production) · Postgres-generated names (DDL as designed; a recreated constraint can quietly become `…_check1`) | Explicit |
+| Schema tests | Behaviour only (writes accepted or rejected; misses indexes and types) · catalog only (`pg_indexes`, `pg_constraint`, …; restates the DDL, can miss a wrong rule) · **both: behaviour for every business rule, catalog for the rest** | Both |
+
+### Decision
+- `V1__create_schema.sql`: extension, the four tables, the sequence and the nine indexes.
+  `V2__seed_reference_data.sql`: 5 countries, 6 departments, 18 titles. `TASKS.md` names
+  `V1__create_employee.sql`; the split replaces that name.
+- No entity in 3.1. Its test checks `employee_id_seq` increments by 50. Task 3.2 adds the entity with
+  `allocationSize = 50` and a test that ids come from the sequence in blocks of 50. Together the two
+  tasks keep ADR-009's promise.
+- Every constraint has an explicit name. These replace the unnamed constraints in `DATA_MODEL.md`'s target
+  DDL; index names are unchanged:
+
+  | Constraint | Name |
+  |---|---|
+  | `country` primary key, unique name | `country_pk`, `country_name_uq` |
+  | `department` primary key | `department_pk` |
+  | `job_title` primary key, FK to department, unique `(department, name)` | `job_title_pk`, `job_title_department_fk`, `job_title_department_name_uq` |
+  | `employee` primary key | `employee_pk` |
+  | `employee` FK to country | `employee_country_fk` |
+  | `employee` composite FK to job title | `employee_title_in_department_fk` |
+  | `salary > 0` | `employee_salary_positive_ck` |
+  | `hire_date >= 1950-01-01` | `employee_hire_date_min_ck` |
+
+- Tests run against Testcontainers Postgres 18 through `JdbcClient`. Write tests roll back their transaction; catalog and reference tests only read.
+  Every business rule (required fields, salary, hire date, the foreign keys, the active-email index) has
+  a behaviour test. Catalog queries pin what behaviour cannot reach: every column's type and nullability,
+  every constraint's name and full definition (so a primary key on the wrong columns fails too), the
+  index list and definitions (partial predicate, trigram ops, `lower(email)`), the sequence increment,
+  that V1 and V2 applied, and the reference rows. The Flyway check asserts V1 and V2 are present, not that
+  they are the only rows, so later migrations leave it untouched.
+
+### Consequences
+- A reference-data change is a new migration modelled on `V2`. Applied migrations are never edited:
+  Flyway's checksum check would stop startup.
+- Until 3.2, nothing checks that a JPA mapping matches the schema. `ddl-auto=validate` has no entity to
+  validate.
+- 3.3 and 3.7 can map `employee_email_active_uq` and the names above to Problem codes. Renaming one is a
+  migration plus a test change, never a quiet edit.
+- The catalog tests partly restate the DDL, so a deliberate schema change touches them too. That is the
+  intent: the schema cannot change without a failing test pointing at it.
+- The stage push runs `V1` and `V2` against the stage Neon database; production gets them at the next
+  promotion. A mistake found after that is fixed forward with `V3`, not by editing `V1`.
 
 ---
 
