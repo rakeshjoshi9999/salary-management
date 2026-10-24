@@ -78,6 +78,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-028 | Backend settings for the default country (scope addition) | Accepted | 2026-10-24 |
 | ADR-029 | Chart.js for the department doughnut | Accepted | 2026-10-24 |
 | ADR-030 | A deployed `stage` branch in front of `main` | Accepted | 2026-10-24 |
+| ADR-031 | Building the stage environment | Accepted | 2026-10-24 |
 
 ---
 
@@ -1135,6 +1136,60 @@ review and CI while the merge itself stays a true fast-forward.
 - The seed (6.4) runs on stage first, then on production.
 - Until 1.11 is done there is no stage, so the old rule applies: nothing is pushed without the
   engineer's OK.
+
+---
+
+## ADR-031 — Building the stage environment
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 1.11. Builds on ADR-030 and settles the details it left open.
+
+### Context
+ADR-030 chose a fully deployed `stage` (Vercel branch deploy, a second Render service, a Neon branch) and
+a ruleset on `main`. Building it forces smaller choices: how each piece is defined, when it deploys, how
+the frontend knows it is stage, and what this slice tests.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Render stage service | **Second entry in `render.yaml`** (reviewable, matches prod; a blueprint sync re-applies prod too) · created by hand in the dashboard (prod untouchable, but undocumented and drifts) | `render.yaml` |
+| When stage deploys | Every push (fastest; red CI still deploys) · **`autoDeployTrigger: checksPass`** (red CI never reaches stage; ~5 min wait, and Vercel has no equivalent) | After checks pass, stage only. Prod unchanged |
+| Vercel build switch | **Inline shell condition on `VERCEL_GIT_COMMIT_REF` in `vercel.json`** (one file; untestable string) · a `vercel-build.mjs` script (testable; extra file for one `if`) | Inline condition |
+| Other preview branches | **Leave on the production configuration**, blocked by prod CORS (cannot write to prod; hotfix previews not clickable) · all non-`main` branches on `stage` with wildcard CORS · only `hotfix/*` on stage (wildcard CORS, and stage's schema may be a phase ahead of prod) | Leave as is |
+| Stage frontend URL | Vercel's automatic branch URL (no setup; long, breaks on rename) · **a stable alias assigned to `stage` in Vercel Domains** (one dashboard step; name must be free) | Stable alias |
+| `stage` Angular configuration | **Copy of `production` plus `fileReplacements` → `environment.stage.ts`** (same bundle shape as prod; no source maps) · based on `development` (debuggable; stops testing what prod ships) · production plus source maps | Copy of production |
+| Environment marker | **`environment.name` shown on the health page** (small, testable addition) · a STAGE badge in the app shell (touches `UI_DESIGN.md`, shell not built yet) · none | Health page only |
+| Neon stage lifecycle | Branch once, never reset · reset from prod at each promotion (manual step, wipes stage data) · **branch once now, decide at 6.4** | Decide at 6.4 |
+| Ruleset creation | **Committed `.github/rulesets/main.json`, applied with `gh api`** after the engineer sees the command · created by hand in GitHub settings | Committed JSON |
+| Ruleset extras | **Block force-push, block deletion, require up to date** · only the first two · only ADR-030's three rules | All three |
+| Default branch | **`main`** (reviewers see production code) · `stage` (front page shows unreleased code) | `main` |
+| What the slice tests | **Unit tests for the environment name and the stage URL, plus a verification checklist** · the health-page test only · checklist only | Tests plus checklist |
+| Environment file layout | **`environment.ts` holds local values and is never replaced; `environment.production.ts` and `environment.stage.ts` are swapped in by their build configurations** (every environment importable by a test; touches the production build) · read `environment.ts` as text in the spec (fragile parsing) · hardcode the production URL in the test (duplicated, weaker test) | One file per environment |
+| Pushing during 1.11 | **The AI may push `stage` freely within this task** · ask before each push | Free on `stage`; the ruleset is still applied only with the engineer's OK |
+
+### Decision
+As chosen above. The common reasons: stage is defined in reviewed config like production,
+it only runs code that passed CI, it builds exactly what production builds, and nothing weakens the
+ADR-003 CORS allowlist. Where a more elaborate option existed (a build script, Neon resets, a shell badge),
+it was deferred until something needs it. The ruleset on `main` requires a PR (0 approvals), the `Backend tests` and
+`Frontend tests` checks, up-to-date branches and linear history, and it blocks force-pushes and deletion.
+The Repository admin role is on the bypass list.
+
+### Consequences
+- A commit with red CI can still reach the stage *frontend*, because Vercel does not wait for checks. For a
+  few minutes the stage frontend can be newer than the stage backend.
+- Previews of `hotfix/*` and other branches load but cannot reach any API. A hotfix is verified locally and
+  by CI, then in production.
+- The stage alias is part of the stage CORS allowlist. Renaming the alias means updating Render's
+  `CORS_ALLOWED_ORIGINS` for stage.
+- `.github/rulesets/main.json` can drift from GitHub if the ruleset is edited in the UI; re-apply the file
+  instead.
+- **Open until 6.4:** whether the Neon stage branch is reset from production at each promotion.
+- Unit tests apply the `development` build configuration, so a file it replaces cannot be read by a test.
+  Hence the layout above. A wrong production replacement would point production at localhost; C5 checks it.
+- Production's Render service still deploys on every push to `main`. Making it wait for checks is a
+  separate item.
 
 ---
 
