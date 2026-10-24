@@ -73,6 +73,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-023 | Optimistic locking: `@Version` plus an explicit check | Accepted | 2026-10-24 |
 | ADR-024 | Monorepo | Accepted | 2026-10-24 |
 | ADR-025 | Render and Vercel for hosting | Accepted | 2026-10-24 |
+| ADR-026 | Code structure: feature packages, one-way dependencies | Accepted | 2026-10-24 |
 
 ---
 
@@ -909,6 +910,44 @@ Option A, as specified.
 ### Consequences
 - See ADR-002, ADR-003 and ADR-004.
 - Both hosts deploy from `main`, so every merge is live (ADR-001).
+
+---
+
+## ADR-026 — Code structure: feature packages, one-way dependencies
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.4
+
+### Context
+Both apps are flat today: the backend has two classes in the root package, and the frontend has one
+`health/` folder. `CLAUDE.md` fixes the layering (`controller → service → repository`) and the frontend
+feature folders (`employees/`, `insights/`, `shared/`), but not how backend packages are grouped, how
+features reach each other, or where cross-cutting frontend code lives.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Diagram format | **Mermaid in Markdown** (GitHub renders it, diffable, no tools) · C4-PlantUML (proper notation; needs committed renders) · drawn image (looks best; binary, drifts) | Mermaid |
+| Views | **Deployment + backend and frontend components + two sequences** (stale update, insights) · deployment + components only · full C4 (a context diagram with one user and no external systems) | Deployment, components, 2 sequences |
+| Backend packages | **By feature, layers inside** (`employee/`, `insights/`, `reference/`, `common/`) · by layer (`controller/`, `service/`, …; one change touches five packages, everything public) | By feature |
+| Enforcing the rules | **Convention and review** · ArchUnit test (new test dependency) · Spring Modulith (bigger dependency and its own concepts) | Convention |
+| Reaching reference data | **Through `ReferenceService`, loaded once in memory** · through `ReferenceService`, querying each time · rely on FK violations (cannot say which field is wrong) | In memory |
+| Frontend cross-cutting | **A `core/` folder** for the interceptor, cold-start detection, `ReferenceStore` and models · everything in `shared/` (mixes services into UI) | `core/` |
+| Moving `CorsConfig` | **With the first phase 3 slice**, as a `refactor:` · now, inside this docs task | Phase 3 |
+
+### Decision
+As chosen above, drawn in [`ARCHITECTURE.md`](ARCHITECTURE.md). Dependencies run one way: `employee` and
+`insights` depend on `reference` and `common`; `reference` depends only on `common`. A feature reaches
+another only through its public service.
+
+### Consequences
+- A feature change stays inside one folder, and internals can be package-private.
+- No test guards the boundaries. An AI-written shortcut (a controller calling a repository, or one
+  feature reading another's entity) is caught only in review. Revisit with ArchUnit if that happens once.
+- Reference data in memory is correct only because it changes solely by migration, which means a
+  restart. If reference data ever becomes editable at runtime, the in-memory copy must go.
+- The diagrams are hand-maintained and can drift. A slice that changes structure updates `ARCHITECTURE.md`.
 
 ---
 
