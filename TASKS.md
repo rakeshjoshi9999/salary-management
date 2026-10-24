@@ -61,7 +61,7 @@ can reach its database.
 ---
 
 ## Phase 3 — Employee CRUD (one slice per task)
-- [ ] **3.0** Verify tooling (`chore:`): JaCoCo coverage report (report only, no threshold), angular-eslint and
+- [x] **3.0** Verify tooling (`chore:`): JaCoCo coverage report (report only, no threshold), angular-eslint and
       a Prettier check for the frontend, all run in CI (approved in the workflow check, 2026-10-24)
 - [ ] **3.1** Flyway `V1__create_employee.sql` (table + indexes)
 - [ ] **3.2** Create employee — validation rules (required fields, email format, salary > 0, hire date not future, supported country); currency derived from country

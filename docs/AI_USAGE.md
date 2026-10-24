@@ -16,6 +16,7 @@ Newest first. One entry per notable AI interaction. Prompts are saved verbatim i
 
 | Date | Task | What AI did | What I changed / caught | Why |
 |---|---|---|---|---|
+| 2026-10-24 | 3.0 | Asked eight tooling decisions one at a time (ADR-035), then wired `.gitattributes`, Prettier, angular-eslint, JaCoCo, Vitest coverage and a `frontend-lint` CI job | The engineer cut the CI red-path checks to local only. The reviewer caught that ADR-035 claimed a style failure blocks Vercel deploys (it blocks only Render's) and that `main`'s ruleset did not require the new lint job | A gate is only real if the thing that enforces it lists it; an ADR states what the platform does, not what we wish it did |
 | 2026-10-24 | 1.12 | Added `checksPass` to production in `render.yaml` and wrote ADR-034 | The reviewer caught that the AI's proposed evidence (a stage push) could not prove a production change, and the AI corrected its own earlier claim that stage's deploy had been seen waiting for CI | Verification has to test the thing that changed; a claim not observed is recorded as not observed |
 | 2026-10-24 | 1.11 | Listed eleven open decisions in one message; after correction asked thirteen one at a time (ADR-031); found mid-build that Render Blueprints read `render.yaml` only from `main` and that tests cannot read a replaced environment file, and stopped to ask each time (ADR-032, ADR-033) | Asked for questions one by one; approved one push to `main`, a force-push of `stage`, and the ruleset | Each of those acts on shared state the engineer owns; the reviewer also caught a test that would have passed vacuously and a mis-encoded character that would have shown on both live pages |
 | 2026-10-24 | process | Asked ten branching decisions one at a time and wrote ADR-030; flagged that GitHub cannot fast-forward a PR merge, which conflicts with requiring PRs on `main` | Chose promotion once per phase (AI had recommended per slice), and an admin bypass so fast-forward and required PRs can coexist | Two of the engineer's answers were incompatible on GitHub; raising the conflict before building avoided discovering it at the first promotion |
@@ -43,6 +44,8 @@ Newest first. One entry per notable AI interaction. Prompts are saved verbatim i
 Kept deliberately specific, because a list of successes proves nothing about how the tool
 was supervised.
 
+- **Claimed in ADR-035 that a lint failure holds back both deploys in 3.0.** ADR-031 and ADR-034 already
+  recorded that Vercel never waits for CI; the reviewer caught it, and a correction addendum fixed it.
 - **Batched eleven decisions into one message in 1.11**, which the engineer had to stop ("Always ask me
   questions one by one"). It also wrote a `·` through a script using the Windows default encoding,
   which would have shown as `�` on both health pages had the reviewer not caught it.
