@@ -21,6 +21,17 @@ This is a deliberate trade, recorded in [ADR-004](docs/DECISIONS.md). The app sa
 happening while it waits rather than showing an unexplained spinner, because a reviewer who
 assumes it is broken stops being a reviewer.
 
+### Stage
+
+Every slice is deployed to stage before it reaches production; production is promoted from
+stage once per phase ([ADR-030](docs/DECISIONS.md)). Stage has its own API and its own Neon
+branch database, so nothing done there touches production data.
+
+| | |
+|---|---|
+| App | https://salary-management-stage.vercel.app (behind Vercel login) |
+| API health | https://salary-management-api-stage.onrender.com/actuator/health |
+
 The API serves exactly one endpoint today. A 404 at any other path, including `/`, is
 correct: domain endpoints arrive in phase 3.
 

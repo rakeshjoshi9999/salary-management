@@ -34,6 +34,7 @@ contradicts them stops and asks; a change to them is a new ADR, not a quiet edit
 | Frontend tests (once) | `cd frontend && npx ng test --watch=false` (`npm test` runs in watch mode) |
 | Frontend dev server | `cd frontend && npm start` (port 4200) |
 | Frontend build | `cd frontend && npx ng build` |
+| Frontend stage build | `cd frontend && npx ng build --configuration stage` (what Vercel builds for `stage`) |
 
 On Windows, use `mvnw.cmd` from cmd/PowerShell. When a phase adds an entry point, record it here.
 

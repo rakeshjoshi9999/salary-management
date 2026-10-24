@@ -16,6 +16,7 @@ export class HealthPage {
   private readonly health = inject(HealthService);
 
   protected readonly apiBaseUrl = environment.apiBaseUrl;
+  protected readonly environmentName = environment.name;
   protected readonly phase = signal<Phase>('pending');
 
   /**
