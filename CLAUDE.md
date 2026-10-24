@@ -13,23 +13,25 @@ Read `REQUIREMENTS.md` before any task. Do not build anything listed under "Deli
 - `docs/` — workflow, decisions (ADRs), AI usage log, prompts
 
 ## Repo state
-`backend/` and `frontend/` are empty placeholders — nothing is scaffolded yet. Phase 0 (Foundation) is
-done; `TASKS.md` is the authoritative roadmap and names the next phase. Do not assume a build, a schema,
-or an API exists: check first. `docs/DECISIONS.md` is still a stub, so design questions are open, not
-already answered elsewhere.
+Phases 0 and 1 are done: a walking skeleton (health endpoint + health page) is live on Vercel → Render →
+Neon, with CI on every push. There is **no domain code yet** — no migrations, entities or API beyond
+`/actuator/health`. `TASKS.md` is the authoritative roadmap and names the next phase. Do not assume a
+schema or an API exists: check first. `docs/DECISIONS.md` holds ADR-001 to ADR-007 (environment and
+stack); data model, API and domain decisions are still open.
 
 ## Commands
-No build exists yet. As phases land, the expected entry points are:
 
 | Area | Command |
 |---|---|
-| Backend tests | `cd backend && ./mvnw test` |
+| Local Postgres | `docker compose up -d` (host port **5433**) |
+| Backend tests | `cd backend && ./mvnw test` (needs Docker: Testcontainers starts its own Postgres) |
 | One backend test | `./mvnw test -Dtest=EmployeeServiceTest#rejectsSalaryOfZero` |
-| Local Postgres | `docker compose up -d` (task 1.2) |
-| Frontend tests | `cd frontend && npm test` |
-| Frontend dev server | `cd frontend && npm start` |
+| Run backend | `cd backend && ./mvnw spring-boot:run` (port **8081**; env vars `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `CORS_ALLOWED_ORIGINS`) |
+| Frontend tests (once) | `cd frontend && npx ng test --watch=false` (`npm test` runs in watch mode) |
+| Frontend dev server | `cd frontend && npm start` (port 4200) |
+| Frontend build | `cd frontend && npx ng build` |
 
-When you scaffold a phase, record the real commands here, replacing the expected ones.
+On Windows, use `mvnw.cmd` from cmd/PowerShell. When a phase adds an entry point, record it here.
 
 ## How we work
 1. **One slice per session.** Work only on the task named in the prompt — slices are the numbered tasks in
