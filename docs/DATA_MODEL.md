@@ -1,8 +1,10 @@
 # Data Model
 
 The schema for v1, designed in task 2.1. The reasoning and rejected options live in
-[ADR-008 to ADR-012](DECISIONS.md). Task 3.1 turns this into Flyway migrations. The SQL below is the
-**target**, not a migration file.
+[ADR-008 to ADR-012](DECISIONS.md). The SQL below is the **target**, not a migration file. Task 3.1
+built it as `backend/src/main/resources/db/migration/V1__create_schema.sql` (schema) and
+`V2__seed_reference_data.sql` (reference rows). The migrations add the explicit constraint names from
+[ADR-036](DECISIONS.md); otherwise they match this DDL, and a change to either is a new ADR.
 
 ## Tables
 
@@ -142,7 +144,8 @@ literally.
 ## Left for later tasks
 - ~~2.2: decimals and whitespace~~ Settled in ADR-014: more than 2 decimals is rejected, and text is
   trimmed before validation.
-- **3.1:** whether reference data goes in the same migration as the tables or its own.
+- ~~3.1: whether reference data goes in the same migration as the tables or its own~~ Settled in
+  ADR-036: its own migration, `V2`.
 - **4.4:** the tiebreaker is `id` (ADR-016). Still open: whether sort indexes widen to `(column, id)`.
 - **6.3:** if the seed inserts outside JPA, it must take ids from `employee_id_seq` in the same blocks
   of 50.

@@ -63,8 +63,10 @@ can reach its database.
 ## Phase 3 — Employee CRUD (one slice per task)
 - [x] **3.0** Verify tooling (`chore:`): JaCoCo coverage report (report only, no threshold), angular-eslint and
       a Prettier check for the frontend, all run in CI (approved in the workflow check, 2026-10-24)
-- [ ] **3.1** Flyway `V1__create_employee.sql` (table + indexes)
-- [ ] **3.2** Create employee — validation rules (required fields, email format, salary > 0, hire date not future, supported country); currency derived from country
+- [x] **3.1** Flyway `V1__create_schema.sql` (tables, sequence, indexes) and `V2__seed_reference_data.sql`
+      (countries, departments, titles), ADR-036
+- [ ] **3.2** Create employee — validation rules (required fields, email format, salary > 0, hire date not future, supported country); currency derived from country;
+      JPA ids come from `employee_id_seq` in blocks of 50 (moved from 3.1, ADR-036)
 - [ ] **3.3** Duplicate email → 409
 - [ ] **3.4** Get employee by id; missing → 404
 - [ ] **3.5** Update employee with optimistic locking (`version`); stale update → 409
