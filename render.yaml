@@ -42,3 +42,28 @@ services:
 
     # PORT is deliberately absent. Render injects it and the app reads it;
     # setting it by hand pins the container to the wrong port.
+
+  # Stage (ADR-030, ADR-031): the same image, tracking the stage branch, with its
+  # own Neon branch database and its own CORS origin. It deploys only once CI is
+  # green on the commit, so stage never runs code that failed its tests.
+  - type: web
+    name: salary-management-api-stage
+    runtime: docker
+    rootDir: backend
+    region: singapore
+    plan: free
+    branch: stage
+    autoDeployTrigger: checksPass
+    healthCheckPath: /actuator/health
+
+    envVars:
+      # The Neon stage branch's pooled connection, never production's.
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      # The stage Vercel alias only.
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
