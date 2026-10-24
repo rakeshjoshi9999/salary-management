@@ -61,6 +61,21 @@ CREATE TABLE employee (
 
 There is no `currency` column on `employee`. Currency always comes from `country` (ADR-008).
 
+### Settings (added in task 2.5, ADR-028)
+
+```sql
+CREATE TABLE app_settings (
+    id                   SMALLINT PRIMARY KEY CHECK (id = 1),   -- exactly one row
+    default_country_code CHAR(2)  NOT NULL REFERENCES country (code),
+    version              BIGINT   NOT NULL DEFAULT 0
+);
+
+INSERT INTO app_settings (id, default_country_code) VALUES (1, 'IN');
+```
+
+There is one typed row. A new setting means a migration that adds a column. Insights currency still
+comes from the country, so choosing a default country also chooses the currency shown.
+
 ## Indexes
 
 All are partial on `WHERE deleted_at IS NULL` (ADR-011, ADR-012). Queries must include that predicate

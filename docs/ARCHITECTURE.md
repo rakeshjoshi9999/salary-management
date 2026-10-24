@@ -65,6 +65,11 @@ flowchart TB
         rs --> rr["Country / Department / JobTitle<br/>repositories"]
     end
 
+    subgraph settings["settings/"]
+        sc["SettingsController"] --> ss["SettingsService"]
+        ss --> sr["SettingsRepository<br/>JPA, one row"]
+    end
+
     subgraph common["common/"]
         err["error/<br/>Problem Details handler"]
         money["money/<br/>MoneyRounding"]
@@ -73,8 +78,9 @@ flowchart TB
 
     es -- "validate country,<br/>department, title" --> rs
     is -- "country exists,<br/>currency" --> rs
+    ss -- "country valid?" --> rs
     is --> money
-    er & ir & rr --> pg[("PostgreSQL")]
+    er & ir & rr & sr --> pg[("PostgreSQL")]
 ```
 
 ```
@@ -82,6 +88,7 @@ com.acme.salary
 ├─ employee/    EmployeeController, EmployeeService, EmployeeRepository, Employee (entity), dto/
 ├─ insights/    InsightsController, InsightsService, InsightsRepository, dto/
 ├─ reference/   ReferenceController, ReferenceService, Country, Department, JobTitle, repositories, dto/
+├─ settings/    SettingsController, SettingsService, SettingsRepository, AppSettings (entity), dto/ (ADR-028)
 └─ common/      error/ (Problem Details), money/ (MoneyRounding), config/ (CORS, Clock, Jackson)
 ```
 
@@ -91,7 +98,7 @@ com.acme.salary
 |---|---|
 | Controllers call only their own feature's service | Domain logic stays out of controllers (`CLAUDE.md`) |
 | Entities never leave a service; controllers see DTOs | DTOs at the boundary (`CLAUDE.md`) |
-| Features depend on `reference` and `common` only. `reference` depends on nothing but `common` | One direction, no cycles |
+| Features (`employee`, `insights`, `settings`) depend on `reference` and `common` only. `reference` depends on nothing but `common` | One direction, no cycles |
 | Another feature is reached only through its public service, never its repository or entity | Internals stay package-private and changeable |
 | `employee` uses JPA; `insights` uses `JdbcClient`; aggregation never happens in Java | ADR-022 |
 | Every query on `employee` filters `deleted_at IS NULL` | ADR-011 |
@@ -127,23 +134,31 @@ flowchart TB
         isvc["InsightsService"]
     end
 
+    subgraph settingsf["settings/"]
+        sp["Settings page"]
+        ssvc["SettingsService"]
+    end
+
     subgraph shared["shared/ (presentational only)"]
         ui["Money pipe · loading / empty / error panels"]
     end
 
     list & form --> esvc
     dash --> isvc
-    list & form & dash --> ref
+    dash -- "default country" --> ssvc
+    sp --> ssvc
+    list & form & dash & sp --> ref
     list & form & dash --> ui
-    esvc & isvc & ref --> int
+    esvc & isvc & ssvc & ref --> int
     int --> api["Spring Boot API"]
 ```
 
 ```
 src/app/
 ├─ core/       interceptor, cold-start detection, ReferenceStore, API models
-├─ employees/  list, form, delete confirmation, employee.service
-├─ insights/   dashboard, insights.service
+├─ employees/  Catalog list, drawer (view/add/edit), delete confirmation, employee.service
+├─ insights/   dashboard (landing page), insights.service
+├─ settings/   settings page, settings.service (ADR-028)
 ├─ shared/     presentational UI only: money pipe, state panels
 └─ health/     phase 1 health page (exists)
 ```

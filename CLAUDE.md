@@ -88,7 +88,8 @@ On Windows, use `mvnw.cmd` from cmd/PowerShell. When a phase adds an entry point
 
 ## Frontend conventions
 - Standalone components, signals for state, `OnPush` change detection.
-- Feature folders: `employees/`, `insights/`; shared UI in `shared/`.
+- Feature folders: `employees/` (the "Catalog" in the UI), `insights/`, `settings/`; cross-cutting services in
+  `core/`; presentational shared UI in `shared/` (`docs/ARCHITECTURE.md`, `docs/UI_DESIGN.md`).
 - Services own HTTP calls; components stay presentational where possible.
 - List filters and pagination are reflected in URL query params.
 - Every data view handles loading, empty, and error states.

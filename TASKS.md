@@ -47,7 +47,7 @@ can reach its database.
 - [x] **2.2** API contract: endpoints, request/response shapes, error format → `docs/openapi.yaml`
 - [x] **2.3** ADRs in `docs/DECISIONS.md`: stack, Postgres over SQLite, BigDecimal money, SQL aggregations, optimistic locking, monorepo, hosting
 - [x] **2.4** Architecture diagram → `docs/ARCHITECTURE.md`
-- [ ] **2.5** UI design → `docs/UI_DESIGN.md`: Mermaid user-flow diagrams (find and update a salary in
+- [x] **2.5** UI design → `docs/UI_DESIGN.md`: Mermaid user-flow diagrams (find and update a salary in
       under 30 s, add, delete, view insights, 409 and error paths), low-fidelity wireframes per screen,
       and the loading, empty, error and cold-start states each screen shows
 
@@ -83,6 +83,8 @@ can reach its database.
 - [ ] **5.3** Headcount by department within a country
 - [ ] **5.4** Edge cases: country with no employees → empty result; single employee → min = max = avg
 - [ ] **5.5** Reference endpoint: supported countries, currencies, job titles, departments (feeds UI dropdowns)
+- [ ] **5.6** Settings: `app_settings` migration (one row, default country IN), `GET`/`PUT /settings` with
+      optimistic locking; unsupported country → 400 (ADR-028)
 
 **Done when:** insight results match a small hand-calculated fixture.
 
@@ -98,12 +100,16 @@ can reach its database.
 
 ## Phase 7 — Frontend features
 - [ ] **7.1** API client services + typed models
-- [ ] **7.2** Employee list: server-side paging, debounced search, filters, sorting, filters synced to URL
-- [ ] **7.3** Employee form (create/edit): validation mirroring backend, 409 conflict handling
+- [ ] **7.2** Catalog (`/catalog`): server-side paging, debounced search, filters, sorting, all synced to URL;
+      table on desktop, cards on phone (`docs/UI_DESIGN.md`)
+- [ ] **7.3** Employee drawer (view/add/edit): validation mirroring backend, dependent title dropdown,
+      409 handling that keeps edits
 - [ ] **7.4** Delete with confirmation
-- [ ] **7.5** Insights dashboard: country picker, stats cards, by-job-title chart/table, department headcount
+- [ ] **7.5** Insights dashboard (landing `/`): country from URL → settings → IN, stats cards, CSS-bar table
+      by job title, Chart.js doughnut by department
 - [ ] **7.6** Loading, empty and error states everywhere — including an honest message while Render wakes
 - [ ] **7.7** One or two Playwright E2E happy paths
+- [ ] **7.8** Settings page (`/settings`): default country for Insights
 
 ---
 

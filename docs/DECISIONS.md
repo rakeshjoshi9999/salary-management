@@ -74,6 +74,9 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-024 | Monorepo | Accepted | 2026-10-24 |
 | ADR-025 | Render and Vercel for hosting | Accepted | 2026-10-24 |
 | ADR-026 | Code structure: feature packages, one-way dependencies | Accepted | 2026-10-24 |
+| ADR-027 | UI: Insights landing, Catalog with a drawer, responsive | Accepted | 2026-10-24 |
+| ADR-028 | Backend settings for the default country (scope addition) | Accepted | 2026-10-24 |
+| ADR-029 | Chart.js for the department doughnut | Accepted | 2026-10-24 |
 
 ---
 
@@ -948,6 +951,136 @@ another only through its public service.
 - Reference data in memory is correct only because it changes solely by migration, which means a
   restart. If reference data ever becomes editable at runtime, the in-memory copy must go.
 - The diagrams are hand-maintained and can drift. A slice that changes structure updates `ARCHITECTURE.md`.
+
+---
+
+## ADR-027 — UI: Insights as the landing page, a Catalog with a drawer, fully responsive
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.5
+
+### Context
+`REQUIREMENTS.md`: find any employee and update their salary in under 30 seconds; insights for a country
+in under 1 second; filters in the URL. Phase 7 builds the screens, and this decides them first.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Landing page | Employee list (AI's recommendation: the salary task starts with zero clicks) · **Insights dashboard** | Insights |
+| List section name | "Employees" (AI's recommendation) · **"Catalog"** · "Directory" | Catalog |
+| List URL | **`/catalog`** (matches the label) · `/employees` (matches the API) | `/catalog` |
+| View and edit | **Side drawer over the list** (list keeps filters and scroll; linkable `/catalog/:id`) · separate pages · modal dialog | Drawer |
+| Add | **The same drawer, empty** · a separate page | Drawer |
+| Delete guard | **Simple confirm dialog** · type the name · undo toast (needs restore, ruled out by ADR-011) | Confirm dialog |
+| 409 on save | **Keep edits, offer reload** · auto-reload and discard · field diff and merge | Keep edits |
+| Columns | **Name with email, title, department, country, salary, hire date** · fewer | All six |
+| Money display | **ISO code and en-US style for all countries** · each country's locale (mixed separators) · browser locale | en-US with code |
+| Charts | See ADR-029 | — |
+| Cold start | **Banner after 3 s, error and Retry at 90 s** · a blocking wake screen on load · banner after 5 s, no timeout | 3 s / 90 s |
+| Screen sizes | Desktop-first, usable on tablet (AI's recommendation) · **fully responsive, phone included** | Fully responsive |
+
+### Decision
+As chosen, drawn in [`UI_DESIGN.md`](UI_DESIGN.md). The engineer overrode the AI on the landing page,
+the section name and responsiveness. The AI filled in some smaller details itself, all marked in
+`UI_DESIGN.md` and open to change in review:
+- a "Discard changes?" prompt when closing the drawer with unsaved edits
+- tablet widths drop the department and hire date columns
+- an unknown `?country=` falls back to the default, with a toast
+- the 300 ms search debounce
+
+### Consequences
+- The salary update starts with one click (Catalog) instead of zero. It still fits in 30 seconds: 5
+  interactions, each warm response under 200 ms.
+- "Catalog" is the UI word only. The code (`employees/`) and the API (`/employees`) keep the domain
+  name, so the label is a one-line change if it is ever renamed.
+- **Phone support roughly doubles the layout work in phase 7**: cards instead of table rows, a
+  collapsible filter panel, a full-screen drawer and a menu. Each screen needs a phone check in 7.2 to 7.5.
+- The cold-start banner is driven by the `core/` interceptor (ADR-026), so every request gets it for free.
+
+---
+
+## ADR-028 — Backend settings for the default country (scope addition)
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.5 (built in 5.6, 7.8)
+
+### Context
+With Insights as the landing page, the dashboard must open on some country. The engineer chose India by
+default, with HR able to change it in Settings, and the currency follows the country. **This is new
+scope.** `REQUIREMENTS.md` neither lists it nor rules it out, and it was not changed.
+
+### Options considered
+How the first country is chosen: last picked, else the largest by headcount (AI's first recommendation;
+needed a new headcount endpoint) · first alphabetically · an org-wide overview (a new cross-country
+endpoint) · **a fixed default (IN) that HR can change**.
+
+Where the preference lives:
+| Option | For | Against |
+|---|---|---|
+| **A - Browser `localStorage`** (AI's recommendation) | No backend, API or migration change; fits one user and no login | Lost when browser data is cleared, or on another computer |
+| **B - Backend table and endpoint** | Survives any browser or machine | A migration, an endpoint and tests for one value; new scope in phases 5 and 7 |
+| **C - No settings in v1** | Nothing to build | HR cannot change the default |
+
+Table shape: **one typed row** (`id = 1` check, FK to `country`, `version`) · key-value strings (no
+migration per setting, but untyped and no FK).
+
+### Decision
+Option B, chosen by the engineer, with a single typed row:
+- `app_settings(id = 1, default_country_code → country, version)`, seeded with `IN`.
+- `GET` and `PUT /api/v1/settings`, with optimistic locking as for employees.
+- The dashboard picks its country from the URL first, then the setting. Picking a country on the
+  dashboard changes the URL only, never the saved setting.
+
+### Consequences
+- New work: task 5.6 (migration and endpoint) and 7.8 (Settings page). Added to `openapi.yaml`,
+  `DATA_MODEL.md`, `ARCHITECTURE.md` and `TASKS.md`.
+- The dashboard makes one extra call (`GET /settings`) when the URL names no country. It is small, but
+  on a cold start it waits like everything else.
+- Every new setting is a migration adding a column. Fine while settings are few.
+- With no login, "the HR manager's preference" is really **the app's** preference: anyone with the URL
+  changes it for everyone. Accepted under the "one trusted user" assumption. With authentication, it
+  would move to a per-user table.
+
+---
+
+## ADR-029 — Chart.js for the department doughnut
+
+- **Date:** 2026-10-24
+- **Status:** Accepted
+- **Task:** 2.5 (built in 7.5). Extends ADR-005.
+
+### Context
+The dashboard shows average salary by job title (up to 18 rows) and headcount by department (up to 6).
+ADR-005 chose Tailwind and PrimeNG; PrimeNG's Chart component needs `chart.js`, a new dependency.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| CSS bars in tables, no library (AI's recommendation) | No dependency; exact numbers visible; accessible | No real chart for the demo |
+| Chart.js chart per section, with a CSS-bar table below | Charts everywhere, plus an accessible table | Two renderings of each section |
+| **Chart.js for headcount, CSS bars for averages** | A chart where share-of-whole matters; a table where 18 labelled rows read better | One new dependency |
+| A chart/table toggle per section | Flexible | More UI state to build and test |
+
+Chart type for headcount: horizontal bar (AI's recommendation: lengths compare precisely) · **doughnut**
+(share of the whole, total in the centre).
+
+### Decision
+Chart.js through PrimeNG's Chart component, for a **doughnut** of headcount by department. Average by
+job title stays a table with CSS bars. **The engineer explicitly approved `chart.js` as a new dependency**
+(`CLAUDE.md`, "No new dependencies without asking").
+
+### Consequences
+- It adds about 70 kB (gzipped) to the frontend bundle. It can be loaded lazily with the dashboard route
+  if the first paint suffers.
+- Angles are harder to compare than lengths, so the legend shows each department's count and
+  percentage, and the total sits in the centre.
+- Up to 6 slices need 6 colours that can be told apart, which must be checked for contrast in light
+  and dark themes.
+- A canvas chart is invisible to screen readers and DOM tests. The legend is real DOM, so it carries the
+  numbers for both. Unit tests check the data passed to the chart, not the pixels.
+- Revisit if a second chart is wanted: the dependency is now paid for.
 
 ---
 

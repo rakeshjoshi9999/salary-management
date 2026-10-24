@@ -20,6 +20,7 @@ tags:
   - name: Employees
   - name: Insights
   - name: Reference
+  - name: Settings
 
 paths:
   /employees:
@@ -193,6 +194,42 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ReferenceData' }
+
+  /settings:
+    get:
+      tags: [Settings]
+      operationId: getSettings
+      summary: App-wide settings (one row; added in task 2.5, ADR-028)
+      responses:
+        '200':
+          description: Current settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Settings' }
+    put:
+      tags: [Settings]
+      operationId: updateSettings
+      summary: Replace the settings (optimistic locking, as for employees)
+      description: |
+        `defaultCountryCode` must be a supported country, or 400 `VALIDATION_FAILED`. A stale
+        `version` gives 409 `STALE_VERSION` with `currentVersion`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SettingsUpdateRequest' }
+      responses:
+        '200':
+          description: Updated settings, with the new version.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Settings' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409':
+          description: "`STALE_VERSION`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
 components:
   parameters:
@@ -382,6 +419,25 @@ components:
             properties:
               name: { type: string }
               jobTitles: { type: array, items: { type: string } }
+
+    Settings:
+      type: object
+      required: [defaultCountryCode, version]
+      properties:
+        defaultCountryCode:
+          $ref: '#/components/schemas/CountryCode'
+          description: Country the Insights dashboard opens on when the URL names none. IN until changed.
+        version: { type: integer, format: int64 }
+      examples:
+        - { defaultCountryCode: IN, version: 0 }
+
+    SettingsUpdateRequest:
+      type: object
+      required: [defaultCountryCode, version]
+      properties:
+        defaultCountryCode: { $ref: '#/components/schemas/CountryCode' }
+        version: { type: integer, format: int64, minimum: 0 }
+      additionalProperties: false
 
     Problem:
       type: object
