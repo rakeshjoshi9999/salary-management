@@ -125,9 +125,9 @@ literally.
 - No restore through the API. Recovery is done with SQL.
 
 ## Left for later tasks
-- **2.2:** whether salary input with more than 2 decimals is rejected or rounded; whether whitespace in
-  text fields is trimmed.
+- ~~2.2: decimals and whitespace~~ Settled in ADR-014: more than 2 decimals is rejected, and text is
+  trimmed before validation.
 - **3.1:** whether reference data goes in the same migration as the tables or its own.
-- **4.4:** pagination tiebreaker (`id`), and whether sort indexes widen to `(column, id)`.
+- **4.4:** the tiebreaker is `id` (ADR-016). Still open: whether sort indexes widen to `(column, id)`.
 - **6.3:** if the seed inserts outside JPA, it must take ids from `employee_id_seq` in the same blocks
   of 50.
