@@ -1,5 +1,6 @@
 package com.acme.salary.employee;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,10 @@ public class EmployeeService {
 		Employee employee = employees.save(new Employee(request.fullName(), request.email(), request.jobTitle(),
 				request.department(), request.countryCode(), request.salary(), request.hireDate()));
 		return toResponse(employee);
+	}
+
+	static boolean isDuplicateEmail(DataIntegrityViolationException ex) {
+		return false;
 	}
 
 	private EmployeeResponse toResponse(Employee employee) {

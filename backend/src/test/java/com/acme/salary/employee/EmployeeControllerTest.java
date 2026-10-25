@@ -203,6 +203,21 @@ class EmployeeControllerTest {
 	}
 
 	@Test
+	void duplicateEmailReturns409Problem() throws Exception {
+		when(service.create(any())).thenThrow(new DuplicateEmailException("asha.rao@acme.com"));
+
+		send(validBody()).andExpect(status().isConflict())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+			.andExpect(jsonPath("$.type").value("/problems/duplicate-email"))
+			.andExpect(jsonPath("$.title").value("Email already in use"))
+			.andExpect(jsonPath("$.status").value(409))
+			.andExpect(jsonPath("$.code").value("DUPLICATE_EMAIL"))
+			.andExpect(jsonPath("$.detail").value("Another employee already uses asha.rao@acme.com."))
+			.andExpect(jsonPath("$.instance").value("/api/v1/employees"))
+			.andExpect(jsonPath("$.errors").doesNotExist());
+	}
+
+	@Test
 	void judgesTodayByInjectedClock() throws Exception {
 		when(service.create(any())).thenReturn(created());
 		clock.set(Instant.parse("2030-01-01T12:00:00Z"));

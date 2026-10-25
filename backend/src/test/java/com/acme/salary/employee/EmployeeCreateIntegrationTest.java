@@ -16,6 +16,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 import com.acme.salary.AbstractIntegrationTest;
 
@@ -100,8 +101,31 @@ class EmployeeCreateIntegrationTest extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void rejectsDuplicateEmailIgnoringCase() throws Exception {
+		create("Asha.Rao@acme.com").andExpect(status().isCreated());
+
+		create("asha.rao@ACME.com").andExpect(status().isConflict())
+			.andExpect(jsonPath("$.code").value("DUPLICATE_EMAIL"));
+
+		assertThat(jdbc.sql("select count(*) from employee").query(Long.class).single()).isEqualTo(1L);
+	}
+
+	@Test
+	void allowsEmailOfSoftDeletedEmployee() throws Exception {
+		create("asha.rao@acme.com").andExpect(status().isCreated());
+		jdbc.sql("update employee set deleted_at = now()").update();
+
+		create("asha.rao@acme.com").andExpect(status().isCreated());
+	}
+
+	@Test
 	void clockBeanIsUtc() {
 		assertThat(context.getBean(Clock.class).getZone()).isEqualTo(ZoneOffset.UTC);
+	}
+
+	private ResultActions create(String email) throws Exception {
+		return mvc.perform(post("/api/v1/employees").contentType(MediaType.APPLICATION_JSON)
+			.content(BODY.formatted(email, "IN")));
 	}
 
 	private long sequenceLastValue() {
