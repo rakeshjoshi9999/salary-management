@@ -92,7 +92,7 @@ can reach its database.
 - [x] **5.3** Headcount by department within a country
 - [x] **5.4** Edge cases: country with no employees → empty result; single employee → min = max = avg
 - [x] **5.5** Reference endpoint: supported countries, currencies, job titles, departments (feeds UI dropdowns)
-- [ ] **5.6** Settings: `app_settings` migration (one row, default country IN), `GET`/`PUT /settings` with
+- [x] **5.6** Settings: `app_settings` migration (one row, default country IN), `GET`/`PUT /settings` with
       optimistic locking; unsupported country → 400 (ADR-028)
 
 **Done when:** insight results match a small hand-calculated fixture.

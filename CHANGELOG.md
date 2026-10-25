@@ -3,6 +3,24 @@
 One entry per completed phase of [`TASKS.md`](TASKS.md), newest first. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Phase 5 — Salary insights (2026-10-25)
+
+### Added
+- `GET /api/v1/insights/countries/{code}`: min, max, average and an exact median (two
+  `percentile_disc`, numeric) with headcount; average by job title; headcount by department. Money in
+  the country's currency, rounded once in Java to 2 decimals HALF_EVEN (ADR-017, ADR-021, ADR-047).
+- A supported country with no active employees gives 200 with headcount 0, null stats and empty
+  lists; an unsupported or lowercase code gives 404 `COUNTRY_NOT_FOUND`.
+- `GET /api/v1/reference`: countries with currencies, departments with their titles, sorted, cacheable
+  for an hour.
+- `V3__create_app_settings.sql` and `GET`/`PUT /api/v1/settings`: the dashboard's default country (IN),
+  with optimistic locking (ADR-028).
+
+### Changed
+- Contract: a settings save that changes nothing keeps its version (ADR-047).
+- Promotions are only by fast-forward push; squash and rebase merging are off, so the merge button
+  cannot split `main` from `stage` again (ADR-048).
+
 ## Phase 4 — Find employees (2026-10-25)
 
 ### Added

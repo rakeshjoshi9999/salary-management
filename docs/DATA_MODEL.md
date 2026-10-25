@@ -63,7 +63,7 @@ CREATE TABLE employee (
 
 There is no `currency` column on `employee`. Currency always comes from `country` (ADR-008).
 
-### Settings (added in task 2.5, ADR-028)
+### Settings (added in task 2.5, ADR-028; built in 5.6 as `V3__create_app_settings.sql`)
 
 ```sql
 CREATE TABLE app_settings (

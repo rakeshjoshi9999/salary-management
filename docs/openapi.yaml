@@ -225,7 +225,7 @@ paths:
             schema: { $ref: '#/components/schemas/SettingsUpdateRequest' }
       responses:
         '200':
-          description: Updated settings, with the new version.
+          description: Updated settings, with its current version (unchanged if nothing changed) (ADR-047).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Settings' }
