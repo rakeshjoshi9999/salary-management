@@ -16,8 +16,8 @@ interface EmployeeSearch {
 	/** How many active employees match the same criteria. */
 	long countMatching(Criteria criteria);
 
-	/** What to match: {@code q} is trimmed text or null for no search. */
-	record Criteria(String q) {
+	/** What to match; a null value means "no condition". Filters combine with AND (ADR-016). */
+	record Criteria(String q, String country, String department, String jobTitle) {
 	}
 
 	/** One listed employee, as read; the service adds the currency and makes it a response. */

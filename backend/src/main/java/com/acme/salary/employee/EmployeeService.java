@@ -41,7 +41,8 @@ public class EmployeeService {
 	 */
 	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 	public EmployeePage list(EmployeeListQuery query) {
-		EmployeeSearch.Criteria criteria = new EmployeeSearch.Criteria(query.q());
+		EmployeeSearch.Criteria criteria = new EmployeeSearch.Criteria(query.q(), query.country(), query.department(),
+				query.jobTitle());
 		long total = employees.countMatching(criteria);
 		long offset = (long) query.page() * query.size();
 		List<EmployeeResponse> items = employees.findPage(criteria, query.size(), offset)

@@ -61,6 +61,18 @@ class EmployeeSearchImpl implements EmployeeSearch {
 			sql.append(" and (e.full_name ilike :q escape '\\' or e.email ilike :q escape '\\')");
 			params.put("q", "%" + escapeLike(criteria.q()) + "%");
 		}
+		if (criteria.country() != null) {
+			sql.append(" and e.country_code = :country");
+			params.put("country", criteria.country());
+		}
+		if (criteria.department() != null) {
+			sql.append(" and e.department = :department");
+			params.put("department", criteria.department());
+		}
+		if (criteria.jobTitle() != null) {
+			sql.append(" and e.job_title = :jobTitle");
+			params.put("jobTitle", criteria.jobTitle());
+		}
 		return new Where(sql.toString(), params);
 	}
 
