@@ -101,7 +101,20 @@ class ErrorHandlingTest {
 	void missingBodyIs400MalformedRequest() throws Exception {
 		mvc.perform(post("/api/v1/employees").contentType(MediaType.APPLICATION_JSON))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
+			.andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"))
+			.andExpect(jsonPath("$.detail").value("The request body is missing."));
+	}
+
+	@Test
+	void springServerErrorIs500WithErrorId(CapturedOutput output) throws Exception {
+		mvc.perform(get("/test/unwritable"))
+			.andExpect(status().isInternalServerError())
+			.andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
+			.andExpect(jsonPath("$.errorId").value(ERROR_ID));
+
+		String log = output.getAll();
+		assertThat(log).contains(ERROR_ID);
+		assertThat(log.substring(log.indexOf(ERROR_ID))).contains("\tat ");
 	}
 
 	@ParameterizedTest
@@ -271,6 +284,20 @@ class ErrorHandlingTest {
 		@GetMapping("/test/binding-error")
 		String bindingError() throws ServletRequestBindingException {
 			throw new ServletRequestBindingException(SECRET);
+		}
+
+		/** Jackson cannot write this, so Spring itself raises a 500 (HttpMessageNotWritableException). */
+		@GetMapping("/test/unwritable")
+		Unwritable unwritable() {
+			return new Unwritable();
+		}
+
+	}
+
+	static final class Unwritable {
+
+		public String getValue() {
+			throw new IllegalStateException(SECRET);
 		}
 
 	}

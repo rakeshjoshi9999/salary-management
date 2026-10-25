@@ -1,6 +1,10 @@
 package com.acme.salary.common.error;
 
+import jakarta.servlet.RequestDispatcher;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -26,6 +30,22 @@ class ErrorHandlingIntegrationTest extends AbstractIntegrationTest {
 			.andExpect(status().isBadRequest())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
 			.andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
+	}
+
+	/**
+	 * Errors that never reach Spring MVC (a failing servlet filter, say) are forwarded to /error with
+	 * the status as a request attribute; they become a Problem with a code as well (ADR-043).
+	 */
+	@ParameterizedTest
+	@CsvSource({ "400, MALFORMED_REQUEST", "500, INTERNAL_ERROR" })
+	void errorPageIsProblemDetails(int statusCode, String code) throws Exception {
+		mvc.perform(get("/error").requestAttr(RequestDispatcher.ERROR_STATUS_CODE, statusCode)
+			.requestAttr(RequestDispatcher.ERROR_REQUEST_URI, "/api/v1/employees"))
+			.andExpect(status().is(statusCode))
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+			.andExpect(jsonPath("$.status").value(statusCode))
+			.andExpect(jsonPath("$.code").value(code))
+			.andExpect(jsonPath("$.instance").value("/api/v1/employees"));
 	}
 
 	@Test
