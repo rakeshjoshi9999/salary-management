@@ -48,6 +48,10 @@ public class EmployeeService {
 		return toResponse(employee);
 	}
 
+	public EmployeeResponse get(long id) {
+		throw new UnsupportedOperationException("not implemented yet");
+	}
+
 	/** True only for a violation of the active-email unique index, named in V1 (ADR-036). */
 	static boolean isDuplicateEmail(DataIntegrityViolationException ex) {
 		for (Throwable cause = ex; cause != null; cause = cause.getCause()) {

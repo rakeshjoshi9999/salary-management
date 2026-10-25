@@ -42,6 +42,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -49,7 +50,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * POST /api/v1/employees at the HTTP boundary: the real Jackson and validation configuration
+ * /api/v1/employees at the HTTP boundary: the real Jackson and validation configuration
  * (ADR-037), the V2 reference rows in memory, a settable clock, and the service mocked.
  */
 @WebMvcTest(EmployeeController.class)
@@ -214,6 +215,41 @@ class EmployeeControllerTest {
 			.andExpect(jsonPath("$.code").value("DUPLICATE_EMAIL"))
 			.andExpect(jsonPath("$.detail").value("Another employee already uses asha.rao@acme.com."))
 			.andExpect(jsonPath("$.instance").value("/api/v1/employees"))
+			.andExpect(jsonPath("$.errors").doesNotExist());
+	}
+
+	@Test
+	void getReturns200WithEmployee() throws Exception {
+		when(service.get(101L)).thenReturn(createdWithSalary(new BigDecimal("2400000")));
+
+		mvc.perform(get("/api/v1/employees/101"))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.id").value(101))
+			.andExpect(jsonPath("$.fullName").value("Asha Rao"))
+			.andExpect(jsonPath("$.email").value("asha.rao@acme.com"))
+			.andExpect(jsonPath("$.jobTitle").value("Software Engineer"))
+			.andExpect(jsonPath("$.department").value("Engineering"))
+			.andExpect(jsonPath("$.countryCode").value("IN"))
+			.andExpect(jsonPath("$.currency").value("INR"))
+			.andExpect(jsonPath("$.hireDate").value("2021-04-12"))
+			.andExpect(jsonPath("$.version").value(0))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("\"salary\":2400000.00")));
+	}
+
+	@Test
+	void missingEmployeeReturns404Problem() throws Exception {
+		when(service.get(42L)).thenThrow(new EmployeeNotFoundException(42L));
+
+		mvc.perform(get("/api/v1/employees/42"))
+			.andExpect(status().isNotFound())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+			.andExpect(jsonPath("$.type").value("/problems/employee-not-found"))
+			.andExpect(jsonPath("$.title").value("Employee not found"))
+			.andExpect(jsonPath("$.status").value(404))
+			.andExpect(jsonPath("$.code").value("EMPLOYEE_NOT_FOUND"))
+			.andExpect(jsonPath("$.detail").value("No employee with id 42."))
+			.andExpect(jsonPath("$.instance").value("/api/v1/employees/42"))
 			.andExpect(jsonPath("$.errors").doesNotExist());
 	}
 

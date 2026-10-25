@@ -52,6 +52,23 @@ class EmployeeRepositoryTest extends AbstractIntegrationTest {
 		assertThat(EmployeeService.isDuplicateEmail(violation)).isTrue();
 	}
 
+	@Test
+	void findsActiveEmployeeById() {
+		Employee saved = repository.saveAndFlush(employeeWithEmail("asha.rao@acme.com"));
+
+		assertThat(repository.findActiveById(saved.getId())).get()
+			.extracting(Employee::getEmail)
+			.isEqualTo("asha.rao@acme.com");
+	}
+
+	@Test
+	void doesNotFindSoftDeletedEmployeeById() {
+		Employee saved = repository.saveAndFlush(employeeWithEmail("asha.rao@acme.com"));
+		jdbc.sql("update employee set deleted_at = now() where id = :id").param("id", saved.getId()).update();
+
+		assertThat(repository.findActiveById(saved.getId())).isEmpty();
+	}
+
 	private static Employee employeeWithEmail(String email) {
 		return new Employee("Asha Rao", email, "Software Engineer", "Engineering", "IN", new BigDecimal("2400000.00"),
 				LocalDate.of(2021, 4, 12));

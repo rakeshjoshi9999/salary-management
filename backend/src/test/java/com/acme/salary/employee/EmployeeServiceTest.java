@@ -1,7 +1,10 @@
 package com.acme.salary.employee;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.util.Optional;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
@@ -9,6 +12,7 @@ import org.mockito.ArgumentCaptor;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ProblemDetail;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.acme.salary.employee.dto.EmployeeResponse;
 import com.acme.salary.reference.TestReferenceData;
@@ -98,6 +102,49 @@ class EmployeeServiceTest {
 		Throwable thrown = catchThrowable(() -> service.create(Requests.valid().build()));
 
 		assertThat(thrown).isSameAs(other);
+	}
+
+	@Test
+	void getReturnsActiveEmployee() {
+		Employee stored = new Employee("Asha Rao", "asha.rao@acme.com", "Software Engineer", "Engineering", "DE",
+				new BigDecimal("2400000.00"), LocalDate.of(2021, 4, 12));
+		ReflectionTestUtils.setField(stored, "id", 42L);
+		ReflectionTestUtils.setField(stored, "version", 3L);
+		when(repository.findActiveById(42L)).thenReturn(Optional.of(stored));
+
+		EmployeeResponse found = service.get(42L);
+
+		assertThat(found.id()).isEqualTo(42L);
+		assertThat(found.fullName()).isEqualTo("Asha Rao");
+		assertThat(found.email()).isEqualTo("asha.rao@acme.com");
+		assertThat(found.jobTitle()).isEqualTo("Software Engineer");
+		assertThat(found.department()).isEqualTo("Engineering");
+		assertThat(found.hireDate()).isEqualTo("2021-04-12");
+		assertThat(found.countryCode()).isEqualTo("DE");
+		assertThat(found.currency()).isEqualTo("EUR");
+		assertThat(found.salary()).isEqualByComparingTo("2400000.00");
+		assertThat(found.version()).isEqualTo(3L);
+	}
+
+	@Test
+	void getThrowsNotFoundForMissingId() {
+		when(repository.findActiveById(42L)).thenReturn(Optional.empty());
+
+		Throwable thrown = catchThrowable(() -> service.get(42L));
+
+		assertThat(thrown).isInstanceOf(EmployeeNotFoundException.class);
+		assertThat(((EmployeeNotFoundException) thrown).getBody().getDetail()).isEqualTo("No employee with id 42.");
+	}
+
+	@Test
+	void employeeNotFoundExceptionCarriesProblem() {
+		ProblemDetail problem = new EmployeeNotFoundException(42L).getBody();
+
+		assertThat(problem.getStatus()).isEqualTo(404);
+		assertThat(problem.getType()).isEqualTo(URI.create("/problems/employee-not-found"));
+		assertThat(problem.getTitle()).isEqualTo("Employee not found");
+		assertThat(problem.getDetail()).isEqualTo("No employee with id 42.");
+		assertThat(problem.getProperties()).containsEntry("code", "EMPLOYEE_NOT_FOUND");
 	}
 
 	/** The shape Spring and Hibernate give a Postgres constraint violation (checked for real in EmployeeRepositoryTest). */
