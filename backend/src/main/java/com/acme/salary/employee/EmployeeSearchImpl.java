@@ -30,12 +30,9 @@ class EmployeeSearchImpl implements EmployeeSearch {
 
 	@Override
 	public List<EmployeeRow> findPage(Criteria criteria, int limit, long offset) {
-		Where where = where(criteria);
-		return jdbc.sql("select " + COLUMNS + " from employee e " + where.sql() + " " + orderBy(criteria)
-				+ " limit :limit offset :offset")
-			.params(where.params())
-			.param("limit", limit)
-			.param("offset", offset)
+		Sql page = pageSql(criteria, limit, offset);
+		return jdbc.sql(page.text())
+			.params(page.params())
 			.query((rs, rowNum) -> new EmployeeRow(rs.getLong("id"), rs.getString("full_name"), rs.getString("email"),
 					rs.getString("job_title"), rs.getString("department"), rs.getString("country_code"),
 					rs.getBigDecimal("salary"), rs.getObject("hire_date", LocalDate.class), rs.getLong("version")))
@@ -44,11 +41,24 @@ class EmployeeSearchImpl implements EmployeeSearch {
 
 	@Override
 	public long countMatching(Criteria criteria) {
+		Sql count = countSql(criteria);
+		return jdbc.sql(count.text()).params(count.params()).query(Long.class).single();
+	}
+
+	/** The page query exactly as it runs; the plan report (4.5, ADR-045) explains this same text. */
+	static Sql pageSql(Criteria criteria, int limit, long offset) {
 		Where where = where(criteria);
-		return jdbc.sql("select count(*) from employee e " + where.sql())
-			.params(where.params())
-			.query(Long.class)
-			.single();
+		Map<String, Object> params = new HashMap<>(where.params());
+		params.put("limit", limit);
+		params.put("offset", offset);
+		return new Sql("select " + COLUMNS + " from employee e " + where.sql() + " " + orderBy(criteria)
+				+ " limit :limit offset :offset", params);
+	}
+
+	/** The count query exactly as it runs. */
+	static Sql countSql(Criteria criteria) {
+		Where where = where(criteria);
+		return new Sql("select count(*) from employee e " + where.sql(), where.params());
 	}
 
 	/**
@@ -95,6 +105,10 @@ class EmployeeSearchImpl implements EmployeeSearch {
 	}
 
 	private record Where(String sql, Map<String, Object> params) {
+	}
+
+	/** A statement and its named parameters. */
+	record Sql(String text, Map<String, Object> params) {
 	}
 
 }
