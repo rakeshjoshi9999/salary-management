@@ -89,6 +89,8 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-039 | Get by id: explicit active queries; ids that name nobody are 404 | Accepted | 2026-10-25 |
 | ADR-040 | Render builds from `backend/` without a root directory | Accepted | 2026-10-25 |
 | ADR-041 | Update: a separate request record, the true version on a lost race, no bump for a no-op | Accepted | 2026-10-25 |
+| ADR-042 | Delete: one conditional UPDATE | Accepted | 2026-10-25 |
+| ADR-043 | Error handling: every response has a code, 500s carry an error id | Accepted | 2026-10-25 |
 
 ---
 
@@ -1613,6 +1615,71 @@ excludes the employee being updated, and its race uses 3.3's translation (ADR-03
 - A field-rule change must touch both request records; a test fails if they drift.
 - The lost-race path costs one extra read, and only when the race happens.
 - `version` means "the data changed", so a client must not assume +1 after every PUT.
+
+---
+
+## ADR-042 — Delete: one conditional UPDATE
+
+- **Date:** 2026-10-25
+- **Status:** Accepted
+- **Task:** 3.6. Builds on ADR-011 and ADR-014.
+
+### Context
+`DELETE /api/v1/employees/{id}` is a soft delete by id, with no version check: it sets `deleted_at`
+from the injected `Clock`, bumps `version`, and returns 204; a missing or already-deleted employee is
+404 (ADR-011, ADR-014). Left open: how the write is done, which decides what happens when a delete and
+an edit race.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A — One conditional JPQL UPDATE** (`deleted_at = :now, version = version + 1 where id = :id and deleted_at is null`; 1 row → 204, 0 rows → 404) | Atomic: a delete cannot lose a race; an edit racing it gets 409 because the version moved | Bypasses the entity and `@Version`; the bump is written by hand |
+| **B — Load the entity, set `deletedAt`, let `@Version` bump on flush** | Same style as update | A delete racing an edit fails with an optimistic-lock error, which needs a rule (retry, or a 409 for a request that sent no version) |
+
+### Decision
+Option A, chosen by the engineer on the AI's recommendation. `EmployeeService` takes the `Clock` in its
+constructor, so the 3.2 unit test's fixture line changes to pass a fixed clock (structure only; the
+engineer approved this with the test list).
+
+### Consequences
+- The update query states `deleted_at IS NULL` literally (ADR-012).
+- No entity is loaded, so nothing in the same persistence context can go stale; the service method
+  loads nothing else.
+- A second delete, a GET, and a PUT after the delete are all 404.
+
+---
+
+## ADR-043 — Error handling: every response has a code, 500s carry an error id
+
+- **Date:** 2026-10-25
+- **Status:** Accepted
+- **Task:** 3.7. Builds on ADR-018, ADR-037, ADR-039; amends `openapi.yaml`.
+
+### Context
+3.2 to 3.6 mapped their own codes. Task 3.7 owns the rest: malformed JSON (400 `MALFORMED_REQUEST`),
+unknown routes (404 `NOT_FOUND`), wrong methods (405 `METHOD_NOT_ALLOWED`), unexpected errors (500
+`INTERNAL_ERROR`), and never a stack trace (ADR-018). ADR-039 also left the 400 for a non-numeric id
+here. Spring raises errors the contract does not name (415, 406), a 500 says nothing that helps match
+a report to a log line, and a database rule that slips past validation must not be a 500 with a stack
+trace (ADR-010).
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Non-numeric or out-of-range id | **400 `VALIDATION_FAILED`, `errors[{field: "id"}]`** (one 400 shape; `field` now also names path parameters) · 400 `MALFORMED_REQUEST` (stretches a body-only code) | `VALIDATION_FAILED` |
+| Errors the contract does not name | **Keep Spring's status and add `UNSUPPORTED_MEDIA_TYPE` (415) and `NOT_ACCEPTABLE` (406); a missing body is `MALFORMED_REQUEST`; anything else unmapped falls back by status class (4xx → `MALFORMED_REQUEST`, 5xx → `INTERNAL_ERROR`)** · squash 415 and 406 into 400 `MALFORMED_REQUEST` (a misleading status) | New codes, fallback |
+| What a 500 carries | **An `errorId` (UUID) in the body and in the logged line** (from an injected generator, so tests are deterministic) · a fixed message only | `errorId` |
+| An unmapped integrity violation | **500 `INTERNAL_ERROR` with an `errorId`; the constraint is in the log, not the body** (it is a validation bug) · 400 per constraint name (a second copy of the rules in `common/error`) | 500 |
+
+### Decision
+As chosen above, by the engineer, each on the AI's recommendation.
+
+### Consequences
+- No error response leaves the app without a `code`, and none contains an exception class, message or
+  stack trace; one parameterized test checks every error path for both.
+- `openapi.yaml` gains: the two codes, `errorId` on `Problem`, a 400 on the `{id}` operations, and
+  path parameters in the `errors[].field` description.
+- A 500 is something to fix, and its `errorId` finds the log line on Render.
 
 ---
 
