@@ -87,6 +87,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-037 | Create employee: validation in one pass, strict JSON globally, errors built up per slice | Accepted | 2026-10-25 |
 | ADR-038 | Duplicate email: pre-check plus translated race, feature exceptions as `ErrorResponseException` | Accepted | 2026-10-25 |
 | ADR-039 | Get by id: explicit active queries; ids that name nobody are 404 | Accepted | 2026-10-25 |
+| ADR-040 | Render builds from `backend/` without a root directory | Accepted | 2026-10-25 |
 
 ---
 
@@ -1539,6 +1540,43 @@ As chosen above, by the engineer, each on the AI's recommendation. `EmployeeNotF
   `findById` and `findAll` must not be used for employees; review is the only guard (ADR-026).
 - Until 3.7, `/employees/abc` returns Spring's default 400 without a `code`.
 - 3.7 amends `openapi.yaml` with a 400 on the `{id}` operations.
+
+---
+
+## ADR-040 — Render builds from `backend/` without a root directory
+
+- **Date:** 2026-10-25
+- **Status:** Accepted
+- **Task:** found while checking task 3.2's stage deploy. Amends ADR-031 and ADR-034 (how the CI-gated
+  deploy is configured, not whether it is gated).
+
+### Context
+The stage service never auto-deployed a `stage` commit after it was created in 1.11; 3.0 to 3.4 reached
+stage only when the engineer deployed by hand. Its settings were as designed: branch `stage`,
+auto-deploy "After CI Checks Pass". Both services set `rootDir: backend`, and Render skips an
+auto-deploy when the commit changes nothing under the root directory. Every one of the 12 stage pushes
+ended on a commit touching nothing under `backend/` (the slice loop ends each push with a `docs:`
+commit), which fits Render judging the commit whose CI passed. Production has the same setting, so a
+promotion ending on a `docs:` commit would not deploy it either. This is the best explanation of the
+evidence, not one Render's documentation confirms; the next docs-only push to stage tests it.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A — No `rootDir`; `dockerfilePath ./backend/Dockerfile`, `dockerContext ./backend`** | Same image; every green push deploys; one config change | Docs-only pushes rebuild (~3 min on the free tier) |
+| **B — CI calls a Render deploy hook after all jobs pass** | Deterministic, independent of Render's change detection | Two secrets and a new job; replaces Render's own CI gate |
+| **C — Keep `rootDir`, end every push on a code commit** | No change | Fragile and invisible: one docs-last push silently skips |
+
+### Decision
+Option A, chosen by the engineer on the AI's recommendation, for both services.
+
+### Consequences
+- Render reads the Blueprint only from `main` (ADR-032). Until the phase 3 promotion carries this file
+  to `main`, the engineer applies the same change to the stage service in the dashboard; production
+  gets it with the promotion, which must then be watched to deploy.
+- Every green push to `stage` or `main` deploys, docs included.
+- Task 1.11's acceptance checked only that health was `UP`, which an old build also reports. A deploy
+  check needs a probe of something only the new build does.
 
 ---
 
