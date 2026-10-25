@@ -1,5 +1,6 @@
 package com.acme.salary.employee;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -33,5 +34,9 @@ interface EmployeeRepository extends JpaRepository<Employee, Long> {
 	@Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
 	@Query("select e.version from Employee e where e.id = :id and e.deletedAt is null")
 	Optional<Long> findActiveVersionById(@Param("id") long id);
+
+	default int softDeleteActive(long id, Instant now) {
+		return 0;
+	}
 
 }

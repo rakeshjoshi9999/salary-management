@@ -1,5 +1,7 @@
 package com.acme.salary.employee;
 
+import java.time.Clock;
+
 import org.hibernate.exception.ConstraintViolationException;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -21,9 +23,16 @@ public class EmployeeService {
 
 	private final ReferenceService reference;
 
-	EmployeeService(EmployeeRepository employees, ReferenceService reference) {
+	private final Clock clock;
+
+	EmployeeService(EmployeeRepository employees, ReferenceService reference, Clock clock) {
 		this.employees = employees;
 		this.reference = reference;
+		this.clock = clock;
+	}
+
+	public void delete(long id) {
+		throw new UnsupportedOperationException("not implemented yet");
 	}
 
 	/**

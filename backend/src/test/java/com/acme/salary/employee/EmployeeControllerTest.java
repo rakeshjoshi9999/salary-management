@@ -41,9 +41,11 @@ import static org.hamcrest.Matchers.blankOrNullString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -320,6 +322,24 @@ class EmployeeControllerTest {
 		body.put("version", 3);
 
 		sendPut(body).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("EMPLOYEE_NOT_FOUND"));
+	}
+
+	@Test
+	void deleteReturns204WithNoBody() throws Exception {
+		mvc.perform(delete("/api/v1/employees/101")).andExpect(status().isNoContent()).andExpect(content().string(""));
+
+		verify(service).delete(101L);
+	}
+
+	@Test
+	void deleteOfMissingEmployeeReturns404Problem() throws Exception {
+		doThrow(new EmployeeNotFoundException(101L)).when(service).delete(101L);
+
+		mvc.perform(delete("/api/v1/employees/101"))
+			.andExpect(status().isNotFound())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+			.andExpect(jsonPath("$.code").value("EMPLOYEE_NOT_FOUND"))
+			.andExpect(jsonPath("$.instance").value("/api/v1/employees/101"));
 	}
 
 	private ResultActions sendPut(Map<String, Object> body) throws Exception {

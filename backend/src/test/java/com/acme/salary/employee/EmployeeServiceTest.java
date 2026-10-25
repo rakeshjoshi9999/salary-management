@@ -3,7 +3,10 @@ package com.acme.salary.employee;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.sql.SQLException;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import org.hibernate.exception.ConstraintViolationException;
@@ -33,7 +36,9 @@ class EmployeeServiceTest {
 
 	private final EmployeeRepository repository = mock(EmployeeRepository.class);
 
-	private final EmployeeService service = new EmployeeService(repository, TestReferenceData.v2());
+	private static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2026-10-25T12:00:00Z"), ZoneOffset.UTC);
+
+	private final EmployeeService service = new EmployeeService(repository, TestReferenceData.v2(), FIXED_CLOCK);
 
 	@Test
 	void createDerivesCurrencyFromCountry() {
@@ -258,6 +263,24 @@ class EmployeeServiceTest {
 
 		Throwable thrown = catchThrowable(
 				() -> service.update(42L, Requests.valid().with("salary", new BigDecimal("1.00")).buildUpdate(3L)));
+
+		assertThat(thrown).isInstanceOf(EmployeeNotFoundException.class);
+	}
+
+	@Test
+	void deleteSoftDeletesWithInjectedClock() {
+		when(repository.softDeleteActive(42L, Instant.parse("2026-10-25T12:00:00Z"))).thenReturn(1);
+
+		service.delete(42L);
+
+		verify(repository).softDeleteActive(42L, Instant.parse("2026-10-25T12:00:00Z"));
+	}
+
+	@Test
+	void deleteThrowsNotFoundWhenNoActiveRow() {
+		when(repository.softDeleteActive(42L, Instant.parse("2026-10-25T12:00:00Z"))).thenReturn(0);
+
+		Throwable thrown = catchThrowable(() -> service.delete(42L));
 
 		assertThat(thrown).isInstanceOf(EmployeeNotFoundException.class);
 	}

@@ -1,7 +1,9 @@
 package com.acme.salary.employee;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 
 import org.junit.jupiter.api.Test;
 
@@ -76,6 +78,43 @@ class EmployeeRepositoryTest extends AbstractIntegrationTest {
 
 		assertThat(repository.existsActiveByEmailExcludingId("asha.rao@ACME.com", asha.getId())).isFalse();
 		assertThat(repository.existsActiveByEmailExcludingId("asha.rao@ACME.com", ben.getId())).isTrue();
+	}
+
+	@Test
+	void softDeleteSetsDeletedAtAndBumpsVersion() {
+		Employee saved = repository.saveAndFlush(employeeWithEmail("asha.rao@acme.com"));
+		Instant now = Instant.parse("2026-10-25T12:00:00Z");
+
+		int deleted = repository.softDeleteActive(saved.getId(), now);
+
+		assertThat(deleted).isEqualTo(1);
+		assertThat(rowOf(saved.getId())).isEqualTo(new DeletionState(now, 1L));
+	}
+
+	@Test
+	void softDeleteIgnoresAlreadyDeletedRow() {
+		Employee saved = repository.saveAndFlush(employeeWithEmail("asha.rao@acme.com"));
+		Instant first = Instant.parse("2026-10-25T12:00:00Z");
+		repository.softDeleteActive(saved.getId(), first);
+
+		int deleted = repository.softDeleteActive(saved.getId(), Instant.parse("2026-10-26T12:00:00Z"));
+
+		assertThat(deleted).isZero();
+		assertThat(rowOf(saved.getId())).isEqualTo(new DeletionState(first, 1L));
+	}
+
+	private DeletionState rowOf(long id) {
+		return jdbc.sql("select deleted_at, version from employee where id = :id")
+			.param("id", id)
+			.query((rs, rowNum) -> {
+				OffsetDateTime deletedAt = rs.getObject("deleted_at", OffsetDateTime.class);
+				return new DeletionState(deletedAt == null ? null : deletedAt.toInstant(), rs.getLong("version"));
+			})
+			.single();
+	}
+
+	/** {@code deletedAt} is null while the row is active. */
+	private record DeletionState(Instant deletedAt, long version) {
 	}
 
 	private static Employee employeeWithEmail(String email) {
