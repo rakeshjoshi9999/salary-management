@@ -111,8 +111,7 @@ startup and keeps them in immutable maps. Validation on a write and the currency
 cost no query. This is safe because reference data changes only through a migration, and a migration
 means a redeploy and a restart. No caching library is used.
 
-**Known gap until phase 3:** `CorsConfig` still sits in the root package. It moves to `common/config`
-as a `refactor:` commit in the first phase 3 slice.
+`CorsConfig` moved from the root package to `common/config` in task 3.2 (ADR-026).
 
 ## 3. Frontend components
 

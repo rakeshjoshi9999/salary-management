@@ -1,4 +1,4 @@
-package com.acme.salary;
+package com.acme.salary.common.config;
 
 import java.util.List;
 
@@ -15,9 +15,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * value. Configuring one does nothing for the other, which is a quiet way to
  * ship an API the browser refuses to talk to.
  *
- * There are no MVC endpoints yet; this exists so the first controller in phase 3
- * is reachable from the deployed frontend without anyone having to remember why
- * it is not.
+ * Without it, every controller is unreachable from the deployed frontend, and
+ * the browser says only that the request was blocked.
  */
 @Configuration
 class CorsConfig implements WebMvcConfigurer {
