@@ -3,6 +3,24 @@
 One entry per completed phase of [`TASKS.md`](TASKS.md), newest first. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Phase 4 — Find employees (2026-10-25)
+
+### Added
+- `GET /api/v1/employees`: a paginated list with totals (default 20, at most 100), always ordered by
+  the requested sort and then `id`, so pages never overlap (ADR-016, ADR-044).
+- Search with `q`: name OR email, partial and case-insensitive, with `\`, `%` and `_` matched
+  literally; served by the trigram indexes.
+- Filters by country, department and job title, combined with AND and validated against the
+  reference data.
+- Sorting by `fullName`, `salary` or `hireDate`, ascending or descending.
+- A query-plan report over 10,000 rows and `docs/PERFORMANCE.md`: every list shape runs in under
+  4 ms on the server (ADR-045, ADR-046).
+
+### Changed
+- Contract: an unknown query parameter, or `sort` given twice, is a 400 (ADR-044).
+- Roadmap: the phase 6 seed ends with `VACUUM ANALYZE`, because the trigram indexes are skipped
+  until VACUUM merges newly inserted rows; the plans are re-checked on seeded stage.
+
 ## Phase 3 — Employee CRUD (2026-10-25)
 
 ### Added
