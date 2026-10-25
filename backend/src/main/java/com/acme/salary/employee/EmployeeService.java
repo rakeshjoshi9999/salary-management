@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.acme.salary.employee.dto.EmployeeCreateRequest;
 import com.acme.salary.employee.dto.EmployeeResponse;
+import com.acme.salary.employee.dto.EmployeeUpdateRequest;
 import com.acme.salary.reference.ReferenceService;
 
 @Service
@@ -51,6 +52,10 @@ public class EmployeeService {
 	@Transactional(readOnly = true)
 	public EmployeeResponse get(long id) {
 		return employees.findActiveById(id).map(this::toResponse).orElseThrow(() -> new EmployeeNotFoundException(id));
+	}
+
+	public EmployeeResponse update(long id, EmployeeUpdateRequest request) {
+		throw new UnsupportedOperationException("not implemented yet");
 	}
 
 	/** True only for a violation of the active-email unique index, named in V1 (ADR-036). */

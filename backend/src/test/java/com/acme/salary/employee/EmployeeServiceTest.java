@@ -12,9 +12,11 @@ import org.mockito.ArgumentCaptor;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ProblemDetail;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.acme.salary.employee.dto.EmployeeResponse;
+import com.acme.salary.employee.dto.EmployeeUpdateRequest;
 import com.acme.salary.reference.TestReferenceData;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -145,6 +147,128 @@ class EmployeeServiceTest {
 		assertThat(problem.getTitle()).isEqualTo("Employee not found");
 		assertThat(problem.getDetail()).isEqualTo("No employee with id 42.");
 		assertThat(problem.getProperties()).containsEntry("code", "EMPLOYEE_NOT_FOUND");
+	}
+
+	@Test
+	void updateReplacesAllFields() {
+		Employee stored = storedEmployee(42L, 3L);
+		when(repository.findActiveById(42L)).thenReturn(Optional.of(stored));
+		EmployeeUpdateRequest request = new EmployeeUpdateRequest("Asha R. Menon", "asha.menon@acme.com", "Recruiter",
+				"Human Resources", "DE", new BigDecimal("75000.00"), LocalDate.of(2022, 1, 3), 3L);
+
+		EmployeeResponse updated = service.update(42L, request);
+
+		assertThat(stored.getFullName()).isEqualTo("Asha R. Menon");
+		assertThat(stored.getEmail()).isEqualTo("asha.menon@acme.com");
+		assertThat(stored.getJobTitle()).isEqualTo("Recruiter");
+		assertThat(stored.getDepartment()).isEqualTo("Human Resources");
+		assertThat(stored.getCountryCode()).isEqualTo("DE");
+		assertThat(stored.getSalary()).isEqualByComparingTo("75000.00");
+		assertThat(stored.getHireDate()).isEqualTo("2022-01-03");
+		assertThat(updated.currency()).isEqualTo("EUR");
+		assertThat(updated.fullName()).isEqualTo("Asha R. Menon");
+	}
+
+	@Test
+	void updateRejectsStaleVersion() {
+		Employee stored = storedEmployee(42L, 4L);
+		when(repository.findActiveById(42L)).thenReturn(Optional.of(stored));
+
+		Throwable thrown = catchThrowable(
+				() -> service.update(42L, Requests.valid().with("salary", new BigDecimal("1.00")).buildUpdate(3L)));
+
+		assertThat(thrown).isInstanceOf(StaleVersionException.class);
+		assertThat(((StaleVersionException) thrown).currentVersion()).isEqualTo(4L);
+		assertThat(stored.getSalary()).isEqualByComparingTo("2400000.00");
+		verify(repository, never()).flush();
+	}
+
+	@Test
+	void staleVersionExceptionCarriesProblem() {
+		ProblemDetail problem = new StaleVersionException(3L, 4L).getBody();
+
+		assertThat(problem.getStatus()).isEqualTo(409);
+		assertThat(problem.getType()).isEqualTo(URI.create("/problems/stale-version"));
+		assertThat(problem.getTitle()).isEqualTo("Employee was changed by someone else");
+		assertThat(problem.getDetail())
+			.isEqualTo("You sent version 3, but the current version is 4. Reload and try again.");
+		assertThat(problem.getProperties()).containsEntry("code", "STALE_VERSION").containsEntry("currentVersion", 4L);
+	}
+
+	@Test
+	void updateThrowsNotFoundForMissingId() {
+		when(repository.findActiveById(42L)).thenReturn(Optional.empty());
+
+		Throwable thrown = catchThrowable(() -> service.update(42L, Requests.valid().buildUpdate(0L)));
+
+		assertThat(thrown).isInstanceOf(EmployeeNotFoundException.class);
+	}
+
+	@Test
+	void updateRejectsEmailOfAnotherActiveEmployee() {
+		when(repository.findActiveById(42L)).thenReturn(Optional.of(storedEmployee(42L, 3L)));
+		when(repository.existsActiveByEmailExcludingId("taken@acme.com", 42L)).thenReturn(true);
+
+		Throwable thrown = catchThrowable(
+				() -> service.update(42L, Requests.valid().with("email", "taken@acme.com").buildUpdate(3L)));
+
+		assertThat(thrown).isInstanceOf(DuplicateEmailException.class);
+		verify(repository, never()).flush();
+	}
+
+	@Test
+	void updateChecksVersionBeforeEmail() {
+		when(repository.findActiveById(42L)).thenReturn(Optional.of(storedEmployee(42L, 4L)));
+		when(repository.existsActiveByEmailExcludingId("taken@acme.com", 42L)).thenReturn(true);
+
+		Throwable thrown = catchThrowable(
+				() -> service.update(42L, Requests.valid().with("email", "taken@acme.com").buildUpdate(3L)));
+
+		assertThat(thrown).isInstanceOf(StaleVersionException.class);
+	}
+
+	@Test
+	void updateTranslatesUniqueIndexViolationToDuplicateEmail() {
+		when(repository.findActiveById(42L)).thenReturn(Optional.of(storedEmployee(42L, 3L)));
+		doThrow(violationOf("employee_email_active_uq", "23505")).when(repository).flush();
+
+		Throwable thrown = catchThrowable(() -> service.update(42L, Requests.valid().buildUpdate(3L)));
+
+		assertThat(thrown).isInstanceOf(DuplicateEmailException.class);
+	}
+
+	@Test
+	void lostRaceReportsTrueCurrentVersion() {
+		when(repository.findActiveById(42L)).thenReturn(Optional.of(storedEmployee(42L, 3L)));
+		doThrow(new ObjectOptimisticLockingFailureException(Employee.class, 42L)).when(repository).flush();
+		when(repository.findActiveVersionById(42L)).thenReturn(Optional.of(7L));
+
+		Throwable thrown = catchThrowable(
+				() -> service.update(42L, Requests.valid().with("salary", new BigDecimal("1.00")).buildUpdate(3L)));
+
+		assertThat(thrown).isInstanceOf(StaleVersionException.class);
+		assertThat(((StaleVersionException) thrown).currentVersion()).isEqualTo(7L);
+	}
+
+	@Test
+	void lostRaceToDeleteGives404() {
+		when(repository.findActiveById(42L)).thenReturn(Optional.of(storedEmployee(42L, 3L)));
+		doThrow(new ObjectOptimisticLockingFailureException(Employee.class, 42L)).when(repository).flush();
+		when(repository.findActiveVersionById(42L)).thenReturn(Optional.empty());
+
+		Throwable thrown = catchThrowable(
+				() -> service.update(42L, Requests.valid().with("salary", new BigDecimal("1.00")).buildUpdate(3L)));
+
+		assertThat(thrown).isInstanceOf(EmployeeNotFoundException.class);
+	}
+
+	/** The baseline employee as if loaded from the database, with the given id and version. */
+	private static Employee storedEmployee(long id, long version) {
+		Employee stored = new Employee("Asha Rao", "asha.rao@acme.com", "Software Engineer", "Engineering", "IN",
+				new BigDecimal("2400000.00"), LocalDate.of(2021, 4, 12));
+		ReflectionTestUtils.setField(stored, "id", id);
+		ReflectionTestUtils.setField(stored, "version", version);
+		return stored;
 	}
 
 	/** The shape Spring and Hibernate give a Postgres constraint violation (checked for real in EmployeeRepositoryTest). */

@@ -30,6 +30,7 @@ import com.acme.salary.common.config.JacksonConfig;
 import com.acme.salary.common.config.ValidationConfig;
 import com.acme.salary.employee.dto.EmployeeCreateRequest;
 import com.acme.salary.employee.dto.EmployeeResponse;
+import com.acme.salary.employee.dto.EmployeeUpdateRequest;
 import com.acme.salary.reference.ReferenceService;
 import com.acme.salary.reference.TestReferenceData;
 
@@ -39,11 +40,13 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.blankOrNullString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -251,6 +254,77 @@ class EmployeeControllerTest {
 			.andExpect(jsonPath("$.detail").value("No employee with id 42."))
 			.andExpect(jsonPath("$.instance").value("/api/v1/employees/42"))
 			.andExpect(jsonPath("$.errors").doesNotExist());
+	}
+
+	@Test
+	void updateReturns200WithEmployee() throws Exception {
+		when(service.update(eq(101L), any())).thenReturn(createdWithSalary(new BigDecimal("2500000.00")));
+		Map<String, Object> body = validBody();
+		body.put("salary", new BigDecimal("2500000.00"));
+		body.put("version", 3);
+
+		sendPut(body).andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value(101))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("\"salary\":2500000.00")));
+
+		ArgumentCaptor<EmployeeUpdateRequest> sent = ArgumentCaptor.forClass(EmployeeUpdateRequest.class);
+		verify(service).update(eq(101L), sent.capture());
+		assertThat(sent.getValue().version()).isEqualTo(3L);
+		assertThat(sent.getValue().salary()).isEqualTo(new BigDecimal("2500000.00"));
+	}
+
+	@Test
+	void updateRejectsMissingVersion() throws Exception {
+		sendPut(validBody()).andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+			.andExpect(jsonPath("$.errors[*].field").value(containsInAnyOrder("version")));
+		verify(service, never()).update(any(Long.class), any());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "id", "currency" })
+	void updateRejectsUnknownField(String field) throws Exception {
+		Map<String, Object> body = validBody();
+		body.put("version", 3);
+		body.put(field, field.equals("id") ? 5 : "USD");
+
+		sendPut(body).andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+			.andExpect(jsonPath("$.errors[0].field").value(field));
+		verify(service, never()).update(any(Long.class), any());
+	}
+
+	@Test
+	void staleVersionReturns409Problem() throws Exception {
+		when(service.update(eq(101L), any())).thenThrow(new StaleVersionException(3L, 4L));
+		Map<String, Object> body = validBody();
+		body.put("version", 3);
+
+		sendPut(body).andExpect(status().isConflict())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+			.andExpect(jsonPath("$.type").value("/problems/stale-version"))
+			.andExpect(jsonPath("$.title").value("Employee was changed by someone else"))
+			.andExpect(jsonPath("$.status").value(409))
+			.andExpect(jsonPath("$.code").value("STALE_VERSION"))
+			.andExpect(jsonPath("$.detail")
+				.value("You sent version 3, but the current version is 4. Reload and try again."))
+			.andExpect(jsonPath("$.instance").value("/api/v1/employees/101"))
+			.andExpect(jsonPath("$.currentVersion").value(4))
+			.andExpect(jsonPath("$.errors").doesNotExist());
+	}
+
+	@Test
+	void updateOfMissingEmployeeReturns404() throws Exception {
+		when(service.update(eq(101L), any())).thenThrow(new EmployeeNotFoundException(101L));
+		Map<String, Object> body = validBody();
+		body.put("version", 3);
+
+		sendPut(body).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("EMPLOYEE_NOT_FOUND"));
+	}
+
+	private ResultActions sendPut(Map<String, Object> body) throws Exception {
+		return mvc.perform(put("/api/v1/employees/101").contentType(MediaType.APPLICATION_JSON)
+			.content(JSON.writeValueAsString(body)));
 	}
 
 	@Test

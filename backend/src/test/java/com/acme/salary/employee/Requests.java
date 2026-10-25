@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import com.acme.salary.employee.dto.EmployeeCreateRequest;
+import com.acme.salary.employee.dto.EmployeeUpdateRequest;
 
 /** A valid create request, changed one field at a time by each test. */
 final class Requests {
@@ -43,6 +44,12 @@ final class Requests {
 
 	EmployeeCreateRequest build() {
 		return new EmployeeCreateRequest(fullName, email, jobTitle, department, countryCode, salary, hireDate);
+	}
+
+	/** The same fields as an update, carrying the version the client last saw. */
+	EmployeeUpdateRequest buildUpdate(Long version) {
+		return new EmployeeUpdateRequest(fullName, email, jobTitle, department, countryCode, salary, hireDate,
+				version);
 	}
 
 }

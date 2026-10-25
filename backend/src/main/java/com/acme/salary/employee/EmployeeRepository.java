@@ -19,4 +19,12 @@ interface EmployeeRepository extends JpaRepository<Employee, Long> {
 	@Query("select e from Employee e where e.id = :id and e.deletedAt is null")
 	Optional<Employee> findActiveById(@Param("id") long id);
 
+	default boolean existsActiveByEmailExcludingId(String email, long id) {
+		return false;
+	}
+
+	default Optional<Long> findActiveVersionById(long id) {
+		return Optional.empty();
+	}
+
 }

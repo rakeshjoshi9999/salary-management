@@ -69,6 +69,15 @@ class EmployeeRepositoryTest extends AbstractIntegrationTest {
 		assertThat(repository.findActiveById(saved.getId())).isEmpty();
 	}
 
+	@Test
+	void emailCheckExcludesTheEmployeeItself() {
+		Employee asha = repository.saveAndFlush(employeeWithEmail("Asha.Rao@acme.com"));
+		Employee ben = repository.saveAndFlush(employeeWithEmail("ben.ito@acme.com"));
+
+		assertThat(repository.existsActiveByEmailExcludingId("asha.rao@ACME.com", asha.getId())).isFalse();
+		assertThat(repository.existsActiveByEmailExcludingId("asha.rao@ACME.com", ben.getId())).isTrue();
+	}
+
 	private static Employee employeeWithEmail(String email) {
 		return new Employee("Asha Rao", email, "Software Engineer", "Engineering", "IN", new BigDecimal("2400000.00"),
 				LocalDate.of(2021, 4, 12));
