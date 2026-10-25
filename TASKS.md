@@ -89,7 +89,7 @@ can reach its database.
 ## Phase 5 — Salary insights
 - [x] **5.1** Country salary stats: min, max, avg (2dp), median (odd/even), headcount
 - [x] **5.2** Average salary by job title within a country
-- [ ] **5.3** Headcount by department within a country
+- [x] **5.3** Headcount by department within a country
 - [ ] **5.4** Edge cases: country with no employees → empty result; single employee → min = max = avg
 - [ ] **5.5** Reference endpoint: supported countries, currencies, job titles, departments (feeds UI dropdowns)
 - [ ] **5.6** Settings: `app_settings` migration (one row, default country IN), `GET`/`PUT /settings` with
