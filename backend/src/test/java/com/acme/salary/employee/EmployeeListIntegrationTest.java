@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import com.acme.salary.AbstractIntegrationTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -113,6 +114,97 @@ class EmployeeListIntegrationTest extends AbstractIntegrationTest {
 
 		// Same names, so only the id tiebreak fixes the order; ids come from nextval, so inserted is ascending.
 		assertThat(seen).containsExactlyElementsOf(inserted);
+	}
+
+	@Test
+	void searchMatchesPartialNameIgnoringCase() throws Exception {
+		insert("Asha Rao", "a.rao@acme.com");
+		insert("Ben Ito", "ben@acme.com");
+
+		list(get("/api/v1/employees").param("q", "SHA")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(containsInAnyOrder("Asha Rao")));
+	}
+
+	@Test
+	void searchMatchesPartialEmail() throws Exception {
+		insert("Asha Rao", "asha@north.example");
+		insert("Ben Ito", "ben@south.example");
+
+		list(get("/api/v1/employees").param("q", "south.ex")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(containsInAnyOrder("Ben Ito")));
+	}
+
+	@Test
+	void searchMatchesNameOrEmail() throws Exception {
+		insert("Kim Lee", "lee@acme.com");
+		insert("Ana Park", "ana.kimura@acme.com");
+		insert("Ben Ito", "ben@acme.com");
+
+		list(get("/api/v1/employees").param("q", "kim")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(containsInAnyOrder("Kim Lee", "Ana Park")));
+	}
+
+	@Test
+	void searchTreatsPercentAndUnderscoreLiterally() throws Exception {
+		insert("a_b Rao", "one@acme.com");
+		insert("axb Rao", "two@acme.com");
+		insert("Got 50% raise", "three@acme.com");
+		insert("Got 500 raise", "four@acme.com");
+
+		list(get("/api/v1/employees").param("q", "a_b")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(containsInAnyOrder("a_b Rao")));
+		list(get("/api/v1/employees").param("q", "50%")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(containsInAnyOrder("Got 50% raise")));
+	}
+
+	/**
+	 * Unescaped, {@code a\b} would match "ab" ({@code \b} reads as {@code b}), and {@code ab\} would turn
+	 * the closing {@code %} into a literal and find nothing.
+	 */
+	@Test
+	void searchTreatsBackslashLiterally() throws Exception {
+		insert("Dir a\\b Rao", "one@acme.com");
+		insert("Dir ab Rao", "two@acme.com");
+		insert("Dir ab\\ Rao", "three@acme.com");
+
+		list(get("/api/v1/employees").param("q", "a\\b")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(containsInAnyOrder("Dir a\\b Rao")));
+		list(get("/api/v1/employees").param("q", "ab\\")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(containsInAnyOrder("Dir ab\\ Rao")));
+	}
+
+	@Test
+	void blankSearchMeansNoSearch() throws Exception {
+		insertNumbered(3);
+
+		list(get("/api/v1/employees").param("q", "  ")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.totalItems").value(3));
+	}
+
+	@Test
+	void rejectsOneCharacterSearch() throws Exception {
+		list(get("/api/v1/employees").param("q", " a ")).andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+			.andExpect(jsonPath("$.errors[0].field").value("q"))
+			.andExpect(jsonPath("$.errors[0].message").value("must be at least 2 characters"));
+	}
+
+	@Test
+	void rejectsSearchOver254Characters() throws Exception {
+		list(get("/api/v1/employees").param("q", "a".repeat(255))).andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+			.andExpect(jsonPath("$.errors[0].field").value("q"))
+			.andExpect(jsonPath("$.errors[0].message").value("must be at most 254 characters"));
+	}
+
+	@Test
+	void totalsCountOnlyMatches() throws Exception {
+		insertNumbered(25);
+		insert("Zara Khan", "zara@acme.com");
+
+		list(get("/api/v1/employees").param("q", "employee 0")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.totalItems").value(9))
+			.andExpect(jsonPath("$.totalPages").value(1));
 	}
 
 	private ResultActions list(MockHttpServletRequestBuilder request) throws Exception {
