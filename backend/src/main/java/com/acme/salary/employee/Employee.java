@@ -70,6 +70,18 @@ class Employee {
 		this.hireDate = hireDate;
 	}
 
+	/** A full replacement (PUT, ADR-014). Hibernate writes, and bumps the version, only if something changed. */
+	void replace(String fullName, String email, String jobTitle, String department, String countryCode,
+			BigDecimal salary, LocalDate hireDate) {
+		this.fullName = fullName;
+		this.email = email;
+		this.jobTitle = jobTitle;
+		this.department = department;
+		this.countryCode = countryCode;
+		this.salary = salary;
+		this.hireDate = hireDate;
+	}
+
 	Long getId() {
 		return id;
 	}

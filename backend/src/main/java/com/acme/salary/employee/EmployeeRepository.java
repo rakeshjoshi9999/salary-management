@@ -5,6 +5,8 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
@@ -19,12 +21,17 @@ interface EmployeeRepository extends JpaRepository<Employee, Long> {
 	@Query("select e from Employee e where e.id = :id and e.deletedAt is null")
 	Optional<Employee> findActiveById(@Param("id") long id);
 
-	default boolean existsActiveByEmailExcludingId(String email, long id) {
-		return false;
-	}
+	/** The duplicate-email pre-check for an update: the employee's own row does not count (ADR-041). */
+	@Query("select count(e) > 0 from Employee e where lower(e.email) = lower(:email) and e.deletedAt is null"
+			+ " and e.id <> :id")
+	boolean existsActiveByEmailExcludingId(@Param("email") String email, @Param("id") long id);
 
-	default Optional<Long> findActiveVersionById(long id) {
-		return Optional.empty();
-	}
+	/**
+	 * The committed version, read in its own transaction: the caller's transaction has just lost a race
+	 * and its persistence context can no longer be trusted (ADR-041). Empty if the row is gone or deleted.
+	 */
+	@Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+	@Query("select e.version from Employee e where e.id = :id and e.deletedAt is null")
+	Optional<Long> findActiveVersionById(@Param("id") long id);
 
 }

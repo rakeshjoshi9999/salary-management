@@ -3,6 +3,7 @@ package com.acme.salary.employee;
 import org.hibernate.exception.ConstraintViolationException;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,8 +55,36 @@ public class EmployeeService {
 		return employees.findActiveById(id).map(this::toResponse).orElseThrow(() -> new EmployeeNotFoundException(id));
 	}
 
+	/**
+	 * Checks run in the order 404, stale version, duplicate email (ADR-041). The version is compared
+	 * explicitly because Hibernate would only compare against what it just loaded (ADR-023); the flush
+	 * makes {@code @Version} catch a commit that lands between this load and this write.
+	 */
+	@Transactional
 	public EmployeeResponse update(long id, EmployeeUpdateRequest request) {
-		throw new UnsupportedOperationException("not implemented yet");
+		Employee employee = employees.findActiveById(id).orElseThrow(() -> new EmployeeNotFoundException(id));
+		if (employee.getVersion().longValue() != request.version().longValue()) {
+			throw new StaleVersionException(request.version(), employee.getVersion());
+		}
+		if (employees.existsActiveByEmailExcludingId(request.email(), id)) {
+			throw new DuplicateEmailException(request.email());
+		}
+		employee.replace(request.fullName(), request.email(), request.jobTitle(), request.department(),
+				request.countryCode(), request.salary(), request.hireDate());
+		try {
+			employees.flush();
+		}
+		catch (OptimisticLockingFailureException ex) {
+			long current = employees.findActiveVersionById(id).orElseThrow(() -> new EmployeeNotFoundException(id));
+			throw new StaleVersionException(request.version(), current);
+		}
+		catch (DataIntegrityViolationException ex) {
+			if (isDuplicateEmail(ex)) {
+				throw new DuplicateEmailException(request.email());
+			}
+			throw ex;
+		}
+		return toResponse(employee);
 	}
 
 	/** True only for a violation of the active-email unique index, named in V1 (ADR-036). */
