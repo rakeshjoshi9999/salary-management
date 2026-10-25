@@ -278,6 +278,51 @@ class InsightsIntegrationTest extends AbstractIntegrationTest {
 		assertThat(departmentHeadcounts("IN")).containsExactly(new Department("Engineering", 1));
 	}
 
+	@Test
+	void countryWithNoEmployeesIsEmpty() throws Exception {
+		employees("IN", "100.00");
+
+		JsonNode body = body("DE");
+
+		assertEmpty(body);
+	}
+
+	@Test
+	void countryWhoseEmployeesAreAllDeletedIsEmpty() throws Exception {
+		employees("DE", "100.00", "200.00");
+		jdbc.sql("update employee set deleted_at = now() where country_code = 'DE'").update();
+
+		assertEmpty(body("DE"));
+	}
+
+	@Test
+	void singleEmployeeHasEqualStats() throws Exception {
+		employees("IN", "123.45");
+
+		JsonNode salary = salary("IN");
+
+		assertThat(salary.get("headcount").asInt()).isEqualTo(1);
+		assertThat(money(salary, "min")).isEqualTo(new BigDecimal("123.45"));
+		assertThat(money(salary, "max")).isEqualTo(new BigDecimal("123.45"));
+		assertThat(money(salary, "average")).isEqualTo(new BigDecimal("123.45"));
+		assertThat(money(salary, "median")).isEqualTo(new BigDecimal("123.45"));
+	}
+
+	/** A supported country with no active employees: 200, headcount 0, null stats, empty lists (ADR-017). */
+	private static void assertEmpty(JsonNode body) {
+		JsonNode salary = body.get("salary");
+		assertThat(salary.get("headcount").isIntegralNumber()).as("headcount is a number").isTrue();
+		assertThat(salary.get("headcount").asInt()).isZero();
+		for (String field : List.of("min", "max", "average", "median")) {
+			assertThat(salary.has(field)).as(field + " is present").isTrue();
+			assertThat(salary.get(field).isNull()).as(field + " is null").isTrue();
+		}
+		assertThat(body.get("averageByJobTitle").isArray()).isTrue();
+		assertThat(body.get("averageByJobTitle")).isEmpty();
+		assertThat(body.get("headcountByDepartment").isArray()).isTrue();
+		assertThat(body.get("headcountByDepartment")).isEmpty();
+	}
+
 	private List<Department> departmentHeadcounts(String code) throws Exception {
 		List<Department> departments = new ArrayList<>();
 		body(code).get("headcountByDepartment")
