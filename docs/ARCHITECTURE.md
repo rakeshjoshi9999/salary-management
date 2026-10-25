@@ -63,7 +63,7 @@ flowchart TB
 
     subgraph reference["reference/"]
         rc["ReferenceController"] --> rs["ReferenceService<br/>loaded once, held in memory"]
-        rs --> rr["Country / Department / JobTitle<br/>repositories"]
+        rs --> rr["ReferenceRepository<br/>JdbcClient, read once"]
     end
 
     subgraph settings["settings/"]
@@ -86,9 +86,9 @@ flowchart TB
 
 ```
 com.acme.salary
-├─ employee/    EmployeeController, EmployeeService, EmployeeRepository, Employee (entity), dto/
+├─ employee/    EmployeeController, EmployeeService, EmployeeRepository, Employee (entity), dto/, validation/
 ├─ insights/    InsightsController, InsightsService, InsightsRepository, dto/
-├─ reference/   ReferenceController, ReferenceService, Country, Department, JobTitle, repositories, dto/
+├─ reference/   ReferenceController, ReferenceService, ReferenceRepository (JdbcClient), Country, JobTitle, dto/ (ADR-037)
 ├─ settings/    SettingsController, SettingsService, SettingsRepository, AppSettings (entity), dto/ (ADR-028)
 └─ common/      error/ (Problem Details), money/ (MoneyRounding), config/ (CORS, Clock, Jackson)
 ```

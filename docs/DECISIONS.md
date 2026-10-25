@@ -84,6 +84,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-034 | Production deploys only after CI passes | Accepted | 2026-10-24 |
 | ADR-035 | Lint, format and coverage checks in CI | Accepted | 2026-10-24 |
 | ADR-036 | First migrations: two files, named constraints, schema tested two ways | Accepted | 2026-10-24 |
+| ADR-037 | Create employee: validation in one pass, strict JSON globally, errors built up per slice | Accepted | 2026-10-25 |
 
 ---
 
@@ -1421,6 +1422,54 @@ specific Problem `code`, and the constraint name is the only reliable clue to wh
   intent: the schema cannot change without a failing test pointing at it.
 - The stage push runs `V1` and `V2` against the stage Neon database; production gets them at the next
   promotion. A mistake found after that is fixed forward with `V3`, not by editing `V1`.
+
+---
+
+## ADR-037 — Create employee: validation in one pass, strict JSON globally, errors built up per slice
+
+- **Date:** 2026-10-25
+- **Status:** Accepted
+- **Task:** 3.2
+
+### Context
+Task 3.2 is the first domain code: `POST /api/v1/employees`. The contract (`openapi.yaml`), the rules
+(`DATA_MODEL.md`, ADR-010, ADR-014) and the error shape (ADR-018) are settled; how they are built is not.
+Three rules need context beyond the request: supported country and title-in-department need reference
+data, and "hire date not after today (UTC)" needs the `Clock`. ADR-018 wants every invalid field in one
+`errors[]`. Spring Boot's default Jackson setup ignores unknown fields and coerces strings to numbers,
+which would break ADR-014. Task 3.7 owns global error handling, but 3.2 cannot return a 400 without some
+of it. `REQUIREMENTS.md` says only "valid email format".
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Context-dependent rules | **All in Bean Validation:** custom constraints whose validators use `ReferenceService`; `@PastOrPresent` with a `ClockProvider` backed by the `Clock` bean (one pass, every error at once) · service checks after Bean Validation (simple to unit-test; two passes, so a second submit reveals new errors) | Bean Validation |
+| Strict input and trimming | **Global Jackson config:** fail on unknown properties, one trimming `String` deserializer (5.6 inherits it) · per-DTO annotation and compact-constructor trimming (explicit; a forgotten DTO reopens the `currency`-in-body hole) | Global |
+| Error handling in 3.2 | **Minimum now:** `common/error` handles only `VALIDATION_FAILED` (field errors, unknown fields, wrong JSON types); 3.3 to 3.6 add their codes; 3.7 adds the rest · pull all of 3.7 forward (one large mixed diff) | Minimum |
+| Handler base | **Spring `ProblemDetail`, extending `ResponseEntityExceptionHandler`** (content type and MVC exception mapping built in; a forgotten hook has no `code`) · own advice and record (fully explicit; re-implements what Spring does) | `ProblemDetail` |
+| Reading reference data | **`JdbcClient`, three SELECTs into records, no entities** (read once, never written) · JPA entities and repositories (Hibernate validates the mapping; three entities for one `findAll` each) | `JdbcClient` |
+| Test levels | **By layer:** validator unit tests (plain Hibernate Validator, fake reference data, fixed `Clock`); a `@WebMvcTest` slice with the real Jackson and validation config; a few Testcontainers tests for persistence, currency and id blocks · mostly MockMvc integration on Postgres (realistic; inverts the pyramid) | By layer |
+| Email format | **`@Email` plus a dot in the domain** (catches `asha@acmecom`; rejects `user@localhost`) · plain `@Email` (accepts both) | Dotted domain |
+| Salary `100.000` and `"100.00"` | **Decimals judged by value, strings rejected** (`100.000` equals `100.00` and passes; a JSON string for a number is 400) · literal decimal places, strings rejected · both accepted (Jackson defaults) | By value, no strings |
+
+### Decision
+As chosen above, by the engineer, each on the AI's recommendation. Also settled by earlier ADRs and
+built in this slice: the `Clock` bean is `Clock.systemUTC()` (ADR-010), and `CorsConfig` moves to
+`common/config` as a `refactor:` commit (ADR-026).
+
+### Consequences
+- One 400 lists every field-rule failure. A JSON-level failure (an unknown field, or the wrong type
+  for a field) is caught by Jackson before Bean Validation runs, so it is reported on its own.
+- Turning off string-to-number coercion and turning on unknown-property failure apply to every
+  endpoint. An endpoint that needs lenient input would need its own reader.
+- Validators depend on `reference`, which is allowed (ADR-026: features depend on `reference`).
+- Until 3.7, malformed JSON, unknown routes and unexpected exceptions return Spring's default error
+  body. Until 3.3, a duplicate email surfaces as a database error. Both are known gaps in the slice
+  order, not oversights.
+- The Angular form (7.3) must mirror the dotted-domain rule.
+- Hibernate Validator's `@Digits` counts trailing zeros, so it rejects `100.000`. The AI said otherwise
+  when offering this option; the first implementation run showed it. A small `@MoneyAmount` constraint
+  strips trailing zeros before counting digits instead.
 
 ---
 
