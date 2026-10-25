@@ -79,7 +79,7 @@ can reach its database.
 
 ## Phase 4 — Find employees
 - [x] **4.1** Paginated list: default size, max size cap, page past end → empty with correct total
-- [ ] **4.2** Search by name/email (partial, case-insensitive)
+- [x] **4.2** Search by name/email (partial, case-insensitive)
 - [ ] **4.3** Filters: country, job title, department (combinable)
 - [ ] **4.4** Sorting with whitelisted fields; unknown field → 400
 - [ ] **4.5** Verify query plans use indexes (note results in `docs/PERFORMANCE.md`)
