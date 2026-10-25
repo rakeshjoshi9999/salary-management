@@ -38,6 +38,7 @@ import com.acme.salary.employee.dto.EmployeeResponse;
 import com.acme.salary.insights.InsightsService;
 import com.acme.salary.reference.ReferenceService;
 import com.acme.salary.reference.TestReferenceData;
+import com.acme.salary.settings.SettingsService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -89,6 +90,9 @@ class ErrorHandlingTest {
 	/** The slice loads every controller; each feature's service is mocked so its controller can start. */
 	@MockitoBean
 	private InsightsService insightsService;
+
+	@MockitoBean
+	private SettingsService settingsService;
 
 	@Test
 	void malformedJsonIs400MalformedRequest() throws Exception {
