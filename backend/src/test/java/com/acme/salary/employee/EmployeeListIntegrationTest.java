@@ -207,6 +207,82 @@ class EmployeeListIntegrationTest extends AbstractIntegrationTest {
 			.andExpect(jsonPath("$.totalPages").value(1));
 	}
 
+	@Test
+	void filtersByCountry() throws Exception {
+		insertThreeTeams();
+
+		list(get("/api/v1/employees").param("country", "IN")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(containsInAnyOrder("Asha Rao", "Chen Wu")))
+			.andExpect(jsonPath("$.totalItems").value(2));
+	}
+
+	@Test
+	void filtersByDepartment() throws Exception {
+		insertThreeTeams();
+
+		list(get("/api/v1/employees").param("department", "Engineering")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(containsInAnyOrder("Asha Rao", "Ben Ito")))
+			.andExpect(jsonPath("$.totalItems").value(2));
+	}
+
+	@Test
+	void filtersByJobTitle() throws Exception {
+		insertThreeTeams();
+
+		list(get("/api/v1/employees").param("jobTitle", "QA Engineer")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(containsInAnyOrder("Ben Ito")))
+			.andExpect(jsonPath("$.totalItems").value(1));
+	}
+
+	@Test
+	void filtersAndSearchCombineWithAnd() throws Exception {
+		insertThreeTeams();
+
+		list(get("/api/v1/employees").param("country", "IN").param("department", "Engineering"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(containsInAnyOrder("Asha Rao")))
+			.andExpect(jsonPath("$.totalItems").value(1));
+		list(get("/api/v1/employees").param("country", "IN").param("q", "wu")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(containsInAnyOrder("Chen Wu")))
+			.andExpect(jsonPath("$.totalItems").value(1));
+	}
+
+	@Test
+	void validCombinationMatchingNobodyIsEmpty() throws Exception {
+		insertThreeTeams();
+
+		list(get("/api/v1/employees").param("department", "Sales").param("jobTitle", "Recruiter"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.items", hasSize(0)))
+			.andExpect(jsonPath("$.totalItems").value(0));
+	}
+
+	@Test
+	void rejectsUnsupportedOrLowercaseCountry() throws Exception {
+		list(get("/api/v1/employees").param("country", "JP")).andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+			.andExpect(jsonPath("$.errors", hasSize(1)))
+			.andExpect(jsonPath("$.errors[0].field").value("country"))
+			.andExpect(jsonPath("$.errors[0].message").value("must be a supported country"));
+		list(get("/api/v1/employees").param("country", "in")).andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+			.andExpect(jsonPath("$.errors", hasSize(1)))
+			.andExpect(jsonPath("$.errors[0].field").value("country"))
+			.andExpect(jsonPath("$.errors[0].message").value("must be two uppercase letters"));
+	}
+
+	@Test
+	void rejectsUnknownDepartmentOrJobTitle() throws Exception {
+		list(get("/api/v1/employees").param("department", "Legal")).andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.errors", hasSize(1)))
+			.andExpect(jsonPath("$.errors[0].field").value("department"))
+			.andExpect(jsonPath("$.errors[0].message").value("must be a supported department"));
+		list(get("/api/v1/employees").param("jobTitle", "Astronaut")).andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.errors", hasSize(1)))
+			.andExpect(jsonPath("$.errors[0].field").value("jobTitle"))
+			.andExpect(jsonPath("$.errors[0].message").value("must be a supported job title"));
+	}
+
 	private ResultActions list(MockHttpServletRequestBuilder request) throws Exception {
 		return mvc.perform(request);
 	}
@@ -223,18 +299,32 @@ class EmployeeListIntegrationTest extends AbstractIntegrationTest {
 	}
 
 	private long insert(String fullName, String email) {
+		return insert(fullName, email, "IN", "Engineering", "Software Engineer");
+	}
+
+	private long insert(String fullName, String email, String country, String department, String jobTitle) {
 		return jdbc.sql("""
 				insert into employee (id, full_name, email, job_title, department, country_code, salary, hire_date)
-				values (nextval('employee_id_seq'), :name, :email, 'Software Engineer', 'Engineering', 'IN',
+				values (nextval('employee_id_seq'), :name, :email, :jobTitle, :department, :country,
 				        :salary, :hireDate)
 				returning id
 				""")
 			.param("name", fullName)
 			.param("email", email)
+			.param("jobTitle", jobTitle)
+			.param("department", department)
+			.param("country", country)
 			.param("salary", new BigDecimal("1000000.00"))
 			.param("hireDate", LocalDate.of(2021, 4, 12))
 			.query(Long.class)
 			.single();
+	}
+
+	/** Asha (IN, Engineering, Software Engineer), Ben (DE, Engineering, QA Engineer), Chen (IN, Sales, Sales Manager). */
+	private void insertThreeTeams() {
+		insert("Asha Rao", "asha@acme.com", "IN", "Engineering", "Software Engineer");
+		insert("Ben Ito", "ben@acme.com", "DE", "Engineering", "QA Engineer");
+		insert("Chen Wu", "chen@acme.com", "IN", "Sales", "Sales Manager");
 	}
 
 }
