@@ -88,6 +88,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-038 | Duplicate email: pre-check plus translated race, feature exceptions as `ErrorResponseException` | Accepted | 2026-10-25 |
 | ADR-039 | Get by id: explicit active queries; ids that name nobody are 404 | Accepted | 2026-10-25 |
 | ADR-040 | Render builds from `backend/` without a root directory | Accepted | 2026-10-25 |
+| ADR-041 | Update: a separate request record, the true version on a lost race, no bump for a no-op | Accepted | 2026-10-25 |
 
 ---
 
@@ -1577,6 +1578,41 @@ Option A, chosen by the engineer on the AI's recommendation, for both services.
 - Every green push to `stage` or `main` deploys, docs included.
 - Task 1.11's acceptance checked only that health was `UP`, which an old build also reports. A deploy
   check needs a probe of something only the new build does.
+
+---
+
+## ADR-041 — Update: a separate request record, the true version on a lost race, no bump for a no-op
+
+- **Date:** 2026-10-25
+- **Status:** Accepted
+- **Task:** 3.5. Builds on ADR-014 and ADR-023; amends the `updateEmployee` description in `openapi.yaml`.
+
+### Context
+`PUT /api/v1/employees/{id}` replaces every field and carries `version` (ADR-014). The service compares
+it with the loaded version, and `@Version` guards the race between load and write (ADR-023); both give
+409 `STALE_VERSION` with `currentVersion`. Three things were open. The update body has the create body's
+7 validated fields plus `version`, records cannot inherit, and create must still reject `version`.
+On a lost race the UPDATE matches no row and the current version is unknown. And the contract said a
+successful PUT always raises `version`, but Hibernate writes, and bumps `@Version`, only when a field
+changed.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Request shape | **A separate `EmployeeUpdateRequest` repeating the 7 annotated fields plus `version`**, both implementing `JobAssignment` (flat JSON; rules stated twice, guarded by a test running update through the field rules) · shared fields with `@JsonUnwrapped` (rules once; a weak spot in Jackson with records and strict unknown-field handling, and nested error paths) | Separate record |
+| `currentVersion` on a lost race | **Re-read it in a new transaction** (true value; a row deleted in the race gives 404) · omit it on that path (contract change) · loaded version + 1 (wrong when more than one commit raced in) | Re-read |
+| A PUT that changes nothing | **No write, same version; the contract wording changes** · always bump with `OPTIMISTIC_FORCE_INCREMENT` (another user's open form goes stale for a save that changed nothing) | No bump |
+
+### Decision
+As chosen above, by the engineer, each on the AI's recommendation. Also settled without a separate
+question: the checks run in the order 400 (validation) → 404 → 409 `STALE_VERSION` → 409
+`DUPLICATE_EMAIL`, so a client holding an old version learns that first. The duplicate-email check
+excludes the employee being updated, and its race uses 3.3's translation (ADR-038).
+
+### Consequences
+- A field-rule change must touch both request records; a test fails if they drift.
+- The lost-race path costs one extra read, and only when the race happens.
+- `version` means "the data changed", so a client must not assume +1 after every PUT.
 
 ---
 

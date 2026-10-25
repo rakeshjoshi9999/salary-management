@@ -115,7 +115,8 @@ paths:
       description: |
         Full replacement: every field is required. `version` must equal the stored version.
         Otherwise the response is 409 `STALE_VERSION` and nothing is written. On success,
-        `version` goes up by one.
+        `version` goes up by one if any field changed; a PUT that changes nothing returns the
+        same version (ADR-041).
       requestBody:
         required: true
         content:
@@ -123,7 +124,7 @@ paths:
             schema: { $ref: '#/components/schemas/EmployeeUpdateRequest' }
       responses:
         '200':
-          description: Updated employee, with the new version.
+          description: Updated employee, with its current version (unchanged if nothing changed).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Employee' }
