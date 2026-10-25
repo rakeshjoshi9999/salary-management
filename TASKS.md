@@ -82,7 +82,7 @@ can reach its database.
 - [x] **4.2** Search by name/email (partial, case-insensitive)
 - [x] **4.3** Filters: country, job title, department (combinable)
 - [x] **4.4** Sorting with whitelisted fields; unknown field → 400
-- [ ] **4.5** Verify query plans use indexes (note results in `docs/PERFORMANCE.md`)
+- [x] **4.5** Verify query plans use indexes (note results in `docs/PERFORMANCE.md`)
 
 ---
 
@@ -102,8 +102,11 @@ can reach its database.
 ## Phase 6 — Seeding
 - [ ] **6.1** Deterministic generator (fixed random seed): realistic names, titles, departments, country-appropriate salary ranges
 - [ ] **6.2** Idempotent seed runner: exactly 10,000 rows, rerun creates no duplicates
-- [ ] **6.3** Batch inserts; measure and record seed time in `docs/PERFORMANCE.md`
-- [ ] **6.4** Run the seed against the stage database, then once against production
+- [ ] **6.3** Batch inserts; measure and record seed time in `docs/PERFORMANCE.md`; end the seed with
+      `VACUUM ANALYZE employee`, run outside the seed transaction (VACUUM cannot run inside one), or search skips the trigram indexes until autovacuum runs (4.5)
+- [ ] **6.4** Run the seed against the stage database, then once against production; re-run the list
+      query plans on seeded stage, including the deep page and sorts on tied columns, and add them to
+      `docs/PERFORMANCE.md` (ADR-045)
 
 ---
 

@@ -93,6 +93,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-043 | Error handling: every response has a code, 500s carry an error id | Accepted | 2026-10-25 |
 | ADR-044 | List query: assembled SQL through `JdbcClient`, a separate count, a validated query record | Accepted | 2026-10-25 |
 | ADR-045 | Query plans: a report on synthetic data now, re-checked after seeding; sort indexes decided by it | Accepted | 2026-10-25 |
+| ADR-046 | Correction to ADR-045: how the plan report is run | Accepted | 2026-10-25 |
 
 ---
 
@@ -1743,6 +1744,33 @@ As chosen above, by the engineer, each on the AI's recommendation.
 - No automatic guard against a plan regression; the report is re-run when queries or indexes change.
 - The report runs with `./mvnw test -Dgroups=performance` (a Surefire tag filter, not a dependency).
 - Task 6.4 gains a step: re-run the same queries on the seeded stage database and record them.
+
+---
+
+## ADR-046 — Correction to ADR-045: how the plan report is run
+
+- **Date:** 2026-10-25
+- **Status:** Accepted
+- **Task:** 4.5. Amends ADR-045's second consequence; ADR-045 is otherwise unchanged.
+
+### Context
+ADR-045 says the report runs with `./mvnw test -Dgroups=performance`. The reviewer ran it and got
+"Tests run: 0": the pom excludes the `performance` tag by default (`excludedGroups`), so asking for the
+tag alone still excludes it, and the class was first named without the `Test` suffix Surefire requires.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A — Name the class `ListQueryPlanReportTest`; run with `-Dgroups=performance -DexcludedGroups=none`** | The tag, not the class name, keeps it out of the normal suite | A longer command |
+| **B — Keep the name; add `-Dtest=ListQueryPlanReport` to the command** | Shorter class name | The tag exclusion would be untested; a renamed class silently runs nothing |
+
+### Decision
+Option A, approved by the engineer after the reviewer found the documented command ran nothing. The
+engineer also approved recording the command in `CLAUDE.md`'s Commands table.
+
+### Consequences
+- `./mvnw test` runs 263 tests and skips the report; the documented command runs exactly the report.
+- The command is in `CLAUDE.md` and `docs/PERFORMANCE.md`.
 
 ---
 

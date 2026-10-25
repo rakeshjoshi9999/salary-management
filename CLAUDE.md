@@ -39,6 +39,7 @@ contradicts them stops and asks; a change to them is a new ADR, not a quiet edit
 | Frontend coverage | `cd frontend && npx ng test --watch=false --coverage` writes `coverage/salary-management-ui/index.html` |
 | Frontend lint | `cd frontend && npm run lint` (fails on any warning; CI fails on it) |
 | Frontend format | `cd frontend && npm run format` to fix, `npm run format:check` as CI runs it |
+| List query plan report | `cd backend && ./mvnw test -Dgroups=performance -DexcludedGroups=none` writes `target/performance/list-plans.txt` (not in CI; ADR-045, ADR-046) |
 
 On Windows, use `mvnw.cmd` from cmd/PowerShell. When a phase adds an entry point, record it here.
 
