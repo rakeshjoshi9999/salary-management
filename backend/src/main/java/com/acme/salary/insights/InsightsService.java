@@ -49,7 +49,7 @@ public class InsightsService {
 			.map(t -> new TitleAverage(t.jobTitle(), t.department(), t.headcount(), MoneyRounding.toMoney(t.average())))
 			.sorted(BY_SHOWN_AVERAGE)
 			.toList();
-		return new CountryInsights(countryCode, currency, salary, byTitle, List.of());
+		return new CountryInsights(countryCode, currency, salary, byTitle, insights.headcountByDepartment(countryCode));
 	}
 
 }

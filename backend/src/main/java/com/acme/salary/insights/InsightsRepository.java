@@ -6,6 +6,8 @@ import java.util.List;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
+import com.acme.salary.insights.dto.DepartmentHeadcount;
+
 /**
  * The insights aggregates in plain SQL (ADR-022). Aggregation happens here, never in Java; values come
  * back unrounded, and the service rounds them once (ADR-021). Every query states
@@ -37,6 +39,15 @@ class InsightsRepository {
 			group by e.job_title, e.department
 			""";
 
+	/** Only departments with employees appear (ADR-017); headcount descending, then name. */
+	private static final String HEADCOUNT_BY_DEPARTMENT = """
+			select e.department, count(*) as headcount
+			from employee e
+			where e.deleted_at is null and e.country_code = :country
+			group by e.department
+			order by headcount desc, e.department asc
+			""";
+
 	private final JdbcClient jdbc;
 
 	InsightsRepository(JdbcClient jdbc) {
@@ -56,6 +67,13 @@ class InsightsRepository {
 			.param("country", countryCode)
 			.query((rs, rowNum) -> new RawTitleAverage(rs.getString("job_title"), rs.getString("department"),
 					rs.getLong("headcount"), rs.getBigDecimal("average")))
+			.list();
+	}
+
+	List<DepartmentHeadcount> headcountByDepartment(String countryCode) {
+		return jdbc.sql(HEADCOUNT_BY_DEPARTMENT)
+			.param("country", countryCode)
+			.query((rs, rowNum) -> new DepartmentHeadcount(rs.getString("department"), rs.getLong("headcount")))
 			.list();
 	}
 
