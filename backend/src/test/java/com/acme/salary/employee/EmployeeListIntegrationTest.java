@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import com.acme.salary.AbstractIntegrationTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -281,6 +282,101 @@ class EmployeeListIntegrationTest extends AbstractIntegrationTest {
 			.andExpect(jsonPath("$.errors", hasSize(1)))
 			.andExpect(jsonPath("$.errors[0].field").value("jobTitle"))
 			.andExpect(jsonPath("$.errors[0].message").value("must be a supported job title"));
+	}
+
+	@Test
+	void sortsBySalaryDescending() throws Exception {
+		insertPaidAndHired();
+
+		list(get("/api/v1/employees").param("sort", "salary,desc")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(contains("Asha Rao", "Chen Wu", "Ben Ito")));
+	}
+
+	@Test
+	void sortsByHireDateAscending() throws Exception {
+		insertPaidAndHired();
+
+		list(get("/api/v1/employees").param("sort", "hireDate,asc")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(contains("Ben Ito", "Asha Rao", "Chen Wu")));
+	}
+
+	@Test
+	void sortsByFullNameDescending() throws Exception {
+		insertPaidAndHired();
+
+		list(get("/api/v1/employees").param("sort", "fullName,desc")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(contains("Chen Wu", "Ben Ito", "Asha Rao")));
+	}
+
+	@Test
+	void directionDefaultsToAscending() throws Exception {
+		insertPaidAndHired();
+
+		list(get("/api/v1/employees").param("sort", "salary")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].fullName").value(contains("Ben Ito", "Chen Wu", "Asha Rao")));
+	}
+
+	@Test
+	void tiesBreakByIdAscending() throws Exception {
+		long first = insert("Zed One", "z1@acme.com", "500.00", LocalDate.of(2020, 1, 1));
+		long second = insert("Amy Two", "z2@acme.com", "500.00", LocalDate.of(2020, 1, 1));
+		long third = insert("Max Three", "z3@acme.com", "500.00", LocalDate.of(2020, 1, 1));
+
+		JsonNode body = body(list(get("/api/v1/employees").param("sort", "salary,desc")));
+		List<Long> ids = new ArrayList<>();
+		body.get("items").forEach(item -> ids.add(item.get("id").asLong()));
+
+		assertThat(ids).containsExactly(first, second, third);
+	}
+
+	@Test
+	void rejectsUnknownSortField() throws Exception {
+		rejectsSort(get("/api/v1/employees").param("sort", "age"));
+	}
+
+	@Test
+	void rejectsBadDirection() throws Exception {
+		rejectsSort(get("/api/v1/employees").param("sort", "salary,up"));
+	}
+
+	@Test
+	void rejectsMoreThanOneSort() throws Exception {
+		// Bound together these read "salary,desc", a valid sort: only counting the values catches it.
+		rejectsSort(get("/api/v1/employees").param("sort", "salary").param("sort", "desc"));
+	}
+
+	private void rejectsSort(MockHttpServletRequestBuilder request) throws Exception {
+		list(request).andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+			.andExpect(jsonPath("$.errors", hasSize(1)))
+			.andExpect(jsonPath("$.errors[0].field").value("sort"))
+			.andExpect(jsonPath("$.errors[0].message")
+				.value("must be fullName, salary or hireDate, optionally followed by ,asc or ,desc"));
+	}
+
+	/**
+	 * Names sort Asha, Ben, Chen; salaries Ben, Chen, Asha; hire dates Ben, Asha, Chen. Every field and
+	 * direction gives a different order, so a swapped column or direction cannot pass by accident.
+	 */
+	private void insertPaidAndHired() {
+		insert("Asha Rao", "asha@acme.com", "300.00", LocalDate.of(2021, 6, 1));
+		insert("Ben Ito", "ben@acme.com", "100.00", LocalDate.of(2019, 6, 1));
+		insert("Chen Wu", "chen@acme.com", "200.00", LocalDate.of(2023, 6, 1));
+	}
+
+	private long insert(String fullName, String email, String salary, LocalDate hireDate) {
+		return jdbc.sql("""
+				insert into employee (id, full_name, email, job_title, department, country_code, salary, hire_date)
+				values (nextval('employee_id_seq'), :name, :email, 'Software Engineer', 'Engineering', 'IN',
+				        :salary, :hireDate)
+				returning id
+				""")
+			.param("name", fullName)
+			.param("email", email)
+			.param("salary", new BigDecimal(salary))
+			.param("hireDate", hireDate)
+			.query(Long.class)
+			.single();
 	}
 
 	private ResultActions list(MockHttpServletRequestBuilder request) throws Exception {
