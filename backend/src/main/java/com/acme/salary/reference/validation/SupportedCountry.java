@@ -1,4 +1,4 @@
-package com.acme.salary.employee.validation;
+package com.acme.salary.reference.validation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

@@ -14,8 +14,8 @@ import jakarta.validation.constraints.Size;
 import com.acme.salary.employee.validation.JobAssignment;
 import com.acme.salary.employee.validation.MoneyAmount;
 import com.acme.salary.employee.validation.NotBefore;
-import com.acme.salary.employee.validation.SupportedCountry;
 import com.acme.salary.employee.validation.TitleInDepartment;
+import com.acme.salary.reference.validation.SupportedCountry;
 
 /**
  * Body of POST /api/v1/employees ({@code EmployeeCreateRequest} in openapi.yaml). By the time it is

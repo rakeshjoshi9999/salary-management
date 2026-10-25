@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 
 import com.acme.salary.employee.validation.KnownDepartment;
 import com.acme.salary.employee.validation.KnownJobTitle;
-import com.acme.salary.employee.validation.SupportedCountry;
+import com.acme.salary.reference.validation.SupportedCountry;
 
 /**
  * The query string of GET /api/v1/employees (ADR-016, ADR-044), bound by name and validated like a

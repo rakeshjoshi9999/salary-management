@@ -1,4 +1,4 @@
-package com.acme.salary.employee.validation;
+package com.acme.salary.reference.validation;
 
 import java.util.regex.Pattern;
 
