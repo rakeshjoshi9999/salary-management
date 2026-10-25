@@ -32,7 +32,9 @@ paths:
         Filters combine with AND. Each filter value must exist in the reference data, or the request
         is rejected with 400. A valid combination that matches nobody returns an empty page.
         A page past the end returns `items: []` with the correct totals.
-        Results are always ordered by the requested sort, then by `id`, so pages never overlap.
+        Results are always ordered by the requested sort, then by `id` ascending, so pages never overlap.
+        A query parameter not listed here, or `sort` given more than once, is rejected with 400
+        `VALIDATION_FAILED` naming it (ADR-044).
       parameters:
         - name: page
           in: query
