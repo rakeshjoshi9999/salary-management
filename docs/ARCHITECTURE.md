@@ -88,7 +88,8 @@ flowchart TB
 com.acme.salary
 ├─ employee/    EmployeeController, EmployeeService, EmployeeRepository, Employee (entity), dto/, validation/
 ├─ insights/    InsightsController, InsightsService, InsightsRepository, dto/
-├─ reference/   ReferenceController, ReferenceService, ReferenceRepository (JdbcClient), Country, JobTitle, dto/ (ADR-037)
+├─ reference/   ReferenceController, ReferenceService, ReferenceRepository (JdbcClient), Country, JobTitle, dto/,
+│               validation/ (@SupportedCountry, used by employee and settings) (ADR-037)
 ├─ settings/    SettingsController, SettingsService, SettingsRepository, AppSettings (entity), dto/ (ADR-028)
 └─ common/      error/ (Problem Details), money/ (MoneyRounding), config/ (CORS, Clock, Jackson)
 ```
