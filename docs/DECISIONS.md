@@ -85,6 +85,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-035 | Lint, format and coverage checks in CI | Accepted | 2026-10-24 |
 | ADR-036 | First migrations: two files, named constraints, schema tested two ways | Accepted | 2026-10-24 |
 | ADR-037 | Create employee: validation in one pass, strict JSON globally, errors built up per slice | Accepted | 2026-10-25 |
+| ADR-038 | Duplicate email: pre-check plus translated race, feature exceptions as `ErrorResponseException` | Accepted | 2026-10-25 |
 
 ---
 
@@ -1470,6 +1471,43 @@ built in this slice: the `Clock` bean is `Clock.systemUTC()` (ADR-010), and `Cor
 - Hibernate Validator's `@Digits` counts trailing zeros, so it rejects `100.000`. The AI said otherwise
   when offering this option; the first implementation run showed it. A small `@MoneyAmount` constraint
   strips trailing zeros before counting digits instead.
+
+---
+
+## ADR-038 — Duplicate email: pre-check plus translated race, feature exceptions as `ErrorResponseException`
+
+- **Date:** 2026-10-25
+- **Status:** Accepted
+- **Task:** 3.3
+
+### Context
+An email must be unique among active employees, ignoring case (ADR-009, ADR-011). `DATA_MODEL.md` says
+"pre-check, then 409", and the partial unique index `employee_email_active_uq` on `lower(email)` is the
+backstop (ADR-036 named it so it can be mapped). Two creates with one email at the same moment both pass
+the pre-check; the second then fails on the index, which today would be a 500 (ADR-010 says it must not
+be). This is also the first exception a feature turns into a Problem, ahead of `EMPLOYEE_NOT_FOUND`
+(3.4) and `STALE_VERSION` with `currentVersion` (3.5). ADR-026 forbids `common/` depending on features.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| The race | **Service translates it:** save and flush inside the service, catch the violation only when it names `employee_email_active_uq`, throw the pre-check's exception (the feature owns its constraint name; one 409 for both paths) · the global handler maps the constraint name (one table for 3.7; `common` would know an employee constraint) · pre-check only (a rare 500 until 3.7) | Service |
+| Feature exceptions | **Extend Spring's `ErrorResponseException`**, each carrying its `ProblemDetail`; the existing `ResponseEntityExceptionHandler` renders it (no new handler; services import a Spring web type) · own `ApiException` base and handler in `common/error` (no web types in services; re-implements Spring) | `ErrorResponseException` |
+
+### Decision
+As chosen above, by the engineer, each on the AI's recommendation. Also settled without a separate
+question: the pre-check is an explicit query on `lower(email)` with `deleted_at IS NULL`, because
+Spring Data's `IgnoreCase` generates `upper(...)`, which cannot use the `lower(email)` partial index
+(ADR-012).
+
+### Consequences
+- Both duplicate paths return the same 409 `DUPLICATE_EMAIL` body.
+- Any other integrity violation is rethrown untouched, so it is not mistaken for a duplicate; it stays a
+  default error until 3.7.
+- The translation depends on the constraint name reaching Spring's exception, so a test checks it with a
+  real Postgres violation, not only a hand-built exception.
+- 3.4 and 3.5 add their exceptions the same way; `currentVersion` becomes a `ProblemDetail` property.
+- Validation runs first, so a request that is both invalid and a duplicate gets the 400.
 
 ---
 
