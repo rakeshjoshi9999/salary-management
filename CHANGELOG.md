@@ -3,6 +3,28 @@
 One entry per completed phase of [`TASKS.md`](TASKS.md), newest first. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Phase 3 — Employee CRUD (2026-10-25)
+
+### Added
+- Schema and reference data as Flyway migrations `V1` and `V2`, with named constraints (ADR-036).
+- `POST /api/v1/employees`: every field rule in one pass, strict JSON (unknown fields and string
+  numbers rejected, text trimmed), currency derived from the country, ids from `employee_id_seq` in
+  blocks of 50 (ADR-037).
+- 409 `DUPLICATE_EMAIL` for an active email in any case, including two creates racing (ADR-038).
+- `GET /api/v1/employees/{id}`, 404 for a missing or deleted employee (ADR-039).
+- `PUT /api/v1/employees/{id}` with optimistic locking: 409 `STALE_VERSION` with the true current
+  version, for a stale version or a lost race (ADR-041).
+- `DELETE /api/v1/employees/{id}`: a soft delete in one conditional update, 204 then 404 (ADR-042).
+- RFC 7807 Problem Details with a stable `code` for every error, including Spring's own and the
+  `/error` page; 500s carry an `errorId` that is also in the log (ADR-043).
+- JaCoCo coverage, angular-eslint and a Prettier check in CI (ADR-035).
+
+### Changed
+- Contract: a PUT that changes nothing keeps its version; the `{id}` operations gain a 400; two error
+  codes (`UNSUPPORTED_MEDIA_TYPE`, `NOT_ACCEPTABLE`) and `errorId` added (ADR-041, ADR-043).
+- Render builds both services from `backend/` without a root directory, so every green push deploys;
+  before this, a push whose last commit touched only docs never deployed (ADR-040).
+
 ## Phase 2 — Design (2026-10-24)
 
 ### Added
