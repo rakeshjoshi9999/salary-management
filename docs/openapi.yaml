@@ -107,6 +107,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Employee' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/EmployeeNotFound' }
     put:
       tags: [Employees]
@@ -152,6 +153,7 @@ paths:
       description: No version check. A later get returns 404, and so does a second delete.
       responses:
         '204': { description: Deleted. }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/EmployeeNotFound' }
 
   /insights/countries/{countryCode}:
@@ -238,6 +240,9 @@ components:
       name: id
       in: path
       required: true
+      description: |
+        A well-formed id that names no active employee (including 0 and negatives) is 404. A non-numeric
+        or out-of-range id is 400 `VALIDATION_FAILED` on field `id` (ADR-039, ADR-043).
       schema: { type: integer, format: int64, minimum: 1 }
 
   responses:
@@ -445,8 +450,10 @@ components:
       description: |
         RFC 7807 Problem Details. Never contains a stack trace or exception class.
         Codes: VALIDATION_FAILED, MALFORMED_REQUEST (400) · EMPLOYEE_NOT_FOUND, COUNTRY_NOT_FOUND,
-        NOT_FOUND (404, unknown route) · METHOD_NOT_ALLOWED (405) · DUPLICATE_EMAIL, STALE_VERSION (409) ·
-        INTERNAL_ERROR (500).
+        NOT_FOUND (404, unknown route) · METHOD_NOT_ALLOWED (405) · NOT_ACCEPTABLE (406) ·
+        DUPLICATE_EMAIL, STALE_VERSION (409) · UNSUPPORTED_MEDIA_TYPE (415) · INTERNAL_ERROR (500).
+        Any other error keeps its HTTP status and gets MALFORMED_REQUEST (4xx) or INTERNAL_ERROR (5xx)
+        (ADR-043).
       required: [type, title, status, code]
       properties:
         type: { type: string, description: 'Relative URI, e.g. /problems/duplicate-email. It does not resolve.' }
@@ -462,9 +469,12 @@ components:
             type: object
             required: [field, message]
             properties:
-              field: { type: string, description: JSON property or query parameter name. }
+              field: { type: string, description: 'JSON property, query parameter or path parameter name.' }
               message: { type: string }
         currentVersion:
           type: integer
           format: int64
           description: Present only for STALE_VERSION.
+        errorId:
+          type: string
+          description: Present only for INTERNAL_ERROR. The same id is in the server log with the full error (ADR-043).

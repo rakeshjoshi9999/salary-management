@@ -71,7 +71,7 @@ can reach its database.
 - [x] **3.4** Get employee by id; missing → 404
 - [x] **3.5** Update employee with optimistic locking (`version`); stale update → 409
 - [x] **3.6** Delete employee → 204; subsequent get → 404
-- [ ] **3.7** Global error handling: RFC 7807 Problem Details, malformed JSON → 400, no stack traces
+- [x] **3.7** Global error handling: RFC 7807 Problem Details, malformed JSON → 400, no stack traces
 
 **Done when:** all CRUD scenarios from the test bank pass.
 
