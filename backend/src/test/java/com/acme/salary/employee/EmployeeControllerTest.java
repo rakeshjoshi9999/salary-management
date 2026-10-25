@@ -28,6 +28,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import com.acme.salary.common.config.JacksonConfig;
 import com.acme.salary.common.config.ValidationConfig;
+import com.acme.salary.common.error.ErrorIds;
 import com.acme.salary.employee.dto.EmployeeCreateRequest;
 import com.acme.salary.employee.dto.EmployeeResponse;
 import com.acme.salary.employee.dto.EmployeeUpdateRequest;
@@ -400,6 +401,11 @@ class EmployeeControllerTest {
 		@Bean
 		ReferenceService referenceService() {
 			return TestReferenceData.v2();
+		}
+
+		@Bean
+		ErrorIds errorIds() {
+			return () -> "err-test";
 		}
 
 	}
