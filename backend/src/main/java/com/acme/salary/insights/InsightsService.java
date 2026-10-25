@@ -1,5 +1,6 @@
 package com.acme.salary.insights;
 
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -8,10 +9,19 @@ import org.springframework.transaction.annotation.Transactional;
 import com.acme.salary.common.money.MoneyRounding;
 import com.acme.salary.insights.dto.CountryInsights;
 import com.acme.salary.insights.dto.SalaryStats;
+import com.acme.salary.insights.dto.TitleAverage;
 import com.acme.salary.reference.ReferenceService;
 
 @Service
 public class InsightsService {
+
+	/**
+	 * The contract's order is by the average the client sees, so the (at most 18) titles are sorted after
+	 * rounding: two averages shown as 200.00 then fall back to the title.
+	 */
+	private static final Comparator<TitleAverage> BY_SHOWN_AVERAGE = Comparator
+		.comparing(TitleAverage::average, Comparator.reverseOrder())
+		.thenComparing(TitleAverage::jobTitle);
 
 	private final InsightsRepository insights;
 
@@ -34,7 +44,12 @@ public class InsightsService {
 		SalaryStats salary = new SalaryStats(raw.headcount(), MoneyRounding.toMoney(raw.min()),
 				MoneyRounding.toMoney(raw.max()), MoneyRounding.toMoney(raw.average()),
 				MoneyRounding.toMoney(raw.median()));
-		return new CountryInsights(countryCode, currency, salary, List.of(), List.of());
+		List<TitleAverage> byTitle = insights.averageByTitle(countryCode)
+			.stream()
+			.map(t -> new TitleAverage(t.jobTitle(), t.department(), t.headcount(), MoneyRounding.toMoney(t.average())))
+			.sorted(BY_SHOWN_AVERAGE)
+			.toList();
+		return new CountryInsights(countryCode, currency, salary, byTitle, List.of());
 	}
 
 }
