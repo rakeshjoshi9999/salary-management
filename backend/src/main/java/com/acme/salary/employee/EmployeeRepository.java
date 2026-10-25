@@ -15,8 +15,8 @@ interface EmployeeRepository extends JpaRepository<Employee, Long> {
 	@Query("select count(e) > 0 from Employee e where lower(e.email) = lower(:email) and e.deletedAt is null")
 	boolean existsActiveByEmail(@Param("email") String email);
 
-	default Optional<Employee> findActiveById(long id) {
-		return Optional.empty();
-	}
+	/** Use this, never the inherited {@code findById}, which also returns soft-deleted rows (ADR-039). */
+	@Query("select e from Employee e where e.id = :id and e.deletedAt is null")
+	Optional<Employee> findActiveById(@Param("id") long id);
 
 }

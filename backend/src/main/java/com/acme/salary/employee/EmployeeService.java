@@ -48,8 +48,9 @@ public class EmployeeService {
 		return toResponse(employee);
 	}
 
+	@Transactional(readOnly = true)
 	public EmployeeResponse get(long id) {
-		throw new UnsupportedOperationException("not implemented yet");
+		return employees.findActiveById(id).map(this::toResponse).orElseThrow(() -> new EmployeeNotFoundException(id));
 	}
 
 	/** True only for a violation of the active-email unique index, named in V1 (ADR-036). */
