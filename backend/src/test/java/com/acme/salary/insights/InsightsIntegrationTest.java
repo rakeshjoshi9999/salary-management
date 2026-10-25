@@ -209,6 +209,26 @@ class InsightsIntegrationTest extends AbstractIntegrationTest {
 		assertThat(titleAverages("DE")).extracting(Title::average).containsExactly(new BigDecimal("100.02"));
 	}
 
+	/**
+	 * Software Engineer averages 200.004 and Accountant 200.001: both show 200.00, so the title decides.
+	 * Sorting on the unrounded average would put Software Engineer first.
+	 */
+	@Test
+	void averagesEqualAfterRoundingSortByTitle() throws Exception {
+		for (int i = 0; i < 4; i++) {
+			employee("IN", "Software Engineer", "Engineering", "200.00");
+		}
+		employee("IN", "Software Engineer", "Engineering", "200.02");
+		for (int i = 0; i < 9; i++) {
+			employee("IN", "Accountant", "Finance", "200.00");
+		}
+		employee("IN", "Accountant", "Finance", "200.01");
+
+		assertThat(titleAverages("IN")).containsExactly(
+				new Title("Accountant", "Finance", 10, new BigDecimal("200.00")),
+				new Title("Software Engineer", "Engineering", 5, new BigDecimal("200.00")));
+	}
+
 	@Test
 	void titleAveragesExcludeSoftDeleted() throws Exception {
 		employee("IN", "Software Engineer", "Engineering", "100.00");
