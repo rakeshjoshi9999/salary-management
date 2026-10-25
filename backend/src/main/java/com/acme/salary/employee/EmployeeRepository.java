@@ -10,7 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-interface EmployeeRepository extends JpaRepository<Employee, Long> {
+interface EmployeeRepository extends JpaRepository<Employee, Long>, EmployeeSearch {
 
 	/**
 	 * Written out rather than derived: {@code IgnoreCase} would generate {@code upper(...)}, and only

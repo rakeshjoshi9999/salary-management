@@ -1,12 +1,14 @@
 package com.acme.salary.employee;
 
 import java.time.Clock;
+import java.util.List;
 
 import org.hibernate.exception.ConstraintViolationException;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.acme.salary.employee.dto.EmployeeCreateRequest;
@@ -33,8 +35,22 @@ public class EmployeeService {
 		this.clock = clock;
 	}
 
+	/**
+	 * One page plus totals (ADR-044). Repeatable read gives both statements one snapshot, so the totals
+	 * describe the same rows as the page; under read committed each statement would see its own.
+	 */
+	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 	public EmployeePage list(EmployeeListQuery query) {
-		throw new UnsupportedOperationException("not implemented yet");
+		long total = employees.countMatching();
+		long offset = (long) query.page() * query.size();
+		List<EmployeeResponse> items = employees.findPage(query.size(), offset).stream().map(this::toResponse).toList();
+		int totalPages = (int) ((total + query.size() - 1) / query.size());
+		return new EmployeePage(items, query.page(), query.size(), total, totalPages);
+	}
+
+	private EmployeeResponse toResponse(EmployeeSearch.EmployeeRow row) {
+		return new EmployeeResponse(row.id(), row.fullName(), row.email(), row.jobTitle(), row.department(),
+				row.countryCode(), currencyOf(row.countryCode()), row.salary(), row.hireDate(), row.version());
 	}
 
 	/** Soft delete, no version check (ADR-014); "now" comes from the injected clock (ADR-011). */
@@ -118,11 +134,15 @@ public class EmployeeService {
 	}
 
 	private EmployeeResponse toResponse(Employee employee) {
-		String currency = reference.currencyOf(employee.getCountryCode())
-			.orElseThrow(() -> new IllegalStateException("No currency for country " + employee.getCountryCode()));
 		return new EmployeeResponse(employee.getId(), employee.getFullName(), employee.getEmail(),
-				employee.getJobTitle(), employee.getDepartment(), employee.getCountryCode(), currency,
-				employee.getSalary(), employee.getHireDate(), employee.getVersion());
+				employee.getJobTitle(), employee.getDepartment(), employee.getCountryCode(),
+				currencyOf(employee.getCountryCode()), employee.getSalary(), employee.getHireDate(),
+				employee.getVersion());
+	}
+
+	private String currencyOf(String countryCode) {
+		return reference.currencyOf(countryCode)
+			.orElseThrow(() -> new IllegalStateException("No currency for country " + countryCode));
 	}
 
 }

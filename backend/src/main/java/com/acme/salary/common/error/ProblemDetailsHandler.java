@@ -52,7 +52,18 @@ class ProblemDetailsHandler extends ResponseEntityExceptionHandler {
 		List<FieldProblem> errors = ex.getBindingResult()
 			.getFieldErrors()
 			.stream()
-			.map(error -> new FieldProblem(error.getField(), error.getDefaultMessage()))
+			.map(error -> new FieldProblem(error.getField(),
+					// A query value that cannot even be converted (page=abc): Spring's own message names Java types.
+					error.isBindingFailure() ? "has the wrong type or format" : error.getDefaultMessage()))
+			.toList();
+		return validationFailed(errors, request);
+	}
+
+	@ExceptionHandler(UnknownQueryParametersException.class)
+	ResponseEntity<Object> handleUnknownQueryParameters(UnknownQueryParametersException ex, WebRequest request) {
+		List<FieldProblem> errors = ex.names()
+			.stream()
+			.map(name -> new FieldProblem(name, "is not a recognised parameter"))
 			.toList();
 		return validationFailed(errors, request);
 	}
