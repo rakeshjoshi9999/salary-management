@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +31,7 @@ import com.acme.salary.common.config.JacksonConfig;
 import com.acme.salary.common.config.ValidationConfig;
 import com.acme.salary.common.error.ErrorIds;
 import com.acme.salary.employee.dto.EmployeeCreateRequest;
+import com.acme.salary.employee.dto.EmployeePage;
 import com.acme.salary.employee.dto.EmployeeResponse;
 import com.acme.salary.employee.dto.EmployeeUpdateRequest;
 import com.acme.salary.reference.ReferenceService;
@@ -323,6 +325,40 @@ class EmployeeControllerTest {
 		body.put("version", 3);
 
 		sendPut(body).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("EMPLOYEE_NOT_FOUND"));
+	}
+
+	@Test
+	void listReturnsPageEnvelope() throws Exception {
+		when(service.list(any())).thenReturn(new EmployeePage(List.of(created()), 0, 20, 1, 1));
+
+		mvc.perform(get("/api/v1/employees"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.page").value(0))
+			.andExpect(jsonPath("$.size").value(20))
+			.andExpect(jsonPath("$.totalItems").value(1))
+			.andExpect(jsonPath("$.totalPages").value(1))
+			.andExpect(jsonPath("$.items", hasSize(1)))
+			.andExpect(jsonPath("$.items[0].id").value(101))
+			.andExpect(jsonPath("$.items[0].currency").value("INR"))
+			.andExpect(jsonPath("$.items[0].version").value(0));
+	}
+
+	@Test
+	void invalidParameterIs400NamingIt() throws Exception {
+		mvc.perform(get("/api/v1/employees").param("size", "101"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+			.andExpect(jsonPath("$.errors[*].field").value(containsInAnyOrder("size")));
+		verify(service, never()).list(any());
+	}
+
+	@Test
+	void rejectsUnknownQueryParameter() throws Exception {
+		mvc.perform(get("/api/v1/employees").param("contry", "IN"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+			.andExpect(jsonPath("$.errors[*].field").value(containsInAnyOrder("contry")));
+		verify(service, never()).list(any());
 	}
 
 	@Test

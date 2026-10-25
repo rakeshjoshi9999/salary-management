@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.acme.salary.employee.dto.EmployeeCreateRequest;
+import com.acme.salary.employee.dto.EmployeeListQuery;
+import com.acme.salary.employee.dto.EmployeePage;
 import com.acme.salary.employee.dto.EmployeeResponse;
 import com.acme.salary.employee.dto.EmployeeUpdateRequest;
 import com.acme.salary.reference.ReferenceService;
@@ -29,6 +31,10 @@ public class EmployeeService {
 		this.employees = employees;
 		this.reference = reference;
 		this.clock = clock;
+	}
+
+	public EmployeePage list(EmployeeListQuery query) {
+		throw new UnsupportedOperationException("not implemented yet");
 	}
 
 	/** Soft delete, no version check (ADR-014); "now" comes from the injected clock (ADR-011). */
