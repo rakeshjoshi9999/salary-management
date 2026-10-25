@@ -239,6 +239,56 @@ class InsightsIntegrationTest extends AbstractIntegrationTest {
 			.containsExactly(new Title("Software Engineer", "Engineering", 1, new BigDecimal("100.00")));
 	}
 
+	/** Engineering 3, Sales 2, Human Resources 1: not the alphabetical order, so the count decides. */
+	@Test
+	void headcountsByDepartmentWithinCountry() throws Exception {
+		employee("IN", "Recruiter", "Human Resources", "100.00");
+		employee("IN", "Sales Manager", "Sales", "100.00");
+		employee("IN", "Account Executive", "Sales", "100.00");
+		employee("IN", "Software Engineer", "Engineering", "100.00");
+		employee("IN", "Software Engineer", "Engineering", "100.00");
+		employee("IN", "QA Engineer", "Engineering", "100.00");
+		employee("DE", "Recruiter", "Human Resources", "100.00");
+		employee("DE", "Recruiter", "Human Resources", "100.00");
+		employee("DE", "Recruiter", "Human Resources", "100.00");
+
+		assertThat(departmentHeadcounts("IN")).containsExactly(new Department("Engineering", 3),
+				new Department("Sales", 2), new Department("Human Resources", 1));
+	}
+
+	/** Inserted in reverse name order, so only the name tiebreak puts them right. */
+	@Test
+	void equalHeadcountsSortByName() throws Exception {
+		employee("IN", "Operations Analyst", "Operations", "100.00");
+		employee("IN", "Marketing Manager", "Marketing", "100.00");
+		employee("IN", "Accountant", "Finance", "100.00");
+		employee("IN", "Software Engineer", "Engineering", "100.00");
+		employee("IN", "Software Engineer", "Engineering", "100.00");
+
+		assertThat(departmentHeadcounts("IN")).containsExactly(new Department("Engineering", 2),
+				new Department("Finance", 1), new Department("Marketing", 1), new Department("Operations", 1));
+	}
+
+	@Test
+	void departmentHeadcountsExcludeSoftDeleted() throws Exception {
+		employee("IN", "Software Engineer", "Engineering", "100.00");
+		long deleted = employee("IN", "Recruiter", "Human Resources", "100.00");
+		jdbc.sql("update employee set deleted_at = now() where id = :id").param("id", deleted).update();
+
+		assertThat(departmentHeadcounts("IN")).containsExactly(new Department("Engineering", 1));
+	}
+
+	private List<Department> departmentHeadcounts(String code) throws Exception {
+		List<Department> departments = new ArrayList<>();
+		body(code).get("headcountByDepartment")
+			.forEach(d -> departments.add(new Department(d.get("department").asString(), d.get("headcount").asInt())));
+		return departments;
+	}
+
+	/** One entry of {@code headcountByDepartment}. */
+	private record Department(String department, int headcount) {
+	}
+
 	private List<Title> titleAverages(String code) throws Exception {
 		List<Title> titles = new ArrayList<>();
 		body(code).get("averageByJobTitle")
