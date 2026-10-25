@@ -32,10 +32,10 @@ import com.acme.salary.employee.dto.EmployeeUpdateRequest;
 class EmployeeController {
 
 	/**
-	 * The query parameters the list takes; any other is a 400 (ADR-044). Search, filters and an explicit
-	 * sort join this set with tasks 4.2 to 4.4.
+	 * The query parameters the list takes; any other is a 400 (ADR-044). Filters and an explicit sort
+	 * join this set with tasks 4.3 and 4.4.
 	 */
-	private static final Set<String> LIST_PARAMETERS = Set.of("page", "size");
+	private static final Set<String> LIST_PARAMETERS = Set.of("page", "size", "q");
 
 	private final EmployeeService service;
 

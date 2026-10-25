@@ -41,9 +41,13 @@ public class EmployeeService {
 	 */
 	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 	public EmployeePage list(EmployeeListQuery query) {
-		long total = employees.countMatching();
+		EmployeeSearch.Criteria criteria = new EmployeeSearch.Criteria(query.q());
+		long total = employees.countMatching(criteria);
 		long offset = (long) query.page() * query.size();
-		List<EmployeeResponse> items = employees.findPage(query.size(), offset).stream().map(this::toResponse).toList();
+		List<EmployeeResponse> items = employees.findPage(criteria, query.size(), offset)
+			.stream()
+			.map(this::toResponse)
+			.toList();
 		int totalPages = (int) ((total + query.size() - 1) / query.size());
 		return new EmployeePage(items, query.page(), query.size(), total, totalPages);
 	}

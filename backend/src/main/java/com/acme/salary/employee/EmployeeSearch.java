@@ -10,11 +10,15 @@ import java.util.List;
  */
 interface EmployeeSearch {
 
-	/** One page of active employees in list order. */
-	List<EmployeeRow> findPage(int limit, long offset);
+	/** One page of the active employees matching the criteria, in list order. */
+	List<EmployeeRow> findPage(Criteria criteria, int limit, long offset);
 
-	/** How many active employees the same query matches. */
-	long countMatching();
+	/** How many active employees match the same criteria. */
+	long countMatching(Criteria criteria);
+
+	/** What to match: {@code q} is trimmed text or null for no search. */
+	record Criteria(String q) {
+	}
 
 	/** One listed employee, as read; the service adds the currency and makes it a response. */
 	record EmployeeRow(long id, String fullName, String email, String jobTitle, String department,
