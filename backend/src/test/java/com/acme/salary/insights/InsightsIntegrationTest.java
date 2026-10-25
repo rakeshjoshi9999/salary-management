@@ -2,6 +2,8 @@ package com.acme.salary.insights;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
@@ -159,6 +161,79 @@ class InsightsIntegrationTest extends AbstractIntegrationTest {
 			.andExpect(jsonPath("$.type").value("/problems/country-not-found"))
 			.andExpect(jsonPath("$.title").value("Country not supported"))
 			.andExpect(jsonPath("$.detail").value("Country " + code + " is not supported."));
+	}
+
+	@Test
+	void averagesByTitleWithinCountry() throws Exception {
+		employee("IN", "Software Engineer", "Engineering", "100.00");
+		employee("IN", "Software Engineer", "Engineering", "300.00");
+		employee("IN", "Recruiter", "Human Resources", "150.00");
+		employee("DE", "Recruiter", "Human Resources", "9000.00");
+
+		// The higher average sorts later by title and has the larger headcount, so ordering by either fails.
+		assertThat(titleAverages("IN")).containsExactly(
+				new Title("Software Engineer", "Engineering", 2, new BigDecimal("200.00")),
+				new Title("Recruiter", "Human Resources", 1, new BigDecimal("150.00")));
+	}
+
+	@Test
+	void onlyTitlesWithEmployeesAppear() throws Exception {
+		employee("IN", "Accountant", "Finance", "100.00");
+
+		assertThat(titleAverages("IN")).extracting(Title::jobTitle).containsExactly("Accountant");
+	}
+
+	@Test
+	void equalAveragesSortByTitle() throws Exception {
+		employee("IN", "Software Engineer", "Engineering", "100.00");
+		employee("IN", "Software Engineer", "Engineering", "300.00");
+		employee("IN", "Accountant", "Finance", "200.00");
+		employee("IN", "Content Strategist", "Marketing", "200.00");
+
+		assertThat(titleAverages("IN")).extracting(Title::jobTitle)
+			.containsExactly("Accountant", "Content Strategist", "Software Engineer");
+	}
+
+	/**
+	 * 100.005 is a tie: HALF_EVEN gives 100.00, HALF_UP and Postgres round() give 100.01. 100.015 gives
+	 * 100.02 under HALF_EVEN, while truncation or HALF_DOWN give 100.01.
+	 */
+	@Test
+	void titleAverageRoundsHalfEven() throws Exception {
+		employee("IN", "Software Engineer", "Engineering", "100.00");
+		employee("IN", "Software Engineer", "Engineering", "100.01");
+		employee("DE", "Software Engineer", "Engineering", "100.01");
+		employee("DE", "Software Engineer", "Engineering", "100.02");
+
+		assertThat(titleAverages("IN")).extracting(Title::average).containsExactly(new BigDecimal("100.00"));
+		assertThat(titleAverages("DE")).extracting(Title::average).containsExactly(new BigDecimal("100.02"));
+	}
+
+	@Test
+	void titleAveragesExcludeSoftDeleted() throws Exception {
+		employee("IN", "Software Engineer", "Engineering", "100.00");
+		long deleted = employee("IN", "Software Engineer", "Engineering", "900.00");
+		jdbc.sql("update employee set deleted_at = now() where id = :id").param("id", deleted).update();
+
+		assertThat(titleAverages("IN"))
+			.containsExactly(new Title("Software Engineer", "Engineering", 1, new BigDecimal("100.00")));
+	}
+
+	private List<Title> titleAverages(String code) throws Exception {
+		List<Title> titles = new ArrayList<>();
+		body(code).get("averageByJobTitle")
+			.forEach(t -> titles.add(new Title(t.get("jobTitle").asString(), t.get("department").asString(),
+					t.get("headcount").asInt(), t.get("average").decimalValue())));
+		return titles;
+	}
+
+	/** One entry of {@code averageByJobTitle}; {@code average} is compared with its scale. */
+	private record Title(String jobTitle, String department, int headcount, BigDecimal average) {
+	}
+
+	private JsonNode body(String code) throws Exception {
+		String body = insights(code).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+		return JSON.readTree(body);
 	}
 
 	private ResultActions insights(String code) throws Exception {
