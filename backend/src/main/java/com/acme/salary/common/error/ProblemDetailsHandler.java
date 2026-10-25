@@ -59,6 +59,11 @@ class ProblemDetailsHandler extends ResponseEntityExceptionHandler {
 		return validationFailed(errors, request);
 	}
 
+	@ExceptionHandler(InvalidQueryParameterException.class)
+	ResponseEntity<Object> handleInvalidQueryParameter(InvalidQueryParameterException ex, WebRequest request) {
+		return validationFailed(List.of(new FieldProblem(ex.name(), ex.getMessage())), request);
+	}
+
 	@ExceptionHandler(UnknownQueryParametersException.class)
 	ResponseEntity<Object> handleUnknownQueryParameters(UnknownQueryParametersException ex, WebRequest request) {
 		List<FieldProblem> errors = ex.names()

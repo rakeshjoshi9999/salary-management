@@ -18,8 +18,9 @@ class EmployeeSearchImpl implements EmployeeSearch {
 			e.id, e.full_name, e.email, e.job_title, e.department, e.country_code, e.salary, e.hire_date, \
 			e.version""";
 
-	/** The id tiebreak keeps pages from overlapping when sort values repeat (ADR-016). */
-	private static final String ORDER = "order by e.full_name asc, e.id asc";
+	/** API sort names to columns: the only way a sort reaches the SQL (ADR-044). */
+	private static final Map<String, String> SORT_COLUMNS = Map.of("fullName", "e.full_name", "salary", "e.salary",
+			"hireDate", "e.hire_date");
 
 	private final JdbcClient jdbc;
 
@@ -30,7 +31,7 @@ class EmployeeSearchImpl implements EmployeeSearch {
 	@Override
 	public List<EmployeeRow> findPage(Criteria criteria, int limit, long offset) {
 		Where where = where(criteria);
-		return jdbc.sql("select " + COLUMNS + " from employee e " + where.sql() + " " + ORDER
+		return jdbc.sql("select " + COLUMNS + " from employee e " + where.sql() + " " + orderBy(criteria)
 				+ " limit :limit offset :offset")
 			.params(where.params())
 			.param("limit", limit)
@@ -48,6 +49,18 @@ class EmployeeSearchImpl implements EmployeeSearch {
 			.params(where.params())
 			.query(Long.class)
 			.single();
+	}
+
+	/**
+	 * The requested column and direction, then {@code id} ascending, so pages never overlap when sort
+	 * values repeat (ADR-016). An unknown field fails here rather than reaching the SQL.
+	 */
+	private static String orderBy(Criteria criteria) {
+		String column = SORT_COLUMNS.get(criteria.sortField());
+		if (column == null) {
+			throw new IllegalArgumentException("Unsupported sort field: " + criteria.sortField());
+		}
+		return "order by " + column + (criteria.descending() ? " desc" : " asc") + ", e.id asc";
 	}
 
 	/**

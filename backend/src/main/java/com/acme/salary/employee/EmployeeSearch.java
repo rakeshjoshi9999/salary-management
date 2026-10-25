@@ -16,8 +16,12 @@ interface EmployeeSearch {
 	/** How many active employees match the same criteria. */
 	long countMatching(Criteria criteria);
 
-	/** What to match; a null value means "no condition". Filters combine with AND (ADR-016). */
-	record Criteria(String q, String country, String department, String jobTitle) {
+	/**
+	 * What to match and how to order it; a null value means "no condition", and filters combine with
+	 * AND (ADR-016). {@code sortField} is one of the contract's names, checked before it gets here.
+	 */
+	record Criteria(String q, String country, String department, String jobTitle, String sortField,
+			boolean descending) {
 	}
 
 	/** One listed employee, as read; the service adds the currency and makes it a response. */

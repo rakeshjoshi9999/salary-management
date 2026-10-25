@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.acme.salary.common.error.InvalidQueryParameterException;
 import com.acme.salary.common.error.UnknownQueryParametersException;
 import com.acme.salary.employee.dto.EmployeeCreateRequest;
 import com.acme.salary.employee.dto.EmployeeListQuery;
@@ -32,11 +33,10 @@ import com.acme.salary.employee.dto.EmployeeUpdateRequest;
 class EmployeeController {
 
 	/**
-	 * The query parameters the list takes; any other is a 400 (ADR-044). An explicit sort joins this set
-	 * with task 4.4.
+	 * The query parameters the list takes; any other is a 400 (ADR-044).
 	 */
-	private static final Set<String> LIST_PARAMETERS = Set.of("page", "size", "q", "country", "department",
-			"jobTitle");
+	private static final Set<String> LIST_PARAMETERS = Set.of("page", "size", "sort", "q", "country",
+			"department", "jobTitle");
 
 	private final EmployeeService service;
 
@@ -60,6 +60,11 @@ class EmployeeController {
 			.toList();
 		if (!unknown.isEmpty()) {
 			throw new UnknownQueryParametersException(unknown);
+		}
+		// Two sort values bind as one joined string, which can look valid ("salary" + "desc"), so count them.
+		String[] sorts = request.getParameterValues("sort");
+		if (sorts != null && sorts.length > 1) {
+			throw new InvalidQueryParameterException("sort", EmployeeListQuery.SORT_MESSAGE);
 		}
 		return service.list(query);
 	}

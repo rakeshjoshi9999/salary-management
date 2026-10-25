@@ -17,7 +17,7 @@ import com.acme.salary.employee.validation.SupportedCountry;
 public record EmployeeListQuery(
 		@Min(0) Integer page,
 		@Min(1) @Max(100) Integer size,
-		String sort,
+		@Pattern(regexp = SORT_FORMAT, message = SORT_MESSAGE) String sort,
 		@Size(min = 2, message = "must be at least 2 characters")
 		@Size(max = 254, message = "must be at most 254 characters") String q,
 		@Pattern(regexp = SupportedCountry.FORMAT, message = "must be two uppercase letters")
@@ -28,6 +28,21 @@ public record EmployeeListQuery(
 	public static final int DEFAULT_SIZE = 20;
 
 	public static final String DEFAULT_SORT = "fullName,asc";
+
+	/** The contract's sort syntax: one whitelisted field, optionally a direction (ADR-016). */
+	public static final String SORT_FORMAT = "(fullName|salary|hireDate)(,(asc|desc))?";
+
+	public static final String SORT_MESSAGE = "must be fullName, salary or hireDate, optionally followed by ,asc or ,desc";
+
+	/** The field part of a valid sort. */
+	public String sortField() {
+		return sort.split(",")[0];
+	}
+
+	/** Whether a valid sort asks for descending order; ascending is the default. */
+	public boolean sortDescending() {
+		return sort.endsWith(",desc");
+	}
 
 	public EmployeeListQuery {
 		page = page == null ? 0 : page;
