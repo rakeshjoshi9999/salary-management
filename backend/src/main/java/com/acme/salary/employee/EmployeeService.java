@@ -31,8 +31,12 @@ public class EmployeeService {
 		this.clock = clock;
 	}
 
+	/** Soft delete, no version check (ADR-014); "now" comes from the injected clock (ADR-011). */
+	@Transactional
 	public void delete(long id) {
-		throw new UnsupportedOperationException("not implemented yet");
+		if (employees.softDeleteActive(id, clock.instant()) == 0) {
+			throw new EmployeeNotFoundException(id);
+		}
 	}
 
 	/**
