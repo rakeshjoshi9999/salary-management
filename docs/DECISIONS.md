@@ -86,6 +86,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-036 | First migrations: two files, named constraints, schema tested two ways | Accepted | 2026-10-24 |
 | ADR-037 | Create employee: validation in one pass, strict JSON globally, errors built up per slice | Accepted | 2026-10-25 |
 | ADR-038 | Duplicate email: pre-check plus translated race, feature exceptions as `ErrorResponseException` | Accepted | 2026-10-25 |
+| ADR-039 | Get by id: explicit active queries; ids that name nobody are 404 | Accepted | 2026-10-25 |
 
 ---
 
@@ -1508,6 +1509,36 @@ Spring Data's `IgnoreCase` generates `upper(...)`, which cannot use the `lower(e
   real Postgres violation, not only a hand-built exception.
 - 3.4 and 3.5 add their exceptions the same way; `currentVersion` becomes a `ProblemDetail` property.
 - Validation runs first, so a request that is both invalid and a duplicate gets the 400.
+
+---
+
+## ADR-039 — Get by id: explicit active queries; ids that name nobody are 404
+
+- **Date:** 2026-10-25
+- **Status:** Accepted
+- **Task:** 3.4
+
+### Context
+`GET /api/v1/employees/{id}` returns the employee or 404 `EMPLOYEE_NOT_FOUND`, and a soft-deleted
+employee is invisible (ADR-011). It is the first read by id, so how reads exclude deleted rows here
+carries into 3.5, 3.6 and phase 4. The contract gives `{id}` a minimum of 1 but lists only 200 and 404,
+so it does not say what `0`, `-5` or `abc` return.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Excluding deleted rows | **Explicit active queries** (`findActiveById` with `deleted_at IS NULL` written out, like `existsActiveByEmail`; visible in review; inherited `findById` still sees deleted rows) · `@SQLRestriction` on the entity (automatic everywhere; invisible at the call site) | Explicit |
+| Ids that name nobody | **Well-formed numbers (`0`, `-5`) are 404 now; non-numeric or out-of-range ids become a 400 in 3.7**, which adds that 400 to the contract · everything 404 now (hides client bugs such as `/employees/undefined`) · everything 400 now with `@Min(1)` (pulls part of 3.7 and a contract change into 3.4) | 404 now, 400 in 3.7 |
+
+### Decision
+As chosen above, by the engineer, each on the AI's recommendation. `EmployeeNotFoundException` extends
+`ErrorResponseException` (ADR-038).
+
+### Consequences
+- Every new read must state `deleted_at IS NULL`, and each gets a test that a deleted row is invisible.
+  `findById` and `findAll` must not be used for employees; review is the only guard (ADR-026).
+- Until 3.7, `/employees/abc` returns Spring's default 400 without a `code`.
+- 3.7 amends `openapi.yaml` with a 400 on the `{id}` operations.
 
 ---
 

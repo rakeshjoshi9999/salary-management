@@ -68,7 +68,7 @@ can reach its database.
 - [x] **3.2** Create employee — validation rules (required fields, email format, salary > 0, hire date not future, supported country); currency derived from country;
       JPA ids come from `employee_id_seq` in blocks of 50 (moved from 3.1, ADR-036)
 - [x] **3.3** Duplicate email → 409
-- [ ] **3.4** Get employee by id; missing → 404
+- [x] **3.4** Get employee by id; missing → 404
 - [ ] **3.5** Update employee with optimistic locking (`version`); stale update → 409
 - [ ] **3.6** Delete employee → 204; subsequent get → 404
 - [ ] **3.7** Global error handling: RFC 7807 Problem Details, malformed JSON → 400, no stack traces
