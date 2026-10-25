@@ -1,6 +1,5 @@
 package com.acme.salary.employee;
 
-import java.lang.reflect.Constructor;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -9,11 +8,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 
-import jakarta.validation.Configuration;
-import jakarta.validation.ConstraintValidator;
-import jakarta.validation.ConstraintValidatorFactory;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.constraints.Size;
 
@@ -23,7 +18,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.acme.salary.employee.dto.EmployeeCreateRequest;
-import com.acme.salary.reference.ReferenceService;
 import com.acme.salary.reference.TestReferenceData;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,7 +30,7 @@ class EmployeeCreateRequestValidationTest {
 
 	private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-25T12:00:00Z"), ZoneOffset.UTC);
 
-	private final Validator validator = validator(TestReferenceData.v2(), CLOCK);
+	private final Validator validator = TestValidators.validator(TestReferenceData.v2(), CLOCK);
 
 	@Test
 	void acceptsValidRequest() {
@@ -225,41 +219,6 @@ class EmployeeCreateRequestValidationTest {
 		}
 		String fixed = "a".repeat(64) + "@" + "b".repeat(63) + "." + "c".repeat(63) + ".";
 		return fixed + "d".repeat(length - fixed.length() - ".com".length()) + ".com";
-	}
-
-	/**
-	 * The validator as Spring builds it, minus Spring: the fixed clock, and any constraint validator
-	 * with a ReferenceService constructor gets the given one.
-	 */
-	private static Validator validator(ReferenceService reference, Clock clock) {
-		Configuration<?> config = Validation.byDefaultProvider().configure();
-		ConstraintValidatorFactory defaults = config.getDefaultConstraintValidatorFactory();
-		ConstraintValidatorFactory factory = new ConstraintValidatorFactory() {
-
-			@Override
-			public <T extends ConstraintValidator<?, ?>> T getInstance(Class<T> key) {
-				try {
-					Constructor<T> constructor = key.getDeclaredConstructor(ReferenceService.class);
-					constructor.setAccessible(true);
-					return constructor.newInstance(reference);
-				}
-				catch (NoSuchMethodException ex) {
-					return defaults.getInstance(key);
-				}
-				catch (ReflectiveOperationException ex) {
-					throw new IllegalStateException(ex);
-				}
-			}
-
-			@Override
-			public void releaseInstance(ConstraintValidator<?, ?> instance) {
-			}
-
-		};
-		return config.clockProvider(() -> clock)
-			.constraintValidatorFactory(factory)
-			.buildValidatorFactory()
-			.getValidator();
 	}
 
 }

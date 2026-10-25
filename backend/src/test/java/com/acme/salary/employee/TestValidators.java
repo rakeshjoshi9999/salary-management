@@ -13,8 +13,7 @@ import com.acme.salary.reference.ReferenceService;
 
 /**
  * The validator as Spring builds it, minus Spring: the given clock, and any constraint validator with a
- * ReferenceService constructor gets the given one. EmployeeCreateRequestValidationTest keeps its own
- * copy from 3.2, left untouched.
+ * ReferenceService constructor gets the given one.
  */
 final class TestValidators {
 
