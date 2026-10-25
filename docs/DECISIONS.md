@@ -91,6 +91,8 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-041 | Update: a separate request record, the true version on a lost race, no bump for a no-op | Accepted | 2026-10-25 |
 | ADR-042 | Delete: one conditional UPDATE | Accepted | 2026-10-25 |
 | ADR-043 | Error handling: every response has a code, 500s carry an error id | Accepted | 2026-10-25 |
+| ADR-044 | List query: assembled SQL through `JdbcClient`, a separate count, a validated query record | Accepted | 2026-10-25 |
+| ADR-045 | Query plans: a report on synthetic data now, re-checked after seeding; sort indexes decided by it | Accepted | 2026-10-25 |
 
 ---
 
@@ -1680,6 +1682,67 @@ As chosen above, by the engineer, each on the AI's recommendation.
 - `openapi.yaml` gains: the two codes, `errorId` on `Problem`, a 400 on the `{id}` operations, and
   path parameters in the `errors[].field` description.
 - A 500 is something to fix, and its `errorId` finds the log line on Render.
+
+---
+
+## ADR-044 — List query: assembled SQL through `JdbcClient`, a separate count, a validated query record
+
+- **Date:** 2026-10-25
+- **Status:** Accepted
+- **Task:** 4.1–4.4. Settles what ADR-022 left to phase 4; builds on ADR-012 and ADR-016.
+
+### Context
+`GET /api/v1/employees` combines an optional search, up to three filters, one sort and a page
+(ADR-016). Search must use `ILIKE` on the raw column for the trigram indexes, and every query must state
+`deleted_at IS NULL` literally (ADR-012). ADR-022 left open whether the dynamic query is built with JPA
+Specifications or `JdbcClient`. Also open: how totals are counted, how bad parameters become
+`VALIDATION_FAILED`, and what happens to a parameter the API does not know, which the contract left
+unsaid.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Building the query | **`JdbcClient` with assembled SQL:** clauses appended with named parameters, the sort column from a whitelist (exact SQL, readable in `EXPLAIN`; integration-tested only) · JPA Specifications (typed and composable; plain `like(lower(...))` misses the trigram index, so it needs Hibernate's `ilike` and a manual `ESCAPE`) | `JdbcClient` |
+| Totals | **A separate `COUNT(*)` with the same `WHERE`**, in the same read-only transaction (always right, including past the last page) · `count(*) OVER ()` (no total on an empty page, and no cheaper) | Separate count |
+| Parameters | **A validated `EmployeeListQuery` record** (all errors at once through the existing path; two small constraints for department and title) · parsing by hand (a second error-reporting style) | Record |
+| Unknown parameters | **400 `VALIDATION_FAILED` naming each one** (a typo like `contry` fails loudly) · ignore them (silently returns everyone) | Reject |
+
+### Decision
+As chosen above, by the engineer, each on the AI's recommendation.
+
+### Consequences
+- The sort column and direction are never taken from input as text: both come from fixed maps.
+- `q` is escaped (`\`, `%`, `_`) and matched with `ILIKE ... ESCAPE '\'` on `full_name` and `email`.
+- The contract gains: unknown query parameters are a 400.
+- Tooling that appends its own query parameters would be rejected; the frontend sends none.
+
+---
+
+## ADR-045 — Query plans: a report on synthetic data now, re-checked after seeding; sort indexes decided by it
+
+- **Date:** 2026-10-25
+- **Status:** Accepted
+- **Task:** 4.4, 4.5. Settles the question ADR-012 and ADR-016 left to 4.4.
+
+### Context
+Lists must answer within about 200 ms at 10,000 employees (`REQUIREMENTS.md`). Task 4.5 checks that the
+planner uses the indexes, but the realistic seed arrives only in phase 6, and at this size a full scan
+is often the right plan for a broad filter. Every list query sorts by `column, id`, while the sort
+indexes are on the column alone.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Sort indexes | **Keep them; widen to `(column, id)` with a migration only if 4.5 shows the sort costing real time** · widen now in `V3` (a migration and a catalog-test change before any evidence) | Measure first |
+| Checking plans | **A report test: 10k synthetic rows (`generate_series`), `ANALYZE`, `EXPLAIN (ANALYZE, BUFFERS)` per list shape, printed, not asserted; tagged and excluded from the normal suite; results in `docs/PERFORMANCE.md`, marked local and warm; re-run on stage after the 6.4 seed** · assert plans in CI (guards regressions; flaky with statistics and versions) · measure only on stage after phase 6 (reorders the roadmap) | Report now |
+
+### Decision
+As chosen above, by the engineer, each on the AI's recommendation.
+
+### Consequences
+- No automatic guard against a plan regression; the report is re-run when queries or indexes change.
+- The report runs with `./mvnw test -Dgroups=performance` (a Surefire tag filter, not a dependency).
+- Task 6.4 gains a step: re-run the same queries on the seeded stage database and record them.
 
 ---
 
