@@ -87,7 +87,7 @@ can reach its database.
 ---
 
 ## Phase 5 — Salary insights
-- [ ] **5.1** Country salary stats: min, max, avg (2dp), median (odd/even), headcount
+- [x] **5.1** Country salary stats: min, max, avg (2dp), median (odd/even), headcount
 - [ ] **5.2** Average salary by job title within a country
 - [ ] **5.3** Headcount by department within a country
 - [ ] **5.4** Edge cases: country with no employees → empty result; single employee → min = max = avg
