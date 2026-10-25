@@ -94,6 +94,8 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-044 | List query: assembled SQL through `JdbcClient`, a separate count, a validated query record | Accepted | 2026-10-25 |
 | ADR-045 | Query plans: a report on synthetic data now, re-checked after seeding; sort indexes decided by it | Accepted | 2026-10-25 |
 | ADR-046 | Correction to ADR-045: how the plan report is run | Accepted | 2026-10-25 |
+| ADR-047 | Insights median as two `percentile_disc`; settings saves follow ADR-041 | Accepted | 2026-10-25 |
+| ADR-048 | Promotions only by fast-forward push; the merge button cannot merge into `main` | Accepted | 2026-10-25 |
 
 ---
 
@@ -1771,6 +1773,63 @@ engineer also approved recording the command in `CLAUDE.md`'s Commands table.
 ### Consequences
 - `./mvnw test` runs 263 tests and skips the report; the documented command runs exactly the report.
 - The command is in `CLAUDE.md` and `docs/PERFORMANCE.md`.
+
+---
+
+## ADR-047 — Insights median as two `percentile_disc`; settings saves follow ADR-041
+
+- **Date:** 2026-10-25
+- **Status:** Accepted
+- **Task:** 5.1–5.6. Builds on ADR-017, ADR-021, ADR-022, ADR-028 and ADR-041.
+
+### Context
+ADR-017 requires an exact median in `numeric` (not `percentile_cont`, which works in double precision)
+and, for an even headcount, the mean of the two middle salaries. How to write it in SQL was open. For
+settings, ADR-028 copies the employees' optimistic locking, but the contract still said a successful
+PUT always returns a new version, which ADR-041 changed for employees.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Median SQL | **`(percentile_disc(0.5) within group (order by salary) + percentile_disc(0.5) within group (order by salary desc)) / 2`**: the lower and upper middle salaries, exact, averaged in `numeric`; one pass alongside min, max, avg and count · `row_number()` and `count(*) over ()`, keeping the middle rows (textbook; a second query) | Two `percentile_disc` |
+| A settings PUT that changes nothing | **Same rule as ADR-041: no write, same version** · always bump for settings (two rules for one mechanism) | Same rule |
+
+### Decision
+As chosen above, by the engineer, each on the AI's recommendation.
+
+### Consequences
+- The median trick needs a comment in the SQL and a test for odd and even headcounts and for values too
+  large for a `double` to keep exact.
+- `openapi.yaml`'s settings PUT wording changes to match the employees'.
+
+---
+
+## ADR-048 — Promotions only by fast-forward push; the merge button cannot merge into `main`
+
+- **Date:** 2026-10-25
+- **Status:** Accepted
+- **Task:** process, after the phase 3 and phase 4 promotions. Builds on ADR-030.
+
+### Context
+ADR-030 promotes `stage` to `main` by fast-forward. Twice the promotion PR was merged with GitHub's
+squash button instead, which put one squash commit on `main`, split it from `stage`, and dropped the
+test-first commit history from `main`. Each time the engineer approved resetting `main` to `stage`'s tip
+(same files) with a guarded force-push.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A — Allow only merge commits in the repo settings; the ruleset's linear-history rule then blocks them on `main`** | The button cannot merge a promotion PR at all; `git push origin stage:main` is the only path, and GitHub marks the PR merged by itself | The PR page shows no working merge button, which can look broken |
+| **B — Leave the settings; rely on not pressing the button** | No change | Already failed twice |
+| **C — Allow only rebase merging** | The button works | Rebasing rewrites hashes, so `main` and `stage` still diverge |
+
+### Decision
+Option A, chosen by the engineer. Squash and rebase merging are turned off.
+
+### Consequences
+- Promotion stays: PR for CI, the engineer's OK, then the AI or the engineer runs
+  `git push origin stage:main`.
+- A hotfix PR from `hotfix/*` cannot use the button either; it is pushed the same way after its CI.
 
 ---
 
