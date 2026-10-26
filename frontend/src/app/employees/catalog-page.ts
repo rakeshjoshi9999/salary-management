@@ -2,8 +2,9 @@ import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { TableModule } from 'primeng/table';
 import {
@@ -63,12 +64,15 @@ export const SORT_OPTIONS = [
     TableModule,
     PaginatorModule,
     ButtonModule,
+    ConfirmDialogModule,
     MoneyPipe,
     StatePanel,
     Icon,
     DecimalPipe,
   ],
   templateUrl: './catalog-page.html',
+  // The drawer opens inside this page, so it shares this instance with the dialog below (ADR-052).
+  providers: [ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CatalogPage {

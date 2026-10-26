@@ -36,24 +36,24 @@
         #menuButton
         data-testid="menu-button"
         class="ml-auto rounded-md p-2 text-surface-700 sm:hidden"
-        aria-label="Open menu"
-        aria-controls="mobile-menu"
+        [attr.aria-label]="menuOpen() ? 'Close menu' : 'Open menu'"
+        [attr.aria-controls]="menuOpen() ? 'mobile-menu' : null"
         [attr.aria-expanded]="menuOpen()"
-        (click)="menuOpen.set(true)"
+        (click)="menuOpen.set(!menuOpen())"
       >
-        <app-icon name="menu" size="1.4em" />
+        <app-icon [name]="menuOpen() ? 'close' : 'menu'" size="1.4em" />
       </button>
     </div>
   </header>
 
-  <p-drawer
-    [(visible)]="menuOpen"
-    position="right"
-    header="Menu"
-    styleClass="w-64"
-    (onHide)="menuButton.focus()"
-  >
-    <nav id="mobile-menu" data-testid="mobile-menu" aria-label="Main" class="flex flex-col gap-1">
+  <!-- Phones: a panel under the top bar, opened and closed by the menu button (ADR-052). -->
+  @if (menuOpen()) {
+    <nav
+      id="mobile-menu"
+      data-testid="mobile-menu"
+      aria-label="Main"
+      class="flex flex-col gap-1 border-b border-surface-200 bg-surface-0 px-4 py-2 sm:hidden"
+    >
       @for (link of links; track link.path) {
         <a
           [routerLink]="link.path"
@@ -74,7 +74,7 @@
         >Settings</a
       >
     </nav>
-  </p-drawer>
+  }
 
   <!-- The live region is always present so screen readers announce the text when it appears. -->
   <div role="status" aria-live="polite">
@@ -110,7 +110,6 @@
   }
 
   <p-toast position="top-right" />
-  <p-confirmdialog />
 
   <main>
     <router-outlet />
