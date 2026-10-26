@@ -98,6 +98,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-048 | Promotions only by fast-forward push; the merge button cannot merge into `main` | Accepted | 2026-10-25 |
 | ADR-049 | Seeding: a `seed` profile, keyed by email, JDBC batches, Datafaker names | Accepted | 2026-10-26 |
 | ADR-050 | The Neon stage branch is never reset from production | Accepted | 2026-10-26 |
+| ADR-051 | Frontend build: hand-written models, RxJS services with signal pages, the URL as list state, CI E2E | Accepted | 2026-10-26 |
 
 ---
 
@@ -1920,6 +1921,73 @@ manual step every phase and buy nothing yet.
   on production's data shape is checked separately before promotion.
 - Revisit once real users change production data: keeping stage close to production then matters, and
   option B becomes worth its cost.
+
+---
+
+## ADR-051 — Frontend build: hand-written models, RxJS services with signal pages, the URL as list state, CI E2E
+
+- **Date:** 2026-10-26
+- **Status:** Accepted
+- **Task:** 7.1–7.8. Settles the model question ADR-013 left to 7.1, and the details ADR-027 left open.
+  Builds on ADR-004, ADR-005, ADR-015, ADR-018, ADR-027 to ADR-029.
+
+### Context
+Phase 7 builds the screens drawn in `UI_DESIGN.md`. The screens, routes, states, component library and
+chart are already decided; what remained were the decisions about how the frontend is built, and five gaps
+in the design docs: what Save does after a 409, how far the unsaved-changes prompt reaches, what happens
+to invalid values in a Catalog link, where the health page goes, and a set of smaller defaults. Each was
+asked one at a time.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Test-list gate | **All eight test lists approved in one batch, then built without stopping** · no gate (lists written, not approved) · one approval per slice (`CLAUDE.md` as written; eight stops) | One batch |
+| API models (ADR-013) | **Hand-written interfaces in `core/`, each linked to its schema** · generated with `openapi-typescript` (a dev dependency and a CI drift check; awkward names) | Hand-written |
+| Data flow | **Services return Observables; pages hold state in signals; `switchMap` cancels stale requests** · `httpResource`/`resource` (less code; newer API, awkward debounce and reloads) | Observables + signals |
+| Forms | **Typed Reactive Forms** · Signal Forms (experimental in Angular 21) | Reactive Forms |
+| Catalog layouts | **`p-table` (lazy) and a card list both rendered, one shown by Tailwind breakpoints** · CDK `BreakpointObserver` renders one (one DOM copy; JS layout flip; tests fake the width) | Both, CSS-switched |
+| Catalog state | **The URL is the only source of truth; actions navigate; typing uses `replaceUrl`; defaults are left out of the URL** · component signals mirrored into the URL (two copies that can disagree) | URL only |
+| Reference data | **A `ReferenceStore` loads at app start without blocking routing; consumers wait for `ready`; an app-level error with Retry** · block start with `provideAppInitializer` (a blank page through a cold start) | Non-blocking store |
+| E2E (7.7) | **A CI job: Postgres service, backend jar, built frontend, two Playwright paths; not a required check** · local only · against stage (Vercel login, cold starts, mutates seeded data) | CI job |
+| Save after a 409 | **Save stays blocked until "Reload latest"; edits stay visible** · "Overwrite with my edits" using `currentVersion` · a per-field diff (rejected by ADR-027) | Blocked until reload |
+| Unsaved-changes prompt | **A `canDeactivate` guard on the add and edit routes: drawer buttons, top-bar links, Back, other rows** · the same plus `beforeunload` (generic browser dialog; ignored by some mobile browsers) | Guard only |
+| Invalid Catalog URL values | Drop or clamp quietly and replace the URL · send them to the API and show the 400 · **drop or clamp, replace the URL, and show a toast that part of the link was ignored** | Drop or clamp + toast |
+| Health page | **Moves to `/health`, not in the top bar; the shell gets the real top bar** · also linked from Settings or a footer · removed (deletes the 1.10 tests) | `/health`, unlinked |
+| Smaller defaults | **PrimeNG Toast, ConfirmDialog and Drawer; `chart.js` pinned and lazy with Insights; TestBed + `HttpTestingController`; one typed `ApiError`; a 3 s / 90 s cold-start interceptor; a `money` pipe** · hand-built overlays; Angular Testing Library | As listed |
+
+### Decision
+As chosen above, by the engineer, each on the AI's recommendation. In more detail:
+- **Models** are hand-written in `core/`; drift from `openapi.yaml` is caught by the E2E paths, not the
+  compiler.
+- **Invalid Catalog values:** an unknown country, department or title is dropped; a size other than 20,
+  50 or 100 becomes 20; an unsupported sort is dropped (name ascending); a one-character `q` is dropped;
+  unknown parameters are ignored; a negative or non-numeric page becomes 0, and a page past the end goes
+  to the last page once the total is known. The URL is replaced and one toast says some of the link was
+  not recognised.
+- **After a 409 `STALE_VERSION`**, the form shows the banner and keeps the edits, but Save is disabled
+  with "Reload the latest version to save". "Reload latest" fetches the employee and reopens the form on
+  it. Nothing is overwritten without the user seeing the other change.
+- **Errors:** the `core/` interceptor turns every failed response into one `ApiError` (`code`, `status`,
+  field errors, `currentVersion`, `errorId`). No response gives `NETWORK_ERROR`; 90 s without an answer
+  gives `TIMEOUT`. Screens branch on `code` only (ADR-018).
+- **Cold start:** while any request has been pending for more than 3 s, an app-wide banner says the server
+  is waking and can take up to a minute (ADR-004, ADR-027).
+- **Money** is formatted by a `money` pipe with `Intl.NumberFormat('en-US')`, 2 decimals, ISO code first.
+  The width of a CSS bar is a display ratio of two averages, not a calculation with money (ADR-015).
+- **New dependencies, approved here:** `@playwright/test` (dev). `chart.js` was approved in ADR-029.
+
+### Consequences
+- Contract drift in a field no E2E path touches is caught only by review. Revisit generation if the API
+  grows after v1 or gains a second client.
+- Every page repeats a small loading, error and data pattern; a shared helper keeps it short.
+- Each Catalog row exists twice in the DOM (at most 100), and the two templates must stay in step.
+- A user whose save hits a conflict re-enters their change after reloading. Acceptable with one HR user;
+  revisit if conflicts become common.
+- Closing the tab or reloading with unsaved edits loses them without a prompt.
+- A typo in a shared link widens the list instead of failing, but the toast says so.
+- The health page is reached only by its URL; the README links it.
+- CI gains a browser job of a few minutes. It is not required on `main`; making it required is a ruleset
+  change and a separate decision.
 
 ---
 

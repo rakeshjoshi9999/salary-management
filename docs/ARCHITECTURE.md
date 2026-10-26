@@ -173,7 +173,7 @@ src/app/
 | `shared/` holds no services and no HTTP | Keeps it from becoming a junk drawer |
 | UI code formats money but never calculates with it | ADR-015 |
 | The UI branches on the Problem `code`, never on the status or message text | ADR-018 |
-| Whether API models are generated from `openapi.yaml` or written by hand | Decided in 7.1 (ADR-013) |
+| API models are written by hand in `core/`, each linked to its `openapi.yaml` schema | ADR-013, ADR-051 |
 
 ## 4. Key flows
 

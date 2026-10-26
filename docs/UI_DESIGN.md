@@ -134,6 +134,9 @@ Phone (rows become cards):
 - **The URL holds everything:** `/catalog?q=asha&country=IN&department=Engineering&sort=salary,desc&page=0&size=20`.
   The URL's page is 0-based to match the API; the paginator displays it 1-based.
 - On phones, filters collapse into a "Filters (n)" panel and sorting moves to a "Sort" dropdown.
+- **Invalid values in a link** (an unknown filter, a size other than 20/50/100, an unsupported sort, a
+  one-character `q`, a bad or out-of-range page) are dropped or clamped, the URL is replaced, and a toast
+  says part of the link was not recognised (ADR-051).
 
 ### Employee drawer (`/catalog/:id`, `/catalog/new`, `/catalog/:id/edit`)
 
@@ -217,6 +220,10 @@ flowchart LR
     I -->|"Reload latest"| D
     I -->|"Cancel: keep my edits"| E
 ```
+
+After "keep my edits", the edits stay on screen but Save is disabled until "Reload latest" (ADR-051).
+The "Discard changes?" prompt is a route guard: it covers the drawer buttons, the top-bar links, Back and
+clicking another row, but not closing the tab.
 
 That is 5 interactions (click, type, click, click, edit and save), each with a warm response under
 200 ms (ADR-016).
