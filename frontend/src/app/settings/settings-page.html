@@ -1,0 +1,63 @@
+<section class="mx-auto max-w-2xl px-4 pt-6">
+  <h2 class="text-xl font-semibold text-surface-900">Settings</h2>
+
+  <div class="mt-4 rounded-md border border-surface-200 bg-surface-0 p-6">
+    @if (status() === 'error') {
+      <div data-testid="settings-error" role="alert">
+        <p class="font-medium text-red-900">Couldn't load settings</p>
+        <button
+          pButton
+          type="button"
+          data-testid="settings-retry"
+          severity="danger"
+          class="mt-4"
+          (click)="load()"
+        >
+          Retry
+        </button>
+      </div>
+    } @else if (status() === 'loading' || !reference.ready()) {
+      <div data-testid="settings-skeleton" aria-busy="true" class="flex flex-col gap-3">
+        <span class="sr-only">Loading settings</span>
+        <p-skeleton height="1rem" width="40%" />
+        <p-skeleton height="2.5rem" />
+      </div>
+    } @else {
+      <form class="flex flex-col gap-2" (submit)="$event.preventDefault(); save()">
+        <label for="settings-country" class="text-sm font-medium text-surface-800">
+          Default country for Insights
+        </label>
+        <div class="flex flex-col gap-2 sm:flex-row">
+          <select
+            id="settings-country"
+            data-testid="settings-country"
+            class="flex-1 rounded-md border border-surface-300 bg-surface-0 px-2 py-2 text-sm"
+            aria-describedby="settings-currency"
+            [disabled]="saving()"
+            (change)="choose($any($event.target).value)"
+          >
+            <!-- Selected only if the saved code is not a supported country, so nothing wrong looks chosen. -->
+            <option value="" disabled [selected]="!currency()">Choose a country</option>
+            @for (country of reference.countries(); track country.code) {
+              <option [value]="country.code" [selected]="country.code === selected()">
+                {{ country.name }} ({{ country.currency }})
+              </option>
+            }
+          </select>
+          <button
+            pButton
+            type="submit"
+            data-testid="settings-save"
+            [loading]="saving()"
+            [disabled]="!changed() || saving()"
+          >
+            Save
+          </button>
+        </div>
+        <p id="settings-currency" data-testid="settings-currency" class="text-sm text-surface-600">
+          Currency follows the country: {{ currency() }}
+        </p>
+      </form>
+    }
+  </div>
+</section>

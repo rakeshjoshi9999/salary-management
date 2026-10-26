@@ -16,6 +16,11 @@ export const routes: Routes = [
     title: 'Catalog · Salary Management',
   },
   {
+    path: 'settings',
+    loadComponent: () => import('./settings/settings-page').then((m) => m.SettingsPage),
+    title: 'Settings · Salary Management',
+  },
+  {
     // Phase 1 health page: not in the top bar; the README links it (ADR-051).
     path: 'health',
     loadComponent: healthPage,
