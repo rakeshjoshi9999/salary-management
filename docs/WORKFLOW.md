@@ -91,7 +91,7 @@ stay and are named here instead.
 | `b277bef` (7.8) | A failing `test:` commit pushed to `stage`, so CI was red on `stage` until `3aac51b` | The push carried the test commit along with a finished slice; the backend deploy was unaffected (Render waits for checks) |
 | `1439e90`, `a4558e3`, `38491bb`, `4b7fa52` (7.5, 7.6) | Tests for 7.6 were committed before the code for 7.5 | Two slices were reviewed in parallel; each `test:` still precedes its own `feat:` |
 | `ff3ca91` | One `fix:` commit with two changes: the icons and the drawer heading | Found together in the same screenshot pass; should have been two commits |
-| Day 1 | Four commit messages were rewritten and `.env.example` purged from history | Before anything was shared, at the engineer's request (AI usage log). The only rewrite in the project |
+| Day 1; task 1.11 | History was rewritten twice: on day 1, four commit messages were reworded and `.env.example` purged; in 1.11, `stage` was force-pushed | Both at the engineer's request and recorded in the AI usage log. Since 1.11 the ruleset blocks force-pushes to `main` (ADR-031) |
 
 **Where each phase ends:** the changelog entries (`6082f68`, `12a46ad`, `ec6b32f`, `e608ce1`, `90b9dc7`,
 `54dee03`), each followed by a promotion of `stage` to `main` (PRs #2 to #8; #1 created the stage Render service, ADR-032).
