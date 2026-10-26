@@ -76,7 +76,7 @@ cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=seed
 | Local, empty table | 2 | 499 ms | 1,633 ms | 94 ms | 2,228 ms |
 | Local, empty table | 3 | 537 ms | 1,588 ms | 90 ms | 2,215 ms |
 | Local, rerun on the seeded table (0 inserted) | — | 427 ms | 32 ms | 48 ms | 508 ms |
-| Stage (laptop → Neon, includes network) | — | _pending (6.4)_ | | | |
+| Stage (laptop → Neon `ap-southeast-1`, includes network; empty table) | 1 | 466 ms | 3,280 ms | 142 ms | **3,890 ms** |
 
 The total excludes the application's start-up and Flyway check, which are not part of the seed. Inserts go in JDBC
 batches of 500 in one transaction, with ids for all blocks taken in one `generate_series` query, so
@@ -94,19 +94,19 @@ psql "<connection string>" -f backend/src/test/resources/performance/list-plans.
 The seeded data is realistic: names repeat, salaries are round (multiples of 100, INR 1,000) and about
 1.6 people share each hire date. Those ties are what 4.5's synthetic data lacked.
 
-| Shape | Local seeded: plan | ms | Stage: ms |
+| Shape | Local seeded: plan | ms | Stage (Neon, Postgres 18.6): ms, and plan where it differs |
 |---|---|---|---|
-| Default page (name order) | Index Scan `employee_full_name_idx` + incremental sort | 0.12 | _pending_ |
-| Count, no filter | Index Only Scan `employee_country_title_idx` | 0.70 | |
-| Deep page, name order (offset 9,980) | **Seq Scan + full sort** | 8.6 | |
-| Deep page, salary desc | **Seq Scan + full sort** | 6.4 | |
-| Deep page, hire date asc | **Seq Scan + full sort** | 4.0 | |
-| Search `patel` (42 matches) | BitmapOr of both trigram indexes | 0.27 | |
-| Search `00042@` (1 match) | BitmapOr of both trigram indexes | 0.11 | |
-| `country=IN`, salary order, last page (offset 3,480) | Bitmap Scan `employee_country_dept_idx` + sort | 2.3 | |
-| `department=Engineering` | Index Scan `employee_full_name_idx` + incremental sort | 0.06 | |
-| `jobTitle=Recruiter` | Index Scan `employee_full_name_idx` + incremental sort | 0.21 | |
-| `country=IN` + `department=Engineering` | Index Scan `employee_full_name_idx` + incremental sort | 0.06 | |
+| Default page (name order) | Index Scan `employee_full_name_idx` + incremental sort | 0.12 | 0.09 |
+| Count, no filter | Index Only Scan `employee_country_title_idx` | 0.70 | 1.25 (Index Only Scan `employee_country_dept_idx`) |
+| Deep page, name order (offset 9,980) | **Seq Scan + full sort** | 8.6 | 5.97 |
+| Deep page, salary desc | **Seq Scan + full sort** | 6.4 | 8.43 (**Index Scan Backward `employee_salary_idx` + incremental sort**) |
+| Deep page, hire date asc | **Seq Scan + full sort** | 4.0 | 5.08 |
+| Search `patel` (42 matches) | BitmapOr of both trigram indexes | 0.27 | page 3.60 (**Index Scan `employee_full_name_idx` + filter**); count 0.21 (BitmapOr) |
+| Search `00042@` (1 match) | BitmapOr of both trigram indexes | 0.11 | 0.09 |
+| `country=IN`, salary order, last page (offset 3,480) | Bitmap Scan `employee_country_dept_idx` + sort | 2.3 | 2.79; count 0.47 |
+| `department=Engineering` | Index Scan `employee_full_name_idx` + incremental sort | 0.06 | 0.11 |
+| `jobTitle=Recruiter` | Index Scan `employee_full_name_idx` + incremental sort | 0.21 | 0.51 |
+| `country=IN` + `department=Engineering` | Index Scan `employee_full_name_idx` + incremental sort | 0.06 | 0.11 |
 
 ### Findings
 
@@ -118,3 +118,13 @@ The seeded data is realistic: names repeat, salaries are round (multiples of 100
   so **ADR-045 stands: the sort indexes stay single-column.** Revisit if the table grows past about
   100,000 rows, or move to keyset paging.
 - First pages, filters and counts behave as in 4.5.
+- **Stage agrees, at the same scale (all under 9 ms on the server).** Run by the engineer on 2026-10-26
+  straight after the stage seed; Neon chose the same plans as local except in three places, all cheap:
+  - the deep salary page walks `employee_salary_idx` backwards and re-sorts the 291 tie groups (8.4 ms)
+    instead of a full scan and sort;
+  - the `patel` page walks the name index and filters (4,782 rows removed, 3.6 ms) instead of the
+    trigram indexes, because the planner expects 104 matches and there are 42. The count still uses the
+    trigram indexes (0.2 ms). A rarer term would push it back onto the trigram indexes;
+  - the unfiltered count reads `employee_country_dept_idx` instead of `employee_country_title_idx`
+    (both Index Only Scans of the same size).
+  These are server times only; the network from Render to Neon is on top.
