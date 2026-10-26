@@ -1,7 +1,9 @@
 import { HttpTestingController } from '@angular/common/http/testing';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Router, Routes } from '@angular/router';
+import { Toast } from 'primeng/toast';
 
 import { App } from './app';
 import { routes } from './app.routes';
@@ -98,6 +100,16 @@ describe('App shell', () => {
     tracker.slowFinished();
     await fixture.whenStable();
     expect(byTestId('cold-start-banner')).toBeNull();
+  });
+
+  it('shows toasts at the bottom right, clear of the drawer close button', async () => {
+    await create(stubRoutes);
+
+    // The drawer opens on the right with its close button at the top; a top-right toast covered it,
+    // and hovering a toast pauses it, so the drawer could not be closed (found while recording the demo).
+    const toast = fixture.debugElement.query(By.directive(Toast)).componentInstance as Toast;
+
+    expect(toast.position).toBe('bottom-right');
   });
 
   it('shows an app-level reference error with a Retry that recovers', async () => {
