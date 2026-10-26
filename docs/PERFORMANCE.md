@@ -3,6 +3,20 @@
 Measurements behind the requirement that lists answer within about 200 ms and insights within 1 second
 at 10,000 employees (`REQUIREMENTS.md`). Each section says where and how it was measured.
 
+## Summary (task 8.2, 2026-10-26)
+
+| Requirement | Measured | Verdict |
+|---|---|---|
+| A list answers in about 200 ms | **114 ms** median, 204 ms p95, live and warm from India to production in Singapore over a reused connection; 135–266 ms median with a new HTTPS connection per request. On the database server: 0.1–9 ms for every list shape | Met, network included |
+| Insights for a country in under 1 second | **79 ms** median, 103 ms max, live and warm over a reused connection; 158 ms median with a new connection each time. On the database server: 0.4–3 ms for the three insights queries | Met with a wide margin |
+| Seed of 10,000 employees in under 10 seconds | 2.0–2.2 s locally, 3.9 s to stage, 4.2 s to production | Met |
+| Aggregations in the database, not in Java | Every statistic is one SQL aggregate (`InsightsRepository`); Java only rounds | Met by design (ADR-022) |
+
+**Not covered by these numbers: the cold start.** On Render's free tier the first request after about
+15 minutes idle waits for the container to start, often tens of seconds, and Neon's database may be waking
+at the same time (ADR-002, ADR-004). The app shows "Waking the server…" after 3 s rather than a silent
+spinner. Every figure above is warm and says so.
+
 ## List query plans (task 4.5, 2026-10-25)
 
 **Where:** local Testcontainers Postgres 18, 10,000 synthetic employees from `generate_series`, warm:
@@ -129,3 +143,54 @@ The seeded data is realistic: names repeat, salaries are round (multiples of 100
   - the unfiltered count reads `employee_country_dept_idx` instead of `employee_country_title_idx`
     (both Index Only Scans of the same size).
   These are server times only; the network from Render to Neon is on top.
+
+## Insights query plans on seeded data (task 8.2, 2026-10-26)
+
+**How:** `EXPLAIN (ANALYZE, BUFFERS)` of the three queries in `InsightsRepository`, for India, the largest
+country (3,500 of 10,000 active employees), on the seeded local database (docker compose Postgres 18,
+after the seed's `VACUUM ANALYZE`). Three runs; server time only.
+
+| Query | Plan | ms (3 runs) |
+|---|---|---|
+| Salary stats: count, min, max, average and the exact median (two `percentile_disc`) | Index Only Scan `employee_country_salary_idx` + Aggregate | 2.98 / 1.27 / 1.88 |
+| Average salary by job title (18 groups) | Bitmap Scan `employee_country_dept_idx` + HashAggregate | 1.05 / 0.96 / 1.23 |
+| Headcount by department (6 groups) | Index Only Scan `employee_country_dept_idx` + GroupAggregate + sort | 0.57 / 0.49 / 0.41 |
+
+The median, the heaviest statistic, reads the salaries for the country straight out of
+`employee_country_salary_idx` (no heap access), which is the index task 4.5 kept for exactly this.
+
+## Live latency, warm (task 8.2, 2026-10-26)
+
+**Where:** from the engineer's machine in India to the production API on Render (Singapore), which talks
+to Neon. Read-only GETs; no data changed. **What:** `curl` `time_total`, which includes the network, TLS,
+the Spring Boot app and the database. One warm-up request per shape, then 20 timed requests.
+
+**With a new HTTPS connection for every request** (the pessimistic case: a browser reuses connections):
+
+| Shape | Median | p95 | Max |
+|---|---|---|---|
+| Health check (network baseline, no database) | 111 ms | 206 ms | 234 ms |
+| Default list (page 0, name order), measured first | 266 ms | 371 ms | 461 ms |
+| Default list, measured again last | 146 ms | 269 ms | 281 ms |
+| Search `patel` | 149 ms | 244 ms | 318 ms |
+| `country=IN` + `department=Engineering` | 135 ms | 276 ms | 323 ms |
+| Deep page (page 499 of 500) | 135 ms | 156 ms | 204 ms |
+| Insights for India | 158 ms | 268 ms | 356 ms |
+
+**Over one reused connection** (what a browser does):
+
+| Shape | Median | p95 | Max |
+|---|---|---|---|
+| Default list | 114 ms | 204 ms | 205 ms |
+| Insights for India | 79 ms | 102 ms | 103 ms |
+
+### Findings
+
+- **Most of the time is the network.** The health check, which touches no table, takes 111 ms; the
+  database work behind a list is under 10 ms. A user in Singapore would see far less.
+- **The first list of the session paid a one-off cost.** The very first list request took 1.7 s while the
+  health check took 0.23 s, so the app was up but the data path was not: most likely Neon resuming its
+  suspended compute (ADR-002). The default list's first batch (266 ms median) still carried some of that
+  warm-up; measured again at the end it was 146 ms, in line with the other shapes.
+- **This is a snapshot**, not a benchmark: one machine, one day, Render's free tier. The verdicts hold with a
+  wide margin, so the conclusion does not depend on the exact figures.
