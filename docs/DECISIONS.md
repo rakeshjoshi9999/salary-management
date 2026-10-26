@@ -96,6 +96,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-046 | Correction to ADR-045: how the plan report is run | Accepted | 2026-10-25 |
 | ADR-047 | Insights median as two `percentile_disc`; settings saves follow ADR-041 | Accepted | 2026-10-25 |
 | ADR-048 | Promotions only by fast-forward push; the merge button cannot merge into `main` | Accepted | 2026-10-25 |
+| ADR-049 | Seeding: a `seed` profile, keyed by email, JDBC batches, Datafaker names | Accepted | 2026-10-26 |
 
 ---
 
@@ -1830,6 +1831,59 @@ Option A, chosen by the engineer. Squash and rebase merging are turned off.
 - Promotion stays: PR for CI, the engineer's OK, then the AI or the engineer runs
   `git push origin stage:main`.
 - A hotfix PR from `hotfix/*` cannot use the button either; it is pushed the same way after its CI.
+
+---
+
+## ADR-049 — Seeding: a `seed` profile, keyed by email, JDBC batches, Datafaker names
+
+- **Date:** 2026-10-26
+- **Status:** Accepted
+- **Task:** 6.1–6.4. Builds on ADR-009 (ids in blocks of 50), ADR-011 (active rows), ADR-012 and ADR-045.
+
+### Context
+`REQUIREMENTS.md` asks for a deterministic, idempotent seed of 10,000 realistic employees across all
+supported countries, finishing in under 10 seconds. It must never run on a normal start or in the test
+suite, must not break ids the JPA generator hands out later (ADR-009), and must end with
+`VACUUM ANALYZE employee` so search uses the trigram indexes (4.5). Stage may already hold rows typed in
+by hand, and the AI has no Neon credentials.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| How it runs | **A `seed` Spring profile: a `CommandLineRunner` seeds, vacuums and exits, no web server** · a psql script with `generate_series` and `setseed()` (Postgres `random()` is not promised stable across versions; realistic names are clumsy; hard to test first) · a Flyway migration (fake data in every database, test containers and production, on every deploy) | Profile |
+| Idempotency | **Keyed by email: each seed employee has a deterministic email on the reserved `acme.example` domain; existing ones are skipped, `ON CONFLICT DO NOTHING` backs that up** · skip everything if any active employee exists (a stage database with one test row is never seeded) · top up the active total to 10,000 (which rows exist depends on history) | Keyed by email |
+| Insert method | **`JdbcTemplate` batches of 500, ids from `employee_id_seq` in blocks of 50** · JPA `saveAll` (slower, no `ON CONFLICT`) · `unnest` arrays (fewest round trips, less familiar SQL) | JDBC batches |
+| Country mix | **Fixed counts: IN 3,500, US 2,500, GB 1,500, DE 1,500, FR 1,000** · 2,000 each (insights look alike) | Weighted |
+| Names | Hand-written lists per country (AI's recommendation: no dependency, output never drifts) · **Datafaker with a locale per country, version pinned** | Datafaker |
+| Salaries | **A band per country and title level (junior, mid, senior, manager), uniform inside, rounded to 100 (INR 1,000)** · a range per country and title (90 ranges) | Band by level |
+| Hire dates | **Uniform in a fixed window, 2010-01-01 to 2026-09-30, no clock** · the last 15 years from the injected `Clock` (output changes daily) | Fixed window |
+| Transaction | **One transaction for the inserts; `VACUUM ANALYZE` after it, outside** · commit per batch (partial data after a failure) | One |
+| Running on Neon | **The engineer runs the command with the Neon URL in their own shell** · env vars set for the AI's session (write access to a live database) | Engineer runs it |
+| Stage plans (6.4) | **A checked-in psql script with the list queries, including the deep page and sorts on tied columns** · a mode of `ListQueryPlanReportTest` that targets a live `DB_URL` (no drift, but a test that can reach a live database) | psql script |
+| Production seed | **Once, after the phase 6 promotion, from the commit on `main`** · right after stage, before promotion | After promotion |
+| Seed timing | **Logged by the runner, inserts and vacuum separately; recorded locally and on stage** · stage only (mixes in laptop-to-Neon latency) | Local and stage |
+
+### Decision
+As chosen above, by the engineer, each on the AI's recommendation except names: the engineer chose
+Datafaker over hand-written lists. The code lives in a new `seed/` feature package that depends only on
+`common`; its own catalog of the 18 titles is checked against the database's reference data by a test.
+
+**Ids.** For each block of 50 rows the seeder takes `V = nextval('employee_id_seq')` and uses ids
+`V-49 … V` (taking another value if `V-49 < 1`). Any value Hibernate takes afterwards is at least
+`V + 50`, and Hibernate's pooled optimizer uses the 50 ids up to that value, so the two never overlap.
+
+### Consequences
+- A new runtime dependency, `net.datafaker:datafaker` 2.7.0, which ships in the application jar.
+  Determinism holds for a pinned version: a golden test fails when an upgrade changes the output, so
+  the change is seen rather than silent.
+- Re-running adds nothing. A seed employee that HR soft-deletes comes back on the next run, because
+  emails are unique among active rows only (ADR-011). Accepted: the seed is run once per environment.
+- Rows HR added by hand are never touched, so the active total is 10,000 plus those rows.
+- Deterministic means the same people, salaries and dates on every run; ids differ between databases,
+  because they come from each database's sequence.
+- The plan script copies SQL from `EmployeeSearchImpl` and can drift from it; it is re-checked whenever
+  the list query changes.
+- Production is seeded only with the engineer's explicit OK, after the promotion.
 
 ---
 
