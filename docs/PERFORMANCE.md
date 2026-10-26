@@ -77,6 +77,7 @@ cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=seed
 | Local, empty table | 3 | 537 ms | 1,588 ms | 90 ms | 2,215 ms |
 | Local, rerun on the seeded table (0 inserted) | — | 427 ms | 32 ms | 48 ms | 508 ms |
 | Stage (laptop → Neon `ap-southeast-1`, includes network; empty table) | 1 | 466 ms | 3,280 ms | 142 ms | **3,890 ms** |
+| Production (laptop → Neon `ap-southeast-1`, includes network; empty table) | 1 | 555 ms | 3,526 ms | 162 ms | **4,244 ms** |
 
 The total excludes the application's start-up and Flyway check, which are not part of the seed. Inserts go in JDBC
 batches of 500 in one transaction, with ids for all blocks taken in one `generate_series` query, so
