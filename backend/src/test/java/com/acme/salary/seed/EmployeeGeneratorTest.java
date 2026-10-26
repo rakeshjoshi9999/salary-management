@@ -68,9 +68,15 @@ class EmployeeGeneratorTest {
 		assertThat(HexFormat.of().formatHex(sha256.digest())).isEqualTo(GOLDEN_SHA256);
 	}
 
-	private static final List<SeedEmployee> GOLDEN_FIRST_THREE = List.of();
+	private static final List<SeedEmployee> GOLDEN_FIRST_THREE = List.of(
+			new SeedEmployee("Paramartha Malik", "paramartha.malik.00001@acme.example", "Software Engineer",
+					"Engineering", "IN", new BigDecimal("1171000.00"), LocalDate.of(2023, 6, 1)),
+			new SeedEmployee("Daevika Nambeesan", "daevika.nambeesan.00002@acme.example", "Software Engineer",
+					"Engineering", "IN", new BigDecimal("1105000.00"), LocalDate.of(2019, 7, 26)),
+			new SeedEmployee("Draupadi Bandopadhyay", "draupadi.bandopadhyay.00003@acme.example", "Software Engineer",
+					"Engineering", "IN", new BigDecimal("1847000.00"), LocalDate.of(2021, 9, 2)));
 
-	private static final String GOLDEN_SHA256 = "not captured yet";
+	private static final String GOLDEN_SHA256 = "e2c941e9b876cb58a441a78883ea92f7775afe40b82973730cbde8a1910cc8cb";
 
 	@Test
 	void splitsCountriesByFixedCounts() {
