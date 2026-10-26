@@ -1,6 +1,69 @@
 # AI Usage Log
 
-How AI tools were used to build this project, and where human judgment corrected them.
+How AI tools were used to build this project, and where human judgment corrected them. The overview
+answers three questions: how AI was used, where it was wrong, and where the engineer chose differently.
+The log underneath is the evidence, one row per notable interaction.
+
+## Overview
+
+### How AI was used
+
+One loop, for every task (`CLAUDE.md`, [`WORKFLOW.md`](WORKFLOW.md)):
+
+1. **The AI asks before it builds.** It names every decision a task forces, gives at least two real
+   options with what each costs, recommends one and says what would change its mind. Questions go one
+   at a time. The engineer chooses.
+2. **The decision is written down** as an ADR in [`DECISIONS.md`](DECISIONS.md), including the options
+   that lost.
+3. **The engineer approves the test list**, which becomes the slice's acceptance criteria.
+4. **Failing tests first.** A separate reviewer agent (`.claude/agents/reviewer.md`) reads the tests and
+   asks: would a wrong implementation pass this? Then a `test:` commit.
+5. **Minimum code to pass**, the full suite, the reviewer again, then a `feat:` commit and a push to
+   `stage`. Two review rounds at most; anything still open goes to the engineer.
+6. **Production only by promotion**, once per phase, with the engineer's OK for that push (ADR-030,
+   ADR-048).
+
+The AI never had credentials for Neon or Render: the engineer ran every command against a live
+database, and watched every deploy.
+
+### Where it was wrong
+
+The same few mistakes recur, which is the useful finding. Each links to cases in the log below.
+
+| Pattern | Cases | What caught it |
+|---|---|---|
+| **Claiming something it had not checked** | `percentile_cont` offered for an exact median and Postgres `round()` assumed HALF_EVEN (2.2); `@Digits` said to accept `100.000` (3.2); a `double` said to miss the exact median (5.1); a trailing backslash said to give a 500 and wider indexes said to "buy nothing" (4.x); guessed hostnames, image size and action versions (phase 1) | A test run, the reviewer, or the platform itself, rarely the AI |
+| **Tests that a wrong implementation would pass** | Fixtures whose expected order was also alphabetical (5.x, 7.2, 7.5); a page-overlap test that passed without the tiebreak (4.1); a constraint test that failed even on a correct schema (3.1); a settings test reloading a country that was not in the fixture (7.8) | The reviewer agent, whose first question is exactly this |
+| **Ignoring a standing instruction** | Batched questions after "ask me one by one" (1.11, and again in 7); five slices in one session against the one-slice rule (2.1–2.5); the prompt log it had mandated, skipped for eight slices (1.x) | The engineer, each time |
+| **Placeholders and commands that break when pasted** | `<SM_PGHOST>` pasted into `DB_URL` (1.7); `<stage-host>` run literally in psql (6.4) | The engineer's failed run |
+| **What only a real browser shows** | No icon rendered anywhere, from phase 1 to phase 7, because PrimeIcons was never installed; unit tests in jsdom passed throughout | Screenshots taken by the AI at the end of phase 7 |
+| **Checking the wrong thing** | Stage "deployed" judged by a health check an old build also passes (1.11–3.3); proposed evidence for a production change taken from stage (1.12) | The engineer's "check again"; the reviewer |
+
+### Where the engineer chose differently
+
+The AI recommended; the engineer decided. The records say so wherever the engineer went the other way:
+
+| Decision | AI recommended | Engineer chose | Record |
+|---|---|---|---|
+| Landing page | The employee list (zero clicks to the salary task) | Insights | ADR-027 |
+| Section name | "Employees" | "Catalog" | ADR-027 |
+| Screen sizes | Desktop-first | Fully responsive, phones included | ADR-027 |
+| Charts | CSS bars, no library | Chart.js doughnut for headcount | ADR-029 |
+| Default country | Kept in the browser | A backend setting (a scope addition) | ADR-028 |
+| Seed names | Hand-written lists | Datafaker, pinned | ADR-049 |
+| Bundle over budget | Raise the warning budget | Trim the shell | ADR-052 |
+| Money in JSON | A string | A number | ADR-015 |
+| Job titles | Independent of department (changed after pushback) | Dependent on department | ADR-008 |
+| Promotion cadence | Per slice | Once per phase | ADR-030 |
+| Phase 3 in one session | All six slices | One slice | 3.2 row |
+
+### Prompts
+
+Every slice's prompt, decisions, approved test list and outcome are in [`prompts/`](prompts/):
+requirement analysis (`0.0`), environment (`1.1`–`1.12`), design (`2.1`–`2.5`), employee CRUD
+(`3.0`–`3.7`), finding employees (`4.1`–`4.5`), insights (`5.1`–`5.6`), seeding (`6.1`–`6.4`),
+frontend (`7.1`–`7.8`, with the combined test list in `7.1`), docs and submission (`8.1`), and two
+process changes (`process-stage-branch`, `process-workflow-check`).
 
 ## Tools
 | Tool | Used for |
@@ -86,4 +149,15 @@ was supervised.
   presenting them as a red-green cycle.
 
 ## Reflections
-_What AI accelerated, where it struggled, and what I'd do differently — filled in at the end._
+
+_Drafted by the AI from the log above, for the engineer to edit into their own words before submission._
+
+- **What it accelerated:** the volume of careful work. Every task got a written set of options, an ADR, a
+  test list and two independent reviews, which would not have happened at this pace by hand. The
+  reviewer agent was the best value: it found real defects in almost every slice.
+- **Where it struggled:** confidence without checking. Its errors were rarely in code that a test
+  exercised; they were in claims about libraries, platforms and its own tests. And it drifted from
+  standing instructions when a request seemed to invite it.
+- **What I'd do differently:** take one look at the running app in a real browser at the end of every
+  frontend slice, not only at the end of the phase; and make the reviewer's "would wrong code pass this?"
+  check part of writing a test, not only of reviewing it.
