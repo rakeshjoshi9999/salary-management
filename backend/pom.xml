@@ -58,6 +58,13 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
+		<!-- Names for the seed (ADR-049). Pinned: the seed is deterministic only for one version,
+		     and EmployeeGeneratorTest's golden sample fails when an upgrade changes the output. -->
+		<dependency>
+			<groupId>net.datafaker</groupId>
+			<artifactId>datafaker</artifactId>
+			<version>2.7.0</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.postgresql</groupId>
