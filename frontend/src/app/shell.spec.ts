@@ -102,14 +102,15 @@ describe('App shell', () => {
     expect(byTestId('cold-start-banner')).toBeNull();
   });
 
-  it('shows toasts at the bottom right, clear of the drawer close button', async () => {
+  it('shows toasts at the top centre, away from the drawer close, edit and delete buttons', async () => {
     await create(stubRoutes);
 
-    // The drawer opens on the right with its close button at the top; a top-right toast covered it,
-    // and hovering a toast pauses it, so the drawer could not be closed (found while recording the demo).
+    // The drawer opens on the right, close button at the top and edit and delete at the bottom. A
+    // top-right toast covered close and a bottom-right one covers delete, and hovering a toast pauses
+    // it, so the control stayed blocked (found while recording the demo).
     const toast = fixture.debugElement.query(By.directive(Toast)).componentInstance as Toast;
 
-    expect(toast.position).toBe('bottom-right');
+    expect(toast.position).toBe('top-center');
   });
 
   it('shows an app-level reference error with a Retry that recovers', async () => {
