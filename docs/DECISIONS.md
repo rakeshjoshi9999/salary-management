@@ -44,37 +44,61 @@ Option X, because … (the reason, not a restatement of the option).
 - What would make us revisit this — the signal to watch for.
 ```
 
+## Reading guide
+
+Fifty-odd records is a lot to start on. These are the ones that shape the app most; each links to the
+full record below, with the options that were rejected and why.
+
+| Area | Decision | Why it matters |
+|---|---|---|
+| How decisions were made | [ADR-001](#adr-001--build-the-environment-before-the-domain) | Deploy a walking skeleton first, so every risk of hosting showed up on day one, not in the last week |
+| Stack | [ADR-019](#adr-019--stack-java-21-spring-boot-4-angular), [ADR-005](#adr-005--tailwind-with-primeng-for-the-frontend), [ADR-007](#adr-007--angular-21-after-angular-20-proved-a-security-dead-end) | Java 21 and Spring Boot 4; Angular 21 (zoneless, signals) chosen partly because Angular 20's test tooling carried critical advisories |
+| Hosting and its honest cost | [ADR-025](#adr-025--render-and-vercel-for-hosting), [ADR-004](#adr-004--accept-render-free-tier-cold-starts) | Free tiers, with the cold start accepted and shown to the user instead of hidden by a keep-alive pinger |
+| Data model | [ADR-008](#adr-008--reference-data-in-tables-joined-by-natural-keys), [ADR-011](#adr-011--soft-delete-with-deleted_at), [ADR-036](#adr-036--first-migrations-two-files-named-constraints-schema-tested-two-ways) | Reference data in tables, soft delete, and a schema tested against its own constraints |
+| Money | [ADR-021](#adr-021--money-as-plain-bigdecimal-with-one-rounding-helper), [ADR-015](#adr-015--money-as-a-json-number) | `BigDecimal` with one HALF_EVEN rounding helper; the UI formats money and never calculates with it |
+| API contract and errors | [ADR-013](#adr-013--hand-written-openapi-contract-under-apiv1), [ADR-018](#adr-018--rfc-7807-problem-details-with-stable-codes), [ADR-043](#adr-043--error-handling-every-response-has-a-code-500s-carry-an-error-id) | A contract written before the code, and errors that carry a stable code the UI branches on |
+| Concurrency | [ADR-023](#adr-023--optimistic-locking-version-plus-an-explicit-version-check), [ADR-041](#adr-041--update-a-separate-request-record-the-true-version-on-a-lost-race-no-bump-for-a-no-op) | A stale edit is a 409, never a silent overwrite |
+| Finding employees fast | [ADR-016](#adr-016--list-query-pagesize-a-single-sort-one-search-box), [ADR-044](#adr-044--list-query-assembled-sql-through-jdbcclient-a-separate-count-a-validated-query-record), [ADR-045](#adr-045--query-plans-a-report-on-synthetic-data-now-re-checked-after-seeding-sort-indexes-decided-by-it) | Server-side paging and search, with indexes decided by measured query plans |
+| Insights | [ADR-017](#adr-017--one-combined-insights-call-with-an-exact-median), [ADR-022](#adr-022--aggregations-in-sql-through-jdbcclient), [ADR-047](#adr-047--insights-median-as-two-percentile_disc-settings-saves-follow-adr-041) | One call per country, every statistic aggregated in SQL, and an exact median |
+| UI | [ADR-027](#adr-027--ui-insights-as-the-landing-page-a-catalog-with-a-drawer-fully-responsive), [ADR-051](#adr-051--frontend-build-hand-written-models-rxjs-services-with-signal-pages-the-url-as-list-state-ci-e2e) | Insights as the landing page, a Catalog with a drawer, phones included; the URL holds the list state |
+| Delivery | [ADR-030](#adr-030--a-deployed-stage-branch-in-front-of-main), [ADR-034](#adr-034--production-deploys-only-after-ci-passes), [ADR-048](#adr-048--promotions-only-by-fast-forward-push-the-merge-button-cannot-merge-into-main) | Every slice deploys to stage; production is promoted once per phase, only after CI passes |
+| Seeding | [ADR-049](#adr-049--seeding-a-seed-profile-keyed-by-email-jdbc-batches-datafaker-names) | A deterministic, idempotent seed of 10,000 employees in a few seconds |
+
+Where the engineer chose against the AI's recommendation, the record says so: the landing page, the
+"Catalog" name and phone support (ADR-027), Chart.js (ADR-029), Datafaker names (ADR-049) and trimming the
+bundle instead of raising its budget (ADR-052).
+
 ## Index
 
 | ADR | Decision | Status | Date |
 |---|---|---|---|
-| ADR-001 | Walking skeleton before design | Accepted | 2026-10-23 |
+| ADR-001 | Build the environment before the domain | Accepted | 2026-10-23 |
 | ADR-002 | Neon for managed Postgres | Accepted | 2026-10-23 |
-| ADR-003 | Direct cross-origin calls, env-driven CORS | Accepted | 2026-10-23 |
+| ADR-003 | Direct cross-origin calls with env-driven CORS | Accepted | 2026-10-23 |
 | ADR-004 | Accept Render free-tier cold starts | Accepted | 2026-10-23 |
-| ADR-005 | Tailwind + PrimeNG | Accepted | 2026-10-23 |
-| ADR-006 | Spring Boot 4 over Spring Boot 3 | Accepted | 2026-10-23 |
-| ADR-007 | Angular 21 over Angular 20 (Vitest advisories) | Accepted | 2026-10-23 |
+| ADR-005 | Tailwind with PrimeNG for the frontend | Accepted | 2026-10-23 |
+| ADR-006 | Spring Boot 4 rather than Spring Boot 3 | Accepted | 2026-10-23 |
+| ADR-007 | Angular 21, after Angular 20 proved a security dead end | Accepted | 2026-10-23 |
 | ADR-008 | Reference data in tables, joined by natural keys | Accepted | 2026-10-24 |
 | ADR-009 | Employee keys and column types | Accepted | 2026-10-24 |
-| ADR-010 | Validation in both layers; hire-date rules | Accepted | 2026-10-24 |
+| ADR-010 | Validation in both layers, and the hire-date rules | Accepted | 2026-10-24 |
 | ADR-011 | Soft delete with `deleted_at` | Accepted | 2026-10-24 |
 | ADR-012 | Indexes created up front, all partial | Accepted | 2026-10-24 |
 | ADR-013 | Hand-written OpenAPI contract under `/api/v1` | Accepted | 2026-10-24 |
-| ADR-014 | Write semantics: PUT, version in body, strict input | Accepted | 2026-10-24 |
+| ADR-014 | Write semantics: PUT, version in the body, strict input | Accepted | 2026-10-24 |
 | ADR-015 | Money as a JSON number | Accepted | 2026-10-24 |
-| ADR-016 | List query: page/size, single sort, one search box | Accepted | 2026-10-24 |
-| ADR-017 | One combined insights call; exact median | Accepted | 2026-10-24 |
-| ADR-018 | Problem Details with stable codes | Accepted | 2026-10-24 |
+| ADR-016 | List query: page/size, a single sort, one search box | Accepted | 2026-10-24 |
+| ADR-017 | One combined insights call, with an exact median | Accepted | 2026-10-24 |
+| ADR-018 | RFC 7807 Problem Details with stable codes | Accepted | 2026-10-24 |
 | ADR-019 | Stack: Java 21, Spring Boot 4, Angular | Accepted | 2026-10-24 |
 | ADR-020 | PostgreSQL over SQLite and MySQL | Accepted | 2026-10-24 |
 | ADR-021 | Money as plain `BigDecimal` with one rounding helper | Accepted | 2026-10-24 |
 | ADR-022 | Aggregations in SQL through `JdbcClient` | Accepted | 2026-10-24 |
-| ADR-023 | Optimistic locking: `@Version` plus an explicit check | Accepted | 2026-10-24 |
+| ADR-023 | Optimistic locking: `@Version` plus an explicit version check | Accepted | 2026-10-24 |
 | ADR-024 | Monorepo | Accepted | 2026-10-24 |
 | ADR-025 | Render and Vercel for hosting | Accepted | 2026-10-24 |
 | ADR-026 | Code structure: feature packages, one-way dependencies | Accepted | 2026-10-24 |
-| ADR-027 | UI: Insights landing, Catalog with a drawer, responsive | Accepted | 2026-10-24 |
+| ADR-027 | UI: Insights as the landing page, a Catalog with a drawer, fully responsive | Accepted | 2026-10-24 |
 | ADR-028 | Backend settings for the default country (scope addition) | Accepted | 2026-10-24 |
 | ADR-029 | Chart.js for the department doughnut | Accepted | 2026-10-24 |
 | ADR-030 | A deployed `stage` branch in front of `main` | Accepted | 2026-10-24 |
