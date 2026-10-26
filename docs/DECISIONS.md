@@ -99,6 +99,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-049 | Seeding: a `seed` profile, keyed by email, JDBC batches, Datafaker names | Accepted | 2026-10-26 |
 | ADR-050 | The Neon stage branch is never reset from production | Accepted | 2026-10-26 |
 | ADR-051 | Frontend build: hand-written models, RxJS services with signal pages, the URL as list state, CI E2E | Accepted | 2026-10-26 |
+| ADR-052 | Trim the app shell under the default budget; the end-to-end job gates deploys | Accepted | 2026-10-26 |
 
 ---
 
@@ -1988,6 +1989,41 @@ As chosen above, by the engineer, each on the AI's recommendation. In more detai
 - The health page is reached only by its URL; the README links it.
 - CI gains a browser job of a few minutes. It is not required on `main`; making it required is a ruleset
   change and a separate decision.
+
+---
+
+## ADR-052 — Trim the app shell under the default budget; the end-to-end job gates deploys
+
+- **Date:** 2026-10-26
+- **Status:** Accepted
+- **Task:** phase 7 follow-up, before the phase 7 promotion. Builds on ADR-005, ADR-034, ADR-051.
+
+### Context
+Two consequences of phase 7 surfaced in its review. The initial bundle grew from 606 kB to about 700 kB
+(159 kB gzipped), over Angular's 500 kB warning budget (the 1 MB error budget still holds), mostly from
+PrimeNG's Drawer, Toast and ConfirmDialog in the app shell. And the new End-to-end CI job, which ADR-051
+kept off `main`'s required checks, still gates deploys: both Render services deploy only after every
+check on the commit passes (ADR-034). Each was asked one at a time.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Bundle budget | Raise the warning to 750 kB, keep the 1 MB error (AI's recommendation: no code change; the cold start dominates the first load) · **trim the shell: the confirm dialog moves to the Catalog route, which is the only place it is used, and the phone menu becomes a plain panel instead of PrimeNG's Drawer** · both: trim, then set the budget to the new size plus a margin | Trim |
+| End-to-end job and deploys | **Keep it gating: nothing deploys if the main flows are broken end to end** · move it to a `workflow_run` workflow outside the gate (fast deploys; a broken flow can ship before anyone looks) · gate production only by a promotion checklist (a rule to remember, not enforced) | Gating |
+
+### Decision
+The engineer chose to trim the shell, against the AI's recommendation to raise the budget, and to keep
+the End-to-end job gating deploys, on the AI's recommendation. The budget stays at 500 kB (warning) and
+1 MB (error).
+
+### Consequences
+- The trims save roughly 60 to 80 kB. PrimeNG's core and theme make up most of what remains, so the build
+  may still warn; the measured size is recorded in the phase 7 prompt file.
+- The phone menu loses the Drawer's overlay and focus trap: it is a panel under the top bar that opens
+  and closes with the menu button and closes when a link is chosen.
+- A page outside `/catalog` that needs a confirm dialog must render its own `<p-confirmdialog>`.
+- Deploys to stage and production wait for the End-to-end job, about 4 to 5 minutes, and a flaky run
+  blocks a deploy until it is re-run. Revisit (option 2) if the job proves flaky.
 
 ---
 
