@@ -12,6 +12,7 @@ import { ApiError } from '../core/api-error';
 import { ReferenceStore } from '../core/reference.store';
 import { SettingsService } from '../settings/settings.service';
 import { MoneyPipe } from '../shared/money.pipe';
+import { StatePanel } from '../shared/state-panel';
 import { DepartmentDoughnut } from './department-doughnut';
 import { InsightsService } from './insights.service';
 
@@ -27,7 +28,15 @@ type Loaded =
  */
 @Component({
   selector: 'app-insights-page',
-  imports: [RouterLink, ButtonModule, SkeletonModule, DepartmentDoughnut, MoneyPipe, DecimalPipe],
+  imports: [
+    RouterLink,
+    ButtonModule,
+    SkeletonModule,
+    DepartmentDoughnut,
+    MoneyPipe,
+    DecimalPipe,
+    StatePanel,
+  ],
   templateUrl: './insights-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

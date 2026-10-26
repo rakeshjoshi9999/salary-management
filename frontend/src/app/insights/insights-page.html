@@ -20,23 +20,13 @@
 
   <div class="mt-6">
     @if (status() === 'error') {
-      <div
+      <app-state-panel
         data-testid="insights-error"
-        role="alert"
-        class="rounded-md border border-red-200 bg-red-50 p-6 text-center"
-      >
-        <p class="font-medium text-red-900">Couldn't load insights</p>
-        <button
-          pButton
-          type="button"
-          data-testid="insights-retry"
-          severity="danger"
-          class="mt-4"
-          (click)="retry()"
-        >
-          Retry
-        </button>
-      </div>
+        state="error"
+        message="Couldn't load insights"
+        actionId="insights-retry"
+        (action)="retry()"
+      />
     } @else if (status() === 'loading' || !insights()) {
       <div data-testid="insights-skeleton" aria-busy="true">
         <span class="sr-only">Loading insights</span>

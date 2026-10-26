@@ -3,19 +3,13 @@
 
   <div class="mt-4 rounded-md border border-surface-200 bg-surface-0 p-6">
     @if (status() === 'error') {
-      <div data-testid="settings-error" role="alert">
-        <p class="font-medium text-red-900">Couldn't load settings</p>
-        <button
-          pButton
-          type="button"
-          data-testid="settings-retry"
-          severity="danger"
-          class="mt-4"
-          (click)="load()"
-        >
-          Retry
-        </button>
-      </div>
+      <app-state-panel
+        data-testid="settings-error"
+        state="error"
+        message="Couldn't load settings"
+        actionId="settings-retry"
+        (action)="load()"
+      />
     } @else if (status() === 'loading' || !reference.ready()) {
       <div data-testid="settings-skeleton" aria-busy="true" class="flex flex-col gap-3">
         <span class="sr-only">Loading settings</span>

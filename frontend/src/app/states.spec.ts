@@ -150,6 +150,9 @@ describe('Loading, empty and error states', () => {
         expect((q(id) as HTMLSelectElement | null)?.disabled ?? true).toBe(true);
       }
 
+      // Disabled fields skip validation, so Save itself waits too.
+      expect((q('save') as HTMLButtonElement).disabled).toBe(true);
+
       controller.expectOne(apiUrl('/reference')).flush(REFERENCE);
       await harness.fixture.whenStable();
       controller.expectOne((r) => r.url === apiUrl('/employees'));

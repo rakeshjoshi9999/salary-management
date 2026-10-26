@@ -5,7 +5,6 @@ import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/route
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
-import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import {
   Observable,
@@ -24,6 +23,7 @@ import {
 import { Employee, EmployeePage, SortField } from '../core/api.models';
 import { ReferenceStore } from '../core/reference.store';
 import { MoneyPipe } from '../shared/money.pipe';
+import { StatePanel } from '../shared/state-panel';
 import {
   CatalogQuery,
   DEFAULT_QUERY,
@@ -62,8 +62,8 @@ export const SORT_OPTIONS = [
     TableModule,
     PaginatorModule,
     ButtonModule,
-    SkeletonModule,
     MoneyPipe,
+    StatePanel,
     DecimalPipe,
   ],
   templateUrl: './catalog-page.html',
@@ -85,7 +85,6 @@ export class CatalogPage {
   protected readonly filtersOpen = signal(false);
 
   protected readonly sortOptions = SORT_OPTIONS;
-  protected readonly skeletonRows = Array.from({ length: 8 }, (_, i) => i);
 
   protected readonly rows = computed<Employee[]>(() => [...(this.result()?.items ?? [])]);
   protected readonly total = computed(() => this.result()?.totalItems ?? 0);

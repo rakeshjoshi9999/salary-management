@@ -112,59 +112,37 @@
 
   <div class="mt-4">
     @if (status() === 'error') {
-      <div
+      <app-state-panel
         data-testid="catalog-error"
-        role="alert"
-        class="rounded-md border border-red-200 bg-red-50 p-6 text-center"
-      >
-        <p class="font-medium text-red-900">Couldn't load employees</p>
-        <p class="mt-1 text-sm text-red-800">Check your connection and try again.</p>
-        <button
-          pButton
-          type="button"
-          data-testid="catalog-retry"
-          severity="danger"
-          class="mt-4"
-          (click)="retry()"
-        >
-          Retry
-        </button>
-      </div>
+        state="error"
+        message="Couldn't load employees"
+        detail="Check your connection and try again."
+        actionId="catalog-retry"
+        (action)="retry()"
+      />
     } @else if (result() === null) {
-      <div data-testid="catalog-skeleton" aria-busy="true" class="flex flex-col gap-2">
-        <span class="sr-only">Loading employees</span>
-        @for (row of skeletonRows; track row) {
-          <p-skeleton height="3rem" />
-        }
-      </div>
+      <app-state-panel data-testid="catalog-skeleton" state="loading" message="Loading employees" />
     } @else if (total() === 0) {
       @if (filtered()) {
-        <div
+        <app-state-panel
           data-testid="no-matches"
-          class="rounded-md border border-surface-200 bg-surface-0 p-6 text-center"
-        >
-          <p class="font-medium text-surface-900">No one matches these filters</p>
-          <button
-            pButton
-            type="button"
-            data-testid="clear-filters"
-            [outlined]="true"
-            class="mt-4"
-            (click)="clearFilters()"
-          >
-            Clear filters
-          </button>
-        </div>
+          state="empty"
+          message="No one matches these filters"
+          actionLabel="Clear filters"
+          actionId="clear-filters"
+          (action)="clearFilters()"
+        />
       } @else {
-        <div
+        <app-state-panel
           data-testid="empty-catalog"
-          class="rounded-md border border-surface-200 bg-surface-0 p-6 text-center"
-        >
-          <p class="font-medium text-surface-900">No employees yet</p>
-          <button pButton type="button" data-testid="empty-add" class="mt-4" (click)="add()">
-            <i class="pi pi-plus mr-2" aria-hidden="true"></i>Add employee
-          </button>
-        </div>
+          state="empty"
+          message="No employees yet"
+          actionLabel="Add employee"
+          actionIcon="pi pi-plus"
+          [primaryAction]="true"
+          actionId="empty-add"
+          (action)="add()"
+        />
       }
     } @else {
       <div

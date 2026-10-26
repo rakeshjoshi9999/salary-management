@@ -14,6 +14,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { Settings } from '../core/api.models';
 import { ApiError } from '../core/api-error';
 import { ReferenceStore } from '../core/reference.store';
+import { StatePanel } from '../shared/state-panel';
 import { SettingsService } from './settings.service';
 
 /**
@@ -22,7 +23,7 @@ import { SettingsService } from './settings.service';
  */
 @Component({
   selector: 'app-settings-page',
-  imports: [ButtonModule, SkeletonModule],
+  imports: [ButtonModule, SkeletonModule, StatePanel],
   templateUrl: './settings-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

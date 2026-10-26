@@ -39,19 +39,13 @@
         </button>
       </div>
     } @else if (status() === 'error') {
-      <div data-testid="drawer-error" role="alert" class="rounded-md bg-red-50 p-4">
-        <p class="font-medium text-red-900">Couldn't load this employee</p>
-        <button
-          pButton
-          type="button"
-          data-testid="drawer-retry"
-          severity="danger"
-          class="mt-4"
-          (click)="retry()"
-        >
-          Retry
-        </button>
-      </div>
+      <app-state-panel
+        data-testid="drawer-error"
+        state="error"
+        message="Couldn't load this employee"
+        actionId="drawer-retry"
+        (action)="retry()"
+      />
     } @else if (status() === 'loading') {
       <div data-testid="drawer-skeleton" aria-busy="true" class="flex flex-col gap-3">
         <span class="sr-only">Loading employee</span>
@@ -316,7 +310,7 @@
             type="submit"
             data-testid="save"
             [loading]="saving()"
-            [disabled]="saving() || stale()"
+            [disabled]="saving() || stale() || !reference.ready()"
             [attr.aria-busy]="saving()"
           >
             Save

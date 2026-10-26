@@ -4,8 +4,10 @@ import {
   Component,
   DestroyRef,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -21,6 +23,7 @@ import { ApiError } from '../core/api-error';
 import { CLOCK, todayUtc } from '../core/clock';
 import { ReferenceStore } from '../core/reference.store';
 import { MoneyPipe } from '../shared/money.pipe';
+import { StatePanel } from '../shared/state-panel';
 import { CatalogRefresh } from './catalog-refresh';
 import { EmployeeService } from './employee.service';
 import {
@@ -43,7 +46,7 @@ type ViewStatus = 'loading' | 'ready' | 'not-found' | 'error';
  */
 @Component({
   selector: 'app-employee-drawer',
-  imports: [ReactiveFormsModule, DrawerModule, ButtonModule, SkeletonModule, MoneyPipe],
+  imports: [ReactiveFormsModule, DrawerModule, ButtonModule, SkeletonModule, MoneyPipe, StatePanel],
   templateUrl: './employee-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -124,6 +127,12 @@ export class EmployeeDrawer {
     this.form.controls.department.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe((department) => this.syncTitle(department));
+
+    // Choices backed by reference data wait for it (UI_DESIGN.md States).
+    effect(() => {
+      const ready = this.reference.ready();
+      untracked(() => this.gateReferenceFields(ready));
+    });
 
     if (this.mode !== 'add') {
       this.load();
@@ -237,7 +246,8 @@ export class EmployeeDrawer {
   protected save(): void {
     this.submitted.set(true);
     this.form.markAllAsTouched();
-    if (this.stale() || this.saving() || this.form.invalid) {
+    // Disabled controls skip validation, so never save before the reference-backed fields exist.
+    if (!this.reference.ready() || this.stale() || this.saving() || this.form.invalid) {
       return;
     }
     const value = this.form.getRawValue();
@@ -363,7 +373,12 @@ export class EmployeeDrawer {
 
   private syncTitle(department: string): void {
     const title = this.form.controls.jobTitle;
-    if (department) {
+    // Without reference data there is no title list to check against: leave the title alone.
+    if (!this.reference.ready()) {
+      title.disable({ emitEvent: false });
+      return;
+    }
+    if (department && !this.saving()) {
       title.enable({ emitEvent: false });
     } else {
       title.disable({ emitEvent: false });
@@ -375,7 +390,21 @@ export class EmployeeDrawer {
 
   private unlock(): void {
     this.form.enable({ emitEvent: false });
-    this.syncTitle(this.form.controls.department.value);
+    this.gateReferenceFields(this.reference.ready());
+  }
+
+  private gateReferenceFields(ready: boolean): void {
+    const { department, countryCode, jobTitle } = this.form.controls;
+    if (ready && !this.saving()) {
+      department.enable({ emitEvent: false });
+      countryCode.enable({ emitEvent: false });
+      this.syncTitle(department.value);
+    } else {
+      department.disable({ emitEvent: false });
+      countryCode.disable({ emitEvent: false });
+      jobTitle.disable({ emitEvent: false });
+    }
+    this.changes.markForCheck();
   }
 
   private navigateTo(commands: unknown[]): void {
