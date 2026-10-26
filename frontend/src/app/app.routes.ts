@@ -10,6 +10,11 @@ export const routes: Routes = [
     title: 'Salary Management',
   },
   {
+    path: 'catalog',
+    loadComponent: () => import('./employees/catalog-page').then((m) => m.CatalogPage),
+    title: 'Catalog · Salary Management',
+  },
+  {
     // Phase 1 health page: not in the top bar; the README links it (ADR-051).
     path: 'health',
     loadComponent: healthPage,

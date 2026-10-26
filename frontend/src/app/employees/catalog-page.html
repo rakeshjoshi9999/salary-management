@@ -1,0 +1,292 @@
+<section class="mx-auto max-w-7xl px-4 pt-6">
+  <h2 class="sr-only">Catalog</h2>
+
+  <!-- Search and filters. On phones the filters fold into a panel (UI_DESIGN.md). -->
+  <div class="flex flex-col gap-3 lg:flex-row lg:items-start">
+    <div class="flex-1">
+      <label for="catalog-search" class="sr-only">Search name or email</label>
+      <input
+        id="catalog-search"
+        data-testid="search-input"
+        type="search"
+        autocomplete="off"
+        placeholder="Search name or email"
+        maxlength="254"
+        class="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm"
+        aria-describedby="catalog-search-hint"
+        [value]="searchText()"
+        (input)="onSearchInput($event)"
+      />
+      <div id="catalog-search-hint" aria-live="polite">
+        @if (searchHint()) {
+          <p data-testid="search-hint" class="mt-1 text-xs text-surface-600">
+            Type at least 2 characters
+          </p>
+        }
+      </div>
+    </div>
+
+    <div class="flex gap-2 sm:hidden">
+      <button
+        type="button"
+        data-testid="filters-toggle"
+        class="flex-1 rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm"
+        [attr.aria-expanded]="filtersOpen()"
+        aria-controls="catalog-filters"
+        (click)="filtersOpen.set(!filtersOpen())"
+      >
+        Filters ({{ filterCount() }})
+      </button>
+      <label for="catalog-sort" class="sr-only">Sort</label>
+      <select
+        id="catalog-sort"
+        data-testid="sort-select"
+        class="flex-1 rounded-md border border-surface-300 bg-surface-0 px-2 py-2 text-sm"
+        [value]="sortValue()"
+        (change)="setSort($any($event.target).value)"
+      >
+        @for (option of sortOptions; track option.value) {
+          <option [value]="option.value" [selected]="option.value === sortValue()">
+            {{ option.label }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <div
+      id="catalog-filters"
+      class="grid gap-2 sm:grid sm:grid-cols-3 lg:flex"
+      [class.hidden]="!filtersOpen()"
+    >
+      <label class="sr-only" for="filter-country">Country</label>
+      <select
+        id="filter-country"
+        data-testid="filter-country"
+        class="rounded-md border border-surface-300 bg-surface-0 px-2 py-2 text-sm"
+        [disabled]="!reference.ready()"
+        (change)="setCountry($any($event.target).value)"
+      >
+        <option value="">All countries</option>
+        @for (country of reference.countries(); track country.code) {
+          <option [value]="country.code" [selected]="country.code === query().country">
+            {{ country.name }}
+          </option>
+        }
+      </select>
+
+      <label class="sr-only" for="filter-department">Department</label>
+      <select
+        id="filter-department"
+        data-testid="filter-department"
+        class="rounded-md border border-surface-300 bg-surface-0 px-2 py-2 text-sm"
+        [disabled]="!reference.ready()"
+        (change)="setDepartment($any($event.target).value)"
+      >
+        <option value="">All departments</option>
+        @for (department of reference.departments(); track department.name) {
+          <option [value]="department.name" [selected]="department.name === query().department">
+            {{ department.name }}
+          </option>
+        }
+      </select>
+
+      <label class="sr-only" for="filter-title">Job title</label>
+      <select
+        id="filter-title"
+        data-testid="filter-title"
+        class="rounded-md border border-surface-300 bg-surface-0 px-2 py-2 text-sm"
+        [disabled]="!reference.ready()"
+        (change)="setTitle($any($event.target).value)"
+      >
+        <option value="">All job titles</option>
+        @for (title of titleOptions(); track title) {
+          <option [value]="title" [selected]="title === query().jobTitle">{{ title }}</option>
+        }
+      </select>
+    </div>
+
+    <button pButton type="button" data-testid="add-employee" class="lg:ml-auto" (click)="add()">
+      <i class="pi pi-plus mr-2" aria-hidden="true"></i>Add employee
+    </button>
+  </div>
+
+  <div class="mt-4">
+    @if (status() === 'error') {
+      <div
+        data-testid="catalog-error"
+        role="alert"
+        class="rounded-md border border-red-200 bg-red-50 p-6 text-center"
+      >
+        <p class="font-medium text-red-900">Couldn't load employees</p>
+        <p class="mt-1 text-sm text-red-800">Check your connection and try again.</p>
+        <button
+          pButton
+          type="button"
+          data-testid="catalog-retry"
+          severity="danger"
+          class="mt-4"
+          (click)="retry()"
+        >
+          Retry
+        </button>
+      </div>
+    } @else if (result() === null) {
+      <div data-testid="catalog-skeleton" aria-busy="true" class="flex flex-col gap-2">
+        <span class="sr-only">Loading employees</span>
+        @for (row of skeletonRows; track row) {
+          <p-skeleton height="3rem" />
+        }
+      </div>
+    } @else if (total() === 0) {
+      @if (filtered()) {
+        <div
+          data-testid="no-matches"
+          class="rounded-md border border-surface-200 bg-surface-0 p-6 text-center"
+        >
+          <p class="font-medium text-surface-900">No one matches these filters</p>
+          <button
+            pButton
+            type="button"
+            data-testid="clear-filters"
+            [outlined]="true"
+            class="mt-4"
+            (click)="clearFilters()"
+          >
+            Clear filters
+          </button>
+        </div>
+      } @else {
+        <div
+          data-testid="empty-catalog"
+          class="rounded-md border border-surface-200 bg-surface-0 p-6 text-center"
+        >
+          <p class="font-medium text-surface-900">No employees yet</p>
+          <button pButton type="button" data-testid="empty-add" class="mt-4" (click)="add()">
+            <i class="pi pi-plus mr-2" aria-hidden="true"></i>Add employee
+          </button>
+        </div>
+      }
+    } @else {
+      <div
+        data-testid="catalog-results"
+        [attr.data-loading]="status() === 'loading'"
+        [attr.aria-busy]="status() === 'loading'"
+        class="transition-opacity"
+        [class.opacity-50]="status() === 'loading'"
+      >
+        <!-- Desktop and tablet: a table. Phones: cards. Both render; CSS shows one (ADR-051). -->
+        <div class="hidden sm:block">
+          <p-table [value]="rows()" dataKey="id" styleClass="text-sm">
+            <ng-template #header>
+              <tr>
+                <th scope="col" [attr.aria-sort]="ariaSort('fullName')">
+                  <button
+                    type="button"
+                    data-testid="sort-fullName"
+                    class="font-semibold"
+                    (click)="sortBy('fullName')"
+                  >
+                    Name
+                    <span aria-hidden="true">{{ sortGlyph('fullName') }}</span>
+                  </button>
+                </th>
+                <th scope="col">Title</th>
+                <th scope="col" class="hidden lg:table-cell">Department</th>
+                <th scope="col">Country</th>
+                <th scope="col" class="text-right" [attr.aria-sort]="ariaSort('salary')">
+                  <button
+                    type="button"
+                    data-testid="sort-salary"
+                    class="font-semibold"
+                    (click)="sortBy('salary')"
+                  >
+                    Salary
+                    <span aria-hidden="true">{{ sortGlyph('salary') }}</span>
+                  </button>
+                </th>
+                <th
+                  scope="col"
+                  class="hidden lg:table-cell"
+                  [attr.aria-sort]="ariaSort('hireDate')"
+                >
+                  <button
+                    type="button"
+                    data-testid="sort-hireDate"
+                    class="font-semibold"
+                    (click)="sortBy('hireDate')"
+                  >
+                    Hired
+                    <span aria-hidden="true">{{ sortGlyph('hireDate') }}</span>
+                  </button>
+                </th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-employee>
+              <!-- The name is a real link (keyboard, new tab); the row click is a mouse shortcut. -->
+              <tr
+                [attr.data-testid]="'row-' + employee.id"
+                class="cursor-pointer hover:bg-surface-50"
+                (click)="open(employee)"
+              >
+                <td>
+                  <a
+                    class="font-medium text-surface-900 hover:underline"
+                    [routerLink]="[employee.id]"
+                    queryParamsHandling="preserve"
+                    (click)="$event.stopPropagation()"
+                    >{{ employee.fullName }}</a
+                  >
+                  <div class="text-xs text-surface-600">{{ employee.email }}</div>
+                </td>
+                <td>{{ employee.jobTitle }}</td>
+                <td class="hidden lg:table-cell">{{ employee.department }}</td>
+                <td>{{ employee.countryCode }}</td>
+                <td class="text-right tabular-nums">
+                  {{ employee.salary | money: employee.currency }}
+                </td>
+                <td class="hidden tabular-nums lg:table-cell">{{ employee.hireDate }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+
+        <ul class="flex flex-col gap-2 sm:hidden">
+          @for (employee of rows(); track employee.id) {
+            <li>
+              <button
+                type="button"
+                [attr.data-testid]="'card-' + employee.id"
+                class="w-full rounded-md border border-surface-200 bg-surface-0 p-3 text-left"
+                (click)="open(employee)"
+              >
+                <span class="block font-medium text-surface-900">{{ employee.fullName }}</span>
+                <span class="block text-sm text-surface-600">
+                  {{ employee.jobTitle }} · {{ employee.countryCode }}
+                </span>
+                <span class="block text-sm tabular-nums text-surface-800">
+                  {{ employee.salary | money: employee.currency }}
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+
+        <div class="mt-3 flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+          <p data-testid="range-text" class="text-sm text-surface-600">
+            {{ range().from | number }}–{{ range().to | number }} of {{ total() | number }}
+          </p>
+          <p-paginator
+            [first]="query().page * query().size"
+            [rows]="query().size"
+            [totalRecords]="total()"
+            [rowsPerPageOptions]="[20, 50, 100]"
+            [pageLinkSize]="5"
+            (onPageChange)="onPage($event)"
+          />
+        </div>
+      </div>
+    }
+  </div>
+</section>
+
+<router-outlet />

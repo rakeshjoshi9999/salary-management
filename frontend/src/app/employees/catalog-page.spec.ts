@@ -182,14 +182,16 @@ describe('CatalogPage', () => {
   it('waits 300 ms after typing before searching', async () => {
     await open('/catalog');
     await respond(page([ASHA]));
+    // navigate() and routerLink both go through navigateByUrl, so this sees any navigation.
+    const navigateByUrl = vi.spyOn(router, 'navigateByUrl');
     vi.useFakeTimers();
 
     typeSearch('asha');
-    await vi.advanceTimersByTimeAsync(299);
-    expect(router.url).toBe('/catalog');
+    vi.advanceTimersByTime(299);
+    expect(navigateByUrl).not.toHaveBeenCalled();
     controller.expectNone((r) => r.url === EMPLOYEES_URL);
 
-    await vi.advanceTimersByTimeAsync(1);
+    vi.advanceTimersByTime(1);
     vi.useRealTimers();
     await settle();
 
@@ -275,7 +277,7 @@ describe('CatalogPage', () => {
     select('filter-department', 'Engineering');
     await settle();
 
-    expect(router.url).toBe('/catalog?jobTitle=QA%20Engineer&department=Engineering');
+    expect(router.url).toBe('/catalog?department=Engineering&jobTitle=QA%20Engineer');
   });
 
   it('clicking a sortable header toggles asc/desc; other headers do not sort', async () => {
