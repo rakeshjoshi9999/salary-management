@@ -126,10 +126,10 @@ can reach its database.
 ---
 
 ## Phase 8 — Docs & submission
-- [ ] **8.1** `README.md`: what it is, live links, run locally, run tests, seed
-- [ ] **8.2** Finalize `docs/PERFORMANCE.md` and `docs/DECISIONS.md`
-- [ ] **8.3** Finalize `docs/AI_USAGE.md`: how AI was used, prompts, where it was wrong and how you caught it
+- [x] **8.1** `README.md`: what it is, live links, run locally, run tests, seed
+- [x] **8.2** Finalize `docs/PERFORMANCE.md` and `docs/DECISIONS.md`
+- [x] **8.3** Finalize `docs/AI_USAGE.md`: how AI was used, prompts, where it was wrong and how you caught it
 - [ ] **8.4** Smoke test the live app end to end as a reviewer would
 - [ ] **8.5** Record ~3-min demo video; link in README
-- [ ] **8.6** Read the commit history top to bottom as a reviewer would
+- [x] **8.6** Read the commit history top to bottom as a reviewer would
 - [ ] **8.7** Reply to the original email with the repo link

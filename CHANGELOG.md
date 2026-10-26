@@ -3,6 +3,20 @@
 One entry per completed phase of [`TASKS.md`](TASKS.md), newest first. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Phase 8 — Docs and submission (2026-10-26, in progress)
+
+### Added
+- A reviewer-first README: live links and the cold start, screenshots, each requirement mapped to how it
+  is met and the evidence, the stack, how to run and test it, and how it was built.
+- `PERFORMANCE.md`: a summary per requirement, the insights query plans, and warm live latency against
+  production (114 ms median for a list, 79 ms for a country's insights, network included).
+- `DECISIONS.md`: a reading guide to the decisions that shape the app most (ADR-053).
+- `AI_USAGE.md`: an overview of how AI was used, where it was wrong, and where the engineer chose
+  differently; a drafted reflections section for the engineer to edit.
+- `WORKFLOW.md`: a guide to reading the commit history, blemishes included.
+- `SMOKE-TEST.md`: the live smoke test (read-only checks passed at desktop and phone width).
+- A demo video script and a reply email draft, for the engineer to record and send.
+
 ## Phase 7 — Frontend features (2026-10-26)
 
 ### Added
