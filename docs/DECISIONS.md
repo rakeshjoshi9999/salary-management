@@ -97,6 +97,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-047 | Insights median as two `percentile_disc`; settings saves follow ADR-041 | Accepted | 2026-10-25 |
 | ADR-048 | Promotions only by fast-forward push; the merge button cannot merge into `main` | Accepted | 2026-10-25 |
 | ADR-049 | Seeding: a `seed` profile, keyed by email, JDBC batches, Datafaker names | Accepted | 2026-10-26 |
+| ADR-050 | The Neon stage branch is never reset from production | Accepted | 2026-10-26 |
 
 ---
 
@@ -1884,6 +1885,41 @@ Datafaker over hand-written lists. The code lives in a new `seed/` feature packa
 - The plan script copies SQL from `EmployeeSearchImpl` and can drift from it; it is re-checked whenever
   the list query changes.
 - Production is seeded only with the engineer's explicit OK, after the promotion.
+
+---
+
+## ADR-050 — The Neon stage branch is never reset from production
+
+- **Date:** 2026-10-26
+- **Status:** Accepted
+- **Task:** 6.4, ahead of the phase 6 promotion. Settles the question ADR-031 left open until 6.4.
+
+### Context
+ADR-030 gave `stage` its own Neon database, a branch of production, and ADR-031 deferred whether that
+branch is reset from production at each promotion. The stage database now holds the 10,000 seeded
+employees (6.4). Production will get the same 10,000 people from the same deterministic seed after
+this promotion (ADR-049), and has no other data yet.
+
+### Options considered
+| Option | For | Against |
+|---|---|---|
+| **A - Never reset: branch once, stage keeps its own data** | No step per promotion; stage keeps its seeded rows and anything typed into it; nothing to forget | Stage data drifts from production; migrations are tested against stage's history, not production's; recovering a broken stage is improvised |
+| B - Reset from production at each promotion (Neon dashboard) | Each phase starts stage from production's exact schema and data, so the next migrations meet what production holds | A manual step every phase; wipes anything typed into stage; little gain while production holds only seeded data |
+| C - Reset only to recover, with each reset recorded | Day to day the same as A, with the recovery path written down | One more rule; does not keep stage close to production |
+
+### Decision
+Option A, chosen by the engineer on the AI's recommendation. Stage and production hold the same seeded
+people from the same deterministic seed, and production has no other data, so a reset would cost a
+manual step every phase and buy nothing yet.
+
+### Consequences
+- Promotions stay as ADR-030 and ADR-048 describe them; there is no Neon step.
+- Stage keeps whatever is typed into it, and its data will differ from production's over time. Ids
+  already differ between the two (ADR-049).
+- A new migration is checked on stage against stage's data, not production's. A migration that depends
+  on production's data shape is checked separately before promotion.
+- Revisit once real users change production data: keeping stage close to production then matters, and
+  option B becomes worth its cost.
 
 ---
 
