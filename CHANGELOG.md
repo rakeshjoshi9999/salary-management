@@ -3,6 +3,26 @@
 One entry per completed phase of [`TASKS.md`](TASKS.md), newest first. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Phase 6 — Seeding (2026-10-26)
+
+### Added
+- A `seed` Spring profile that inserts 10,000 deterministic employees across IN, US, GB, DE and FR,
+  runs `VACUUM ANALYZE employee` and exits, with no web server and never in a normal start or the
+  test suite (ADR-049).
+- Idempotent by email on the reserved `acme.example` domain: a rerun inserts nothing, and rows typed
+  in by hand are never touched. Names from Datafaker 2.7.0 with a locale per country, pinned by a
+  golden test; salaries in bands per country and title level; hire dates in a fixed window.
+- JDBC batches of 500 in one transaction, with ids taken from `employee_id_seq` in blocks of 50 so
+  they never overlap the ids the API hands out later.
+- Seed time in `docs/PERFORMANCE.md`: about 2.0–2.2 s locally and 3.9 s from a laptop to stage on
+  Neon, against a 10 s target.
+- `list-plans.sql`, a read-only psql script for the list query plans. On seeded local and stage data
+  every list shape runs in under 9 ms on the server; deep pages are the slowest, and ADR-045 stands.
+
+### Changed
+- The stage database is seeded. Production is seeded once, from `main`, after this promotion.
+- The Neon stage branch is never reset from production (ADR-050, settling ADR-031's open question).
+
 ## Phase 5 — Salary insights (2026-10-25)
 
 ### Added
