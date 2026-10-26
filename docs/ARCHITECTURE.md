@@ -91,6 +91,8 @@ com.acme.salary
 ├─ reference/   ReferenceController, ReferenceService, ReferenceRepository (JdbcClient), Country, JobTitle, dto/,
 │               validation/ (@SupportedCountry, used by employee and settings) (ADR-037)
 ├─ settings/    SettingsController, SettingsService, SettingsRepository, AppSettings (entity), dto/ (ADR-028)
+├─ seed/        SeedRunner (`seed` profile only), EmployeeGenerator (Datafaker), EmployeeSeeder (JdbcTemplate
+│               batches), SeedCatalog; depends on no other feature (ADR-049)
 └─ common/      error/ (Problem Details), money/ (MoneyRounding), config/ (CORS, Clock, Jackson)
 ```
 

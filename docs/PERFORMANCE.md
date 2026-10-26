@@ -61,3 +61,60 @@ network and on Render's cold start (ADR-004), not on the query.
 - **Unused indexes:** none to drop. Three indexes appear in no list plan, each for a reason:
   `employee_country_salary_idx` serves the per-country salary statistics (task 5.1, checked there), and
   `employee_pk` and `employee_email_active_uq` exist to enforce constraints, not to serve lists.
+
+## Seed time (task 6.3, 2026-10-26)
+
+**Target:** under 10 seconds (`REQUIREMENTS.md`). **How:** the `seed` profile (ADR-049) logs each phase:
+
+```
+cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=seed
+```
+
+| Where | Run | Generate | Insert | VACUUM ANALYZE | Total |
+|---|---|---|---|---|---|
+| Local (docker compose Postgres 18.6, empty table) | 1 | 453 ms | 1,487 ms | 74 ms | **2,015 ms** |
+| Local, empty table | 2 | 499 ms | 1,633 ms | 94 ms | 2,228 ms |
+| Local, empty table | 3 | 537 ms | 1,588 ms | 90 ms | 2,215 ms |
+| Local, rerun on the seeded table (0 inserted) | — | 427 ms | 32 ms | 48 ms | 508 ms |
+| Stage (laptop → Neon, includes network) | — | _pending (6.4)_ | | | |
+
+The total excludes the application's start-up and Flyway check, which are not part of the seed. Inserts go in JDBC
+batches of 500 in one transaction, with ids for all blocks taken in one `generate_series` query, so
+the round trips over Neon's network stay at about 25.
+
+## List query plans on seeded data (task 6.4, 2026-10-26)
+
+**How:** `backend/src/test/resources/performance/list-plans.sql`, a read-only psql script with the same
+SQL as `EmployeeSearchImpl` (ADR-049), run after the seed and its `VACUUM ANALYZE`:
+
+```
+psql "<connection string>" -f backend/src/test/resources/performance/list-plans.sql
+```
+
+The seeded data is realistic: names repeat, salaries are round (multiples of 100, INR 1,000) and about
+1.6 people share each hire date. Those ties are what 4.5's synthetic data lacked.
+
+| Shape | Local seeded: plan | ms | Stage: ms |
+|---|---|---|---|
+| Default page (name order) | Index Scan `employee_full_name_idx` + incremental sort | 0.12 | _pending_ |
+| Count, no filter | Index Only Scan `employee_country_title_idx` | 0.70 | |
+| Deep page, name order (offset 9,980) | **Seq Scan + full sort** | 8.6 | |
+| Deep page, salary desc | **Seq Scan + full sort** | 6.4 | |
+| Deep page, hire date asc | **Seq Scan + full sort** | 4.0 | |
+| Search `patel` (42 matches) | BitmapOr of both trigram indexes | 0.27 | |
+| Search `00042@` (1 match) | BitmapOr of both trigram indexes | 0.11 | |
+| `country=IN`, salary order, last page (offset 3,480) | Bitmap Scan `employee_country_dept_idx` + sort | 2.3 | |
+| `department=Engineering` | Index Scan `employee_full_name_idx` + incremental sort | 0.06 | |
+| `jobTitle=Recruiter` | Index Scan `employee_full_name_idx` + incremental sort | 0.21 | |
+| `country=IN` + `department=Engineering` | Index Scan `employee_full_name_idx` + incremental sort | 0.06 | |
+
+### Findings
+
+- **The seed's `VACUUM ANALYZE` works:** search uses both trigram indexes straight after seeding (0.1 to
+  0.3 ms), with no wait for autovacuum.
+- **Deep pages no longer use the sort indexes.** For an offset of 9,980 the planner prefers reading the
+  whole table and sorting it (4 to 9 ms) to walking an index whose ties need re-sorting. A `(column, id)`
+  index would let it stop after 10,000 index entries, but the cost now is under 5% of the 200 ms budget,
+  so **ADR-045 stands: the sort indexes stay single-column.** Revisit if the table grows past about
+  100,000 rows, or move to keyset paging.
+- First pages, filters and counts behave as in 4.5.

@@ -40,6 +40,8 @@ contradicts them stops and asks; a change to them is a new ADR, not a quiet edit
 | Frontend lint | `cd frontend && npm run lint` (fails on any warning; CI fails on it) |
 | Frontend format | `cd frontend && npm run format` to fix, `npm run format:check` as CI runs it |
 | List query plan report | `cd backend && ./mvnw test -Dgroups=performance -DexcludedGroups=none` writes `target/performance/list-plans.txt` (not in CI; ADR-045, ADR-046) |
+| Seed 10,000 employees | `cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=seed` (idempotent; uses `DB_URL` etc.; ADR-049) |
+| Seeded list query plans | `psql "<url>" -f backend/src/test/resources/performance/list-plans.sql` (read-only; task 6.4) |
 
 On Windows, use `mvnw.cmd` from cmd/PowerShell. When a phase adds an entry point, record it here.
 
