@@ -82,6 +82,18 @@
           <button pButton type="button" data-testid="edit-button" (click)="edit()">
             <i class="pi pi-pencil mr-2" aria-hidden="true"></i>Edit
           </button>
+          <button
+            pButton
+            type="button"
+            data-testid="delete-button"
+            severity="danger"
+            [outlined]="true"
+            [loading]="deleting()"
+            [disabled]="deleting()"
+            (click)="confirmDelete()"
+          >
+            <i class="pi pi-trash mr-2" aria-hidden="true"></i>Delete
+          </button>
         </div>
       }
     } @else {

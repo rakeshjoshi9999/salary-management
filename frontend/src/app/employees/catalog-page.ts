@@ -8,7 +8,6 @@ import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import {
-  BehaviorSubject,
   Observable,
   Subject,
   catchError,
@@ -16,6 +15,7 @@ import {
   filter,
   map,
   of,
+  startWith,
   switchMap,
   take,
   tap,
@@ -36,7 +36,10 @@ import {
 import { CatalogRefresh } from './catalog-refresh';
 import { EmployeeService } from './employee.service';
 
-type LoadResult = { ok: true; page: EmployeePage; query: CatalogQuery } | { ok: false };
+/** Why a load happened: a refresh after a save or delete steps back from an emptied page quietly. */
+type LoadReason = 'user' | 'refresh';
+type LoadResult =
+  { ok: true; page: EmployeePage; query: CatalogQuery; reason: LoadReason } | { ok: false };
 
 export const SORT_OPTIONS = [
   { value: 'fullName,asc', label: 'Name A–Z' },
@@ -109,7 +112,8 @@ export class CatalogPage {
   /** One toast per link: cleared when the user changes the list themselves. */
   private linkToastShown = false;
 
-  private readonly retry$ = new BehaviorSubject<void>(undefined);
+  /** Reloads of the current query. Carrying the reason keeps it tied to its own load. */
+  private readonly reload$ = new Subject<LoadReason>();
   private readonly search$ = new Subject<string>();
 
   constructor() {
@@ -152,11 +156,16 @@ export class CatalogPage {
           }
           this.searchHint.set(false);
         }),
-        switchMap((query) => this.retry$.pipe(map(() => query))),
-        switchMap((query): Observable<LoadResult> => {
+        switchMap((query) =>
+          this.reload$.pipe(
+            startWith<LoadReason>('user'),
+            map((reason) => ({ query, reason })),
+          ),
+        ),
+        switchMap(({ query, reason }): Observable<LoadResult> => {
           this.status.set('loading');
           return this.employees.list(toListRequest(query)).pipe(
-            map((page): LoadResult => ({ ok: true, page, query })),
+            map((page): LoadResult => ({ ok: true, page, query, reason })),
             catchError(() => of<LoadResult>({ ok: false })),
           );
         }),
@@ -168,14 +177,10 @@ export class CatalogPage {
       .pipe(debounceTime(300), takeUntilDestroyed())
       .subscribe((text) => this.search(text.trim()));
 
-    // The drawer saved or deleted someone: reload, on another page if it asks for one.
-    this.refresh.requested$.pipe(takeUntilDestroyed()).subscribe((target) => {
-      if (target && target.page !== this.query().page) {
-        this.navigate({ ...this.query(), page: target.page });
-      } else {
-        this.retry();
-      }
-    });
+    // The drawer saved or deleted someone: reload this page.
+    this.refresh.requested$
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.reload$.next('refresh'));
   }
 
   protected onSearchInput(event: Event): void {
@@ -253,7 +258,7 @@ export class CatalogPage {
   }
 
   protected retry(): void {
-    this.retry$.next();
+    this.reload$.next('user');
   }
 
   private search(text: string): void {
@@ -275,10 +280,13 @@ export class CatalogPage {
       this.status.set('error');
       return;
     }
-    const { page, query } = loaded;
+    const { page, query, reason } = loaded;
     const lastPage = Math.max(0, page.totalPages - 1);
     if (query.page > lastPage) {
-      this.linkIgnored();
+      // After a delete emptied this page, stepping back is expected; only a link gets the warning.
+      if (reason === 'user') {
+        this.linkIgnored();
+      }
       this.navigate({ ...query, page: lastPage }, true);
       return;
     }

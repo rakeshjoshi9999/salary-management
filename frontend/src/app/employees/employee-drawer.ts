@@ -67,6 +67,7 @@ export class EmployeeDrawer {
   protected readonly employee = signal<Employee | null>(null);
   protected readonly status = signal<ViewStatus>(this.mode === 'add' ? 'ready' : 'loading');
   protected readonly saving = signal(false);
+  protected readonly deleting = signal(false);
   protected readonly stale = signal(false);
   protected readonly submitted = signal(false);
   /** Set once a save succeeds, so leaving afterwards never asks. */
@@ -131,8 +132,8 @@ export class EmployeeDrawer {
 
   /** For the unsaved-changes guard: true, or a promise of the user's answer (ADR-051). */
   canLeave(): boolean | Promise<boolean> {
-    // Never mid-save: the answer would be dropped with the component.
-    if (this.saving()) {
+    // Never mid-save or mid-delete: the answer would be dropped with the component.
+    if (this.saving() || this.deleting()) {
       return false;
     }
     if (this.saved || this.mode === 'view' || !this.form.dirty) {
@@ -154,7 +155,7 @@ export class EmployeeDrawer {
   }
 
   protected close(): void {
-    if (this.saving()) {
+    if (this.saving() || this.deleting()) {
       this.open.set(true);
       return;
     }
@@ -163,6 +164,52 @@ export class EmployeeDrawer {
 
   protected edit(): void {
     this.navigateTo(['/catalog', this.id, 'edit']);
+  }
+
+  /** A simple confirm (ADR-027). There is no undo, because restore is not exposed (ADR-011). */
+  protected confirmDelete(): void {
+    const employee = this.employee();
+    if (!employee || this.deleting()) {
+      return;
+    }
+    this.confirmation.confirm({
+      header: `Delete ${employee.fullName}?`,
+      message: 'They will disappear from the catalog and from insights.',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: () => this.delete(employee),
+    });
+  }
+
+  private delete(employee: Employee): void {
+    this.deleting.set(true);
+    this.employees
+      .delete(employee.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.deleting.set(false);
+          this.toast.add({ severity: 'success', summary: 'Deleted', life: 3000 });
+          this.refresh.request();
+          this.close();
+        },
+        error: (error: unknown) => {
+          this.deleting.set(false);
+          if (error instanceof ApiError && error.code === 'EMPLOYEE_NOT_FOUND') {
+            this.toast.add({
+              severity: 'info',
+              summary: 'Already deleted',
+              detail: `${employee.fullName} had already been deleted.`,
+            });
+            this.refresh.request();
+            this.close();
+            return;
+          }
+          this.toast.add({ severity: 'error', summary: "Couldn't delete", detail: 'Try again.' });
+        },
+      });
   }
 
   protected cancel(): void {
@@ -335,6 +382,7 @@ export class EmployeeDrawer {
     void this.router.navigate(commands, { queryParamsHandling: 'preserve' }).then((navigated) => {
       if (!navigated) {
         this.open.set(true);
+        this.deleting.set(false);
       }
     });
   }
