@@ -3,6 +3,26 @@
 One entry per completed phase of [`TASKS.md`](TASKS.md), newest first. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Phase 7 — Frontend features (2026-10-26)
+
+### Added
+- The app shell: top bar (Insights, Catalog, Settings), a phone menu, toasts, a confirm dialog, an
+  app-wide "Waking the server…" banner after 3 s and a reference-data error with Retry (ADR-051).
+- Insights at `/`: country from the URL, then the saved default, then India; five stat cards; average
+  salary by job title as CSS bars; headcount by department as a Chart.js doughnut with a legend.
+- The Catalog at `/catalog`: server-side paging, a debounced search, filters and sorting, all in the URL;
+  invalid link values are dropped with one toast; a table on desktop and cards on phones.
+- The employee drawer at `/catalog/:id`, `/new` and `/:id/edit`: validation that mirrors the API, a
+  title list that follows the department, a 409 banner that keeps edits and blocks Save until reload, a
+  "Discard changes?" guard, and delete with confirmation.
+- Settings at `/settings`: the default Insights country; a stale save reloads.
+- Loading, empty and error states on every page through one `StatePanel`; requests time out at 90 s.
+- Playwright end-to-end tests in a new CI job, at desktop and phone width, against a seeded database.
+
+### Changed
+- The health page moved to `/health`; the landing page is Insights.
+- New dependencies: `chart.js` 4.5.1 (ADR-029) and `@playwright/test` 1.64.0 (dev, ADR-051).
+
 ## Phase 6 — Seeding (2026-10-26)
 
 ### Added

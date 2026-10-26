@@ -111,17 +111,17 @@ can reach its database.
 ---
 
 ## Phase 7 — Frontend features
-- [ ] **7.1** API client services + typed models
-- [ ] **7.2** Catalog (`/catalog`): server-side paging, debounced search, filters, sorting, all synced to URL;
+- [x] **7.1** API client services + typed models
+- [x] **7.2** Catalog (`/catalog`): server-side paging, debounced search, filters, sorting, all synced to URL;
       table on desktop, cards on phone (`docs/UI_DESIGN.md`)
-- [ ] **7.3** Employee drawer (view/add/edit): validation mirroring backend, dependent title dropdown,
+- [x] **7.3** Employee drawer (view/add/edit): validation mirroring backend, dependent title dropdown,
       409 handling that keeps edits
-- [ ] **7.4** Delete with confirmation
-- [ ] **7.5** Insights dashboard (landing `/`): country from URL → settings → IN, stats cards, CSS-bar table
+- [x] **7.4** Delete with confirmation
+- [x] **7.5** Insights dashboard (landing `/`): country from URL → settings → IN, stats cards, CSS-bar table
       by job title, Chart.js doughnut by department
-- [ ] **7.6** Loading, empty and error states everywhere — including an honest message while Render wakes
-- [ ] **7.7** One or two Playwright E2E happy paths
-- [ ] **7.8** Settings page (`/settings`): default country for Insights
+- [x] **7.6** Loading, empty and error states everywhere — including an honest message while Render wakes
+- [x] **7.7** One or two Playwright E2E happy paths
+- [x] **7.8** Settings page (`/settings`): default country for Insights
 
 ---
 

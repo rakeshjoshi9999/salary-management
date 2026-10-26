@@ -9,6 +9,7 @@ Web app for an HR Manager to manage salary data for ~10,000 employees across cou
 | | |
 |---|---|
 | App | https://salary-management-ivory-psi.vercel.app |
+| Health page | https://salary-management-ivory-psi.vercel.app/health (is the API awake and connected?) |
 | API health | https://salary-management-api-tzf8.onrender.com/actuator/health |
 
 **The first request can take up to a minute.** The API runs on Render's free tier, which
@@ -30,10 +31,8 @@ branch database, so nothing done there touches production data.
 | | |
 |---|---|
 | App | https://salary-management-stage.vercel.app (behind Vercel login) |
+| Health page | https://salary-management-stage.vercel.app/health |
 | API health | https://salary-management-api-stage.onrender.com/actuator/health |
-
-The API serves exactly one endpoint today. A 404 at any other path, including `/`, is
-correct: domain endpoints arrive in phase 3.
 
 ## Docs
 - [Requirements](REQUIREMENTS.md) — goal, scope, assumptions, and what's deliberately left out
