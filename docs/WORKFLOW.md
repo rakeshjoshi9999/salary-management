@@ -63,17 +63,18 @@
 
 A guide for a reviewer reading `git log --reverse` (task 8.6, 2026-10-26, at 177 commits). Every
 commit was checked against the rules in `CLAUDE.md`; what follows is what the history shows, including
-where it falls short. History is never rewritten: `main` is fast-forward only (ADR-048), so blemishes
-stay and are named here instead.
+where it falls short. History is no longer rewritten (since 1.11; the two earlier rewrites are in the
+table below): `main` is fast-forward only (ADR-048), so blemishes stay and are named here instead.
 
 **What to expect**
 
 - **Every message is a conventional commit:** 79 `docs:`, 33 `test:`, 28 `feat:`, 26 `chore:`,
   5 `refactor:`, 4 `ci:`, 2 `fix:`. None carries an AI co-author trailer or attribution; the one commit
   that mentions it is `3f35c29`, which made that the rule.
-- **From phase 3 on, each slice reads the same way:** a `docs:` commit recording the decisions (an ADR),
-  then `test:` (failing tests, reviewed), then `feat:` (the code, reviewed), then `docs:` (roadmap tick,
-  prompt and AI log). For example, task 3.5 is `b725c8d` → `579de80` → `0c4f037`.
+- **From phase 3 on, each slice is `test:` (failing tests, reviewed) then `feat:` (the code, reviewed).**
+  The decisions are recorded in a `docs:` commit: straight after the slice in 3.1–3.5 (task 3.5 is
+  `b725c8d` → `579de80` → `0c4f037`, the last recording ADR-041), and once per phase, before its slices,
+  from phase 4 on (`4c6b12d`, `cef8e06`, `5741b03`, `76e1c16`).
 - **The `docs:` share is high on purpose.** Decisions, prompts and outcomes are committed alongside the
   code they explain, so the reasoning for any change sits next to it in the log.
 
@@ -81,7 +82,7 @@ stay and are named here instead.
 
 | Commits | What | Why, and what was done |
 |---|---|---|
-| `abc9008`–`e6df528` (phase 1) | The environment was scaffolded with `chore:` commits and no failing tests first | Scaffolding and configuration; there was no behaviour to drive. Test-first starts with CORS in 1.9 (`1e37365` → `8f9e722`) |
+| `abc9008`–`e6df528` (phase 1) | The environment was built with scaffolding and configuration commits and no failing tests first | Scaffolding and configuration; there was no behaviour to drive. Test-first starts with CORS in 1.9 (`1e37365` → `8f9e722`) |
 | `bf5c483` (1.3) | A `test:` commit for behaviour that already existed | Said so at the time: regression tests, not a red-green cycle (AI usage log) |
 | `5064917`, `a4b6c9a` | Two `ci:` commits guessing GitHub Action versions | The AI assumed instead of querying the API; recorded under "Where AI was wrong" |
 | `a1fbf70`, `f2fff59`, `07655f0` (3.0) | A broken CI step, an ADR that claimed the wrong deploy was blocked, and a missing index row, each fixed in a follow-up commit | Caught by the reviewer or the CI run; fixed forward |
@@ -94,5 +95,7 @@ stay and are named here instead.
 | Day 1; task 1.11 | History was rewritten twice: on day 1, four commit messages were reworded and `.env.example` purged; in 1.11, `stage` was force-pushed | Both at the engineer's request and recorded in the AI usage log. Since 1.11 the ruleset blocks force-pushes to `main` (ADR-031) |
 
 **Where each phase ends:** the changelog entries (`6082f68`, `12a46ad`, `ec6b32f`, `e608ce1`, `90b9dc7`,
-`54dee03`), each followed by a promotion of `stage` to `main` (PRs #2 to #8; #1 created the stage Render service, ADR-032).
+`54dee03`), followed by promotions of `stage` to `main` (PRs #2 to #8; #1 created the stage Render
+service, ADR-032). Phase 1 was promoted twice (#2 for the stage environment, #3 for 1.12); phase 2,
+documents only, had no promotion of its own.
 

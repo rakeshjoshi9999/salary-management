@@ -7,7 +7,7 @@ at 10,000 employees (`REQUIREMENTS.md`). Each section says where and how it was 
 
 | Requirement | Measured | Verdict |
 |---|---|---|
-| A list answers in about 200 ms | **114 ms** median, 204 ms p95, live and warm from India to production in Singapore over a reused connection; 135–266 ms median with a new HTTPS connection per request. On the database server: 0.1–9 ms for every list shape | Met, network included |
+| A list answers in about 200 ms | **114 ms** median, 204 ms p95, live and warm from India to production in Singapore over a reused connection; 135–149 ms median with a new HTTPS connection per request (the first batch, 266 ms, still carried the database waking up). On the database server: 0.1–9 ms for every list shape | Met, network included |
 | Insights for a country in under 1 second | **79 ms** median, 103 ms max, live and warm over a reused connection; 158 ms median with a new connection each time. On the database server: 0.4–3 ms for the three insights queries | Met with a wide margin |
 | Seed of 10,000 employees in under 10 seconds | 2.0–2.2 s locally, 3.9 s to stage, 4.2 s to production | Met |
 | Aggregations in the database, not in Java | Every statistic is one SQL aggregate (`InsightsRepository`); Java only rounds | Met by design (ADR-022) |

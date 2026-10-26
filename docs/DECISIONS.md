@@ -64,9 +64,10 @@ full record below, with the options that were rejected and why.
 | Delivery | [ADR-030](#adr-030--a-deployed-stage-branch-in-front-of-main), [ADR-034](#adr-034--production-deploys-only-after-ci-passes), [ADR-048](#adr-048--promotions-only-by-fast-forward-push-the-merge-button-cannot-merge-into-main) | Every slice deploys to stage; production is promoted once per phase, only after CI passes |
 | Seeding | [ADR-049](#adr-049--seeding-a-seed-profile-keyed-by-email-jdbc-batches-datafaker-names) | A deterministic, idempotent seed of 10,000 employees in a few seconds |
 
-Where the engineer chose against the AI's recommendation, the record says so: the landing page, the
-"Catalog" name and phone support (ADR-027), Chart.js (ADR-029), Datafaker names (ADR-049) and trimming the
-bundle instead of raising its budget (ADR-052).
+Where the engineer chose against the AI's recommendation, the record says so, for example: indexes
+created up front (ADR-012), money as a JSON number (ADR-015), the landing page, the "Catalog" name and
+phone support (ADR-027), Chart.js (ADR-029), Datafaker names (ADR-049) and trimming the bundle instead of
+raising its budget (ADR-052). The full list is in [`AI_USAGE.md`](AI_USAGE.md#where-the-engineer-chose-differently).
 
 ## Index
 
@@ -2076,8 +2077,8 @@ and the reply email. Two of the tasks need the engineer in person, one touches p
 | Commit history (8.6) | **Read every commit against the commit rules and write a guide to the history, naming its blemishes with hashes; fix forward only what misleads now** · report privately · fix forward with no write-up | Annotated history |
 
 ### Decision
-As chosen above, by the engineer, each on the AI's recommendation. History is never rewritten (`main`
-is fast-forward only, ADR-048).
+As chosen above, by the engineer, each on the AI's recommendation. History is not rewritten (`main`
+is fast-forward only, ADR-048); the two rewrites before 1.11 are listed in `WORKFLOW.md`.
 
 ### Consequences
 - 8.5 and 8.7 stay open in `TASKS.md` until the engineer has recorded the video and sent the reply.

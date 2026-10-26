@@ -24,14 +24,14 @@ answers in about 114 ms and a country's insights in about 79 ms, measured from I
 
 | Requirement ([`REQUIREMENTS.md`](REQUIREMENTS.md)) | How | Evidence |
 |---|---|---|
-| Find any employee and update their salary in under 30 seconds | Catalog → search (debounced) → click → Edit → Save: five interactions, each warm response well under 200 ms | Playwright path "find and update a salary", desktop and phone |
+| Find any employee and update their salary in under 30 seconds | Catalog → search (debounced) → click → Edit → Save: five interactions; a warm list answers in about 114 ms (median) | Playwright path "find and update a salary", desktop and phone |
 | Add, view, edit and delete; currency derived from the country | One drawer for view, add and edit; delete with confirmation | `employee-drawer.spec.ts`, `employee-delete.spec.ts` |
 | Validation: required, valid email, salary > 0, hire date not in the future, supported countries | In the API (Bean Validation, one pass, every error at once) and mirrored in the form | ADR-010, ADR-037 |
 | A stale edit is rejected, not silently overwritten | Optimistic locking: 409 `STALE_VERSION`; the form keeps your edits and blocks Save until you reload | ADR-023, ADR-041, ADR-051 |
 | Paginated list with search, filters and sorting; filters in the URL | Server-side paging, name-or-email search on trigram indexes; the URL is the only source of list state | ADR-016, ADR-044, ADR-051 |
 | Min, max, average and median per country; average by job title; headcount by department | One call per country, every statistic aggregated in SQL, an exact median | ADR-017, ADR-022, ADR-047 |
 | Insights in under 1 second | 0.4–3 ms on the database server; 79 ms live, warm | [`PERFORMANCE.md`](docs/PERFORMANCE.md) |
-| Deterministic, idempotent seed of 10,000 employees, in under 10 seconds | A `seed` Spring profile; 2–4 s locally, on stage and in production | ADR-049 |
+| Deterministic, idempotent seed of 10,000 employees, in under 10 seconds | A `seed` Spring profile; 2.0–4.2 s locally, on stage and in production | ADR-049 |
 | Default country for Insights (added during design) | A backend setting, India until changed | ADR-028 |
 
 <p>
@@ -56,8 +56,9 @@ Needs Docker, Java 21 and Node 22.
 docker compose up -d                                   # Postgres on port 5433
 cd backend
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=seed # seed 10,000 employees (safe to re-run)
-./mvnw spring-boot:run                                 # API on http://localhost:8081
-cd ../frontend
+./mvnw spring-boot:run                                 # API on http://localhost:8081 (keeps running)
+# in a second terminal:
+cd frontend
 npm ci && npm start                                    # app on http://localhost:4200
 ```
 
@@ -68,13 +69,14 @@ set `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` and `CORS_ALLOWED_ORIGINS`. On Window
 
 | What | Command | Count |
 |---|---|---|
-| Backend: unit, slice and Testcontainers tests (needs Docker) | `cd backend && ./mvnw test` | 324 |
+| Backend: unit, slice and Testcontainers tests (needs Docker) | `cd backend && ./mvnw test` | 323 |
 | Frontend: unit and component tests (Vitest, jsdom) | `cd frontend && npx ng test --watch=false` | 137 |
 | End-to-end: 2 paths at desktop and phone width, against the seeded local stack | `cd frontend && npx playwright test` (backend running) | 4 |
 | Lint and format | `cd frontend && npm run lint && npm run format:check` | — |
 
-CI runs all of them on every push. Production and stage deploy only after every check passes (ADR-034,
-ADR-052). More commands are in [`CLAUDE.md`](CLAUDE.md).
+CI runs all of them on every push. The backend (Render) deploys only after every check passes (ADR-034,
+ADR-052); Vercel deploys the frontend without waiting, so production only receives commits that were
+already green on the promotion PR (ADR-048). More commands are in [`CLAUDE.md`](CLAUDE.md).
 
 ## How it was built
 

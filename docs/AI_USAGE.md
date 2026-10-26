@@ -23,8 +23,8 @@ One loop, for every task (`CLAUDE.md`, [`WORKFLOW.md`](WORKFLOW.md)):
 6. **Production only by promotion**, once per phase, with the engineer's OK for that push (ADR-030,
    ADR-048).
 
-The AI never had credentials for Neon or Render: the engineer ran every command against a live
-database, and watched every deploy.
+The AI never had credentials for Neon or Render: the engineer ran every database command, and the one
+AI-run write to production (the 8.4 smoke test, through the app) needed the engineer's yes at the time.
 
 ### Where it was wrong
 
@@ -33,7 +33,7 @@ The same few mistakes recur, which is the useful finding. Each links to cases in
 | Pattern | Cases | What caught it |
 |---|---|---|
 | **Claiming something it had not checked** | `percentile_cont` offered for an exact median and Postgres `round()` assumed HALF_EVEN (2.2); `@Digits` said to accept `100.000` (3.2); a `double` said to miss the exact median (5.1); a trailing backslash said to give a 500 and wider indexes said to "buy nothing" (4.x); guessed hostnames, image size and action versions (phase 1) | A test run, the reviewer, or the platform itself, rarely the AI |
-| **Tests that a wrong implementation would pass** | Fixtures whose expected order was also alphabetical (5.x, 7.2, 7.5); a page-overlap test that passed without the tiebreak (4.1); a constraint test that failed even on a correct schema (3.1); a settings test reloading a country that was not in the fixture (7.8) | The reviewer agent, whose first question is exactly this |
+| **Tests that prove nothing: they pass on wrong code, or fail on right code** | Pass on wrong code: fixtures whose expected order was also alphabetical (5.x, and phase 7's department fixture); a page-overlap test that passed without the tiebreak (4.1). Fail on right code: a constraint test that picked up Flyway's own key (3.1); a settings test reloading a country absent from the fixture (7.8) | The reviewer agent, whose first question is whether a test can tell right from wrong |
 | **Ignoring a standing instruction** | Batched questions after "ask me one by one" (1.11, and again in 7); five slices in one session against the one-slice rule (2.1–2.5); the prompt log it had mandated, skipped for eight slices (1.x) | The engineer, each time |
 | **Placeholders and commands that break when pasted** | `<SM_PGHOST>` pasted into `DB_URL` (1.7); `<stage-host>` run literally in psql (6.4) | The engineer's failed run |
 | **What only a real browser shows** | No icon rendered anywhere, from phase 1 to phase 7, because PrimeIcons was never installed; unit tests in jsdom passed throughout | Screenshots taken by the AI at the end of phase 7 |
@@ -50,6 +50,7 @@ The AI recommended; the engineer decided. The records say so wherever the engine
 | Screen sizes | Desktop-first | Fully responsive, phones included | ADR-027 |
 | Charts | CSS bars, no library | Chart.js doughnut for headcount | ADR-029 |
 | Default country | Kept in the browser | A backend setting (a scope addition) | ADR-028 |
+| Indexes | Wait for task 4.5 and measure | Create them up front | ADR-012 |
 | Seed names | Hand-written lists | Datafaker, pinned | ADR-049 |
 | Bundle over budget | Raise the warning budget | Trim the shell | ADR-052 |
 | Money in JSON | A string | A number | ADR-015 |
@@ -152,8 +153,9 @@ was supervised.
 
 _Drafted by the AI from the log above, for the engineer to edit into their own words before submission._
 
-- **What it accelerated:** the volume of careful work. Every task got a written set of options, an ADR, a
-  test list and two independent reviews, which would not have happened at this pace by hand. The
+- **What it accelerated:** the volume of careful work. Every slice from phase 3 on got a written set of
+  options, an ADR, a test list and two independent reviews, which would not have happened at this pace by
+  hand. The
   reviewer agent was the best value: it found real defects in almost every slice.
 - **Where it struggled:** confidence without checking. Its errors were rarely in code that a test
   exercised; they were in claims about libraries, platforms and its own tests. And it drifted from
