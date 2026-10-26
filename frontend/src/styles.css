@@ -12,3 +12,6 @@
  */
 @import 'tailwindcss';
 @plugin "tailwindcss-primeui";
+
+/* Playwright selectors in e2e/ look like class names; keep them out of the scan. */
+@source not "../e2e";
