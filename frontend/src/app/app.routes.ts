@@ -4,10 +4,12 @@ const healthPage = () => import('./health/health-page').then((m) => m.HealthPage
 
 export const routes: Routes = [
   {
-    // Until the Insights dashboard takes over the landing page (7.5).
+    // The landing page is the Insights dashboard (ADR-027). Lazy, so Chart.js stays out of the
+    // initial bundle.
     path: '',
-    loadComponent: healthPage,
-    title: 'Salary Management',
+    pathMatch: 'full',
+    loadComponent: () => import('./insights/insights-page').then((m) => m.InsightsPage),
+    title: 'Insights · Salary Management',
   },
   {
     path: 'catalog',
