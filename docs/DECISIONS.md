@@ -100,6 +100,7 @@ Option X, because … (the reason, not a restatement of the option).
 | ADR-050 | The Neon stage branch is never reset from production | Accepted | 2026-10-26 |
 | ADR-051 | Frontend build: hand-written models, RxJS services with signal pages, the URL as list state, CI E2E | Accepted | 2026-10-26 |
 | ADR-052 | Trim the app shell under the default budget; the end-to-end job gates deploys | Accepted | 2026-10-26 |
+| ADR-053 | Phase 8: reviewer-first docs, live warm measurements, a supervised smoke test, an annotated history | Accepted | 2026-10-26 |
 
 ---
 
@@ -2024,6 +2025,43 @@ the End-to-end job gating deploys, on the AI's recommendation. The budget stays 
 - A page outside `/catalog` that needs a confirm dialog must render its own `<p-confirmdialog>`.
 - Deploys to stage and production wait for the End-to-end job, about 4 to 5 minutes, and a flaky run
   blocks a deploy until it is re-run. Revisit (option 2) if the job proves flaky.
+
+---
+
+## ADR-053 — Phase 8: reviewer-first docs, live warm measurements, a supervised smoke test, an annotated history
+
+- **Date:** 2026-10-26
+- **Status:** Accepted
+- **Task:** 8.1–8.7. Builds on ADR-004 (live figures say warm or cold), ADR-030, ADR-048.
+
+### Context
+Phase 8 turns the built app into a submission a reviewer can judge quickly: the README, the performance,
+decision and AI-usage records, a smoke test of the live app, a read of the commit history, a demo video
+and the reply email. Two of the tasks need the engineer in person, one touches production data, and
+`DECISIONS.md` is append-only. Each decision was asked one at a time.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Demo video (8.5) and reply (8.7) | **The AI writes a timed shot-by-shot script and a reply draft; the engineer records and sends** · the engineer does both from scratch · a script only | AI prepares, engineer acts |
+| README (8.1) | **One reviewer-first page with three screenshots and a requirement-to-evidence table, linking out for depth** · the same without screenshots · a short page of links | Reviewer-first with screenshots |
+| `PERFORMANCE.md` (8.2) | **Add the insights query plan, warm live timings against production (median and p95 of 20 read-only requests per shape, network included and said so), one labelled cold start, and a requirement-to-measurement summary** · server-side only · live against stage | Live warm, against production |
+| `DECISIONS.md` (8.2) | **A reading guide to about twelve shaping ADRs plus a consistency check of the index; no existing ADR edited** · the check only · a separate summary file | Guide and check |
+| `AI_USAGE.md` (8.3) | **An overview on top of the log: how AI was used, where it was wrong (patterns with linked cases), where the engineer overrode it, an index of prompts** · complete the log only · rewrite the log as narrative | Overview over the log |
+| Smoke test (8.4) | **Read-only automated checks against production at desktop and phone width, plus one writing pass (a labelled test employee added, edited and deleted; a settings change reverted) run only with the engineer's yes at the time; results in `docs/SMOKE-TEST.md`** · read-only plus a manual checklist for the engineer · the writing pass without asking | Read-only plus supervised writes |
+| Commit history (8.6) | **Read every commit against the commit rules and write a guide to the history, naming its blemishes with hashes; fix forward only what misleads now** · report privately · fix forward with no write-up | Annotated history |
+
+### Decision
+As chosen above, by the engineer, each on the AI's recommendation. History is never rewritten (`main`
+is fast-forward only, ADR-048).
+
+### Consequences
+- 8.5 and 8.7 stay open in `TASKS.md` until the engineer has recorded the video and sent the reply.
+- Screenshots in the README go stale if the UI changes; they are taken with Playwright from the seeded
+  local stack, so they can be retaken.
+- Live timings are a snapshot of one day on Render's free tier from one machine, labelled as such.
+- Production keeps one soft-deleted test employee from the smoke test, and its settings version moves on.
+- The history guide lists imperfections publicly, by the engineer's choice.
 
 ---
 
