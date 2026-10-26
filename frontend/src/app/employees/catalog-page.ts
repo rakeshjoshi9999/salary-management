@@ -33,6 +33,7 @@ import {
   toListRequest,
   toQueryParams,
 } from './catalog-query';
+import { CatalogRefresh } from './catalog-refresh';
 import { EmployeeService } from './employee.service';
 
 type LoadResult = { ok: true; page: EmployeePage; query: CatalogQuery } | { ok: false };
@@ -70,6 +71,7 @@ export class CatalogPage {
   private readonly router = inject(Router);
   private readonly employees = inject(EmployeeService);
   private readonly toast = inject(MessageService);
+  private readonly refresh = inject(CatalogRefresh);
   protected readonly reference = inject(ReferenceStore);
 
   protected readonly query = signal<CatalogQuery>(DEFAULT_QUERY);
@@ -165,6 +167,15 @@ export class CatalogPage {
     this.search$
       .pipe(debounceTime(300), takeUntilDestroyed())
       .subscribe((text) => this.search(text.trim()));
+
+    // The drawer saved or deleted someone: reload, on another page if it asks for one.
+    this.refresh.requested$.pipe(takeUntilDestroyed()).subscribe((target) => {
+      if (target && target.page !== this.query().page) {
+        this.navigate({ ...this.query(), page: target.page });
+      } else {
+        this.retry();
+      }
+    });
   }
 
   protected onSearchInput(event: Event): void {

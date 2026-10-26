@@ -89,10 +89,12 @@ describe('EmployeeDrawer', () => {
     await settle();
   }
 
-  function fillValidNewEmployee(): void {
+  async function fillValidNewEmployee(): Promise<void> {
     type('fullName', '  Chen Wei  ');
     type('email', ' chen.wei@acme.example ');
     choose('department', 'Engineering');
+    // The department's titles render first; only then can one be chosen.
+    await settle();
     choose('jobTitle', 'QA Engineer');
     choose('countryCode', 'DE');
     type('salary', '65000.50');
@@ -319,7 +321,7 @@ describe('EmployeeDrawer', () => {
     const toast = vi.spyOn(MessageService.prototype, 'add');
     const refresh = vi.spyOn(CatalogRefresh.prototype, 'request');
     await open('/catalog/new?country=DE');
-    fillValidNewEmployee();
+    await fillValidNewEmployee();
     await settle();
 
     await save();
@@ -413,7 +415,7 @@ describe('EmployeeDrawer', () => {
 
   it('DUPLICATE_EMAIL shows on the email field', async () => {
     await open('/catalog/new');
-    fillValidNewEmployee();
+    await fillValidNewEmployee();
     await settle();
     await save();
 
@@ -519,6 +521,24 @@ describe('EmployeeDrawer', () => {
     expect(field('salary').value).toBe('2500000');
     expect(field('salary').disabled).toBe(false);
     expect((q('save') as HTMLButtonElement).disabled).toBe(false);
+
+    // A validation error on no field in the form must not vanish silently.
+    toast.mockClear();
+    await save();
+    controller
+      .expectOne((r) => r.method === 'PUT')
+      .flush(
+        {
+          type: '/problems/validation-failed',
+          title: 'Invalid request',
+          status: 400,
+          code: 'VALIDATION_FAILED',
+          errors: [{ field: 'version', message: 'must not be null' }],
+        },
+        { status: 400, statusText: 'Bad Request' },
+      );
+    await settle();
+    expect(toast).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }));
   });
 
   it('a 404 on save shows "This employee no longer exists"', async () => {

@@ -1,0 +1,316 @@
+<!-- Right side over the list; full width on phones (UI_DESIGN.md). Closing goes through the router,
+     so the unsaved-changes guard runs whichever way the drawer is closed. -->
+<p-drawer
+  [(visible)]="open"
+  position="right"
+  [modal]="true"
+  [closable]="false"
+  [closeOnEscape]="true"
+  styleClass="!w-full sm:!w-[32rem] lg:!w-[28rem]"
+  (onHide)="close()"
+>
+  <div data-testid="drawer" class="flex h-full flex-col gap-4">
+    <div class="flex items-start justify-between gap-4">
+      <h2 class="text-lg font-semibold text-surface-900">{{ title() }}</h2>
+      <button
+        type="button"
+        data-testid="drawer-close"
+        class="rounded-md p-2 text-surface-600 hover:text-surface-900"
+        aria-label="Close"
+        (click)="close()"
+      >
+        <i class="pi pi-times" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    @if (status() === 'not-found') {
+      <div data-testid="not-found" role="alert" class="rounded-md bg-surface-100 p-4">
+        <p class="font-medium text-surface-900">This employee no longer exists</p>
+        <p class="mt-1 text-sm text-surface-600">They may have been deleted.</p>
+        <button
+          pButton
+          type="button"
+          data-testid="not-found-close"
+          class="mt-4"
+          [outlined]="true"
+          (click)="close()"
+        >
+          Close
+        </button>
+      </div>
+    } @else if (status() === 'error') {
+      <div data-testid="drawer-error" role="alert" class="rounded-md bg-red-50 p-4">
+        <p class="font-medium text-red-900">Couldn't load this employee</p>
+        <button
+          pButton
+          type="button"
+          data-testid="drawer-retry"
+          severity="danger"
+          class="mt-4"
+          (click)="retry()"
+        >
+          Retry
+        </button>
+      </div>
+    } @else if (status() === 'loading') {
+      <div data-testid="drawer-skeleton" aria-busy="true" class="flex flex-col gap-3">
+        <span class="sr-only">Loading employee</span>
+        <p-skeleton height="1.5rem" width="60%" />
+        <p-skeleton height="1rem" width="80%" />
+        <p-skeleton height="1rem" width="50%" />
+        <p-skeleton height="1.5rem" width="40%" />
+      </div>
+    } @else if (mode === 'view') {
+      @if (employee(); as e) {
+        <div data-testid="employee-details" class="flex flex-col gap-4">
+          <div>
+            <p data-testid="employee-name" class="text-xl font-semibold text-surface-900">
+              {{ e.fullName }}
+            </p>
+            <p class="text-sm text-surface-600">{{ e.email }}</p>
+          </div>
+          <div>
+            <p class="text-surface-900">{{ e.jobTitle }}</p>
+            <p class="text-sm text-surface-600">{{ e.department }} · {{ countryName() }}</p>
+          </div>
+          <p class="text-lg font-semibold tabular-nums text-surface-900">
+            {{ e.salary | money: e.currency }}
+          </p>
+          <p class="text-sm text-surface-600">Hired {{ e.hireDate }}</p>
+        </div>
+        <div class="mt-auto flex justify-between gap-2 pt-4">
+          <button pButton type="button" data-testid="edit-button" (click)="edit()">
+            <i class="pi pi-pencil mr-2" aria-hidden="true"></i>Edit
+          </button>
+        </div>
+      }
+    } @else {
+      <form
+        class="flex flex-col gap-3"
+        novalidate
+        [formGroup]="form"
+        (ngSubmit)="save()"
+        [attr.aria-busy]="saving()"
+      >
+        @if (stale()) {
+          <div
+            data-testid="stale-banner"
+            role="alert"
+            class="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+          >
+            <p class="font-medium">This employee was changed by someone else.</p>
+            <p class="mt-1">
+              Your edits are still here so you can copy them. Reload the latest version to save.
+            </p>
+            <button
+              pButton
+              type="button"
+              size="small"
+              data-testid="reload-latest"
+              class="mt-2"
+              (click)="reloadLatest()"
+            >
+              Reload latest
+            </button>
+          </div>
+        }
+
+        <div>
+          <label for="field-fullName" class="text-sm font-medium text-surface-800">Full name</label>
+          <input
+            id="field-fullName"
+            data-testid="field-fullName"
+            formControlName="fullName"
+            autocomplete="off"
+            class="mt-1 w-full rounded-md border border-surface-300 px-3 py-2 text-sm"
+            [attr.aria-invalid]="showError('fullName')"
+            aria-describedby="error-fullName"
+          />
+          <p
+            id="error-fullName"
+            data-testid="error-fullName"
+            aria-live="polite"
+            class="mt-1 text-xs text-red-700"
+          >
+            {{ showError('fullName') ? errorText('fullName') : '' }}
+          </p>
+        </div>
+
+        <div>
+          <label for="field-email" class="text-sm font-medium text-surface-800">Email</label>
+          <input
+            id="field-email"
+            data-testid="field-email"
+            type="email"
+            formControlName="email"
+            autocomplete="off"
+            class="mt-1 w-full rounded-md border border-surface-300 px-3 py-2 text-sm"
+            [attr.aria-invalid]="showError('email')"
+            aria-describedby="error-email"
+          />
+          <p
+            id="error-email"
+            data-testid="error-email"
+            aria-live="polite"
+            class="mt-1 text-xs text-red-700"
+          >
+            {{ showError('email') ? errorText('email') : '' }}
+          </p>
+        </div>
+
+        <div>
+          <label for="field-department" class="text-sm font-medium text-surface-800"
+            >Department</label
+          >
+          <select
+            id="field-department"
+            data-testid="field-department"
+            formControlName="department"
+            class="mt-1 w-full rounded-md border border-surface-300 bg-surface-0 px-2 py-2 text-sm"
+            [attr.aria-invalid]="showError('department')"
+            aria-describedby="error-department"
+          >
+            <option value="">Choose a department</option>
+            @for (department of reference.departments(); track department.name) {
+              <option [value]="department.name">{{ department.name }}</option>
+            }
+          </select>
+          <p
+            id="error-department"
+            data-testid="error-department"
+            aria-live="polite"
+            class="mt-1 text-xs text-red-700"
+          >
+            {{ showError('department') ? errorText('department') : '' }}
+          </p>
+        </div>
+
+        <div>
+          <label for="field-jobTitle" class="text-sm font-medium text-surface-800">Job title</label>
+          <select
+            id="field-jobTitle"
+            data-testid="field-jobTitle"
+            formControlName="jobTitle"
+            class="mt-1 w-full rounded-md border border-surface-300 bg-surface-0 px-2 py-2 text-sm disabled:bg-surface-100"
+            [attr.aria-invalid]="showError('jobTitle')"
+            aria-describedby="error-jobTitle"
+          >
+            <option value="">
+              {{ department() ? 'Choose a job title' : 'Choose a department first' }}
+            </option>
+            @for (title of titleOptions(); track title) {
+              <option [value]="title">{{ title }}</option>
+            }
+          </select>
+          <p
+            id="error-jobTitle"
+            data-testid="error-jobTitle"
+            aria-live="polite"
+            class="mt-1 text-xs text-red-700"
+          >
+            {{ showError('jobTitle') ? errorText('jobTitle') : '' }}
+          </p>
+        </div>
+
+        <div>
+          <label for="field-countryCode" class="text-sm font-medium text-surface-800"
+            >Country</label
+          >
+          <select
+            id="field-countryCode"
+            data-testid="field-countryCode"
+            formControlName="countryCode"
+            class="mt-1 w-full rounded-md border border-surface-300 bg-surface-0 px-2 py-2 text-sm"
+            [attr.aria-invalid]="showError('countryCode')"
+            aria-describedby="error-countryCode"
+          >
+            <option value="">Choose a country</option>
+            @for (country of reference.countries(); track country.code) {
+              <option [value]="country.code">{{ country.name }}</option>
+            }
+          </select>
+          <p
+            id="error-countryCode"
+            data-testid="error-countryCode"
+            aria-live="polite"
+            class="mt-1 text-xs text-red-700"
+          >
+            {{ showError('countryCode') ? errorText('countryCode') : '' }}
+          </p>
+        </div>
+
+        <div>
+          <label for="field-salary" class="text-sm font-medium text-surface-800">
+            Annual salary
+            <!-- Currency follows the country; it is never an input (ADR-014). -->
+            <span data-testid="salary-currency" class="text-surface-600">{{ currency() }}</span>
+          </label>
+          <input
+            id="field-salary"
+            data-testid="field-salary"
+            formControlName="salary"
+            inputmode="decimal"
+            autocomplete="off"
+            class="mt-1 w-full rounded-md border border-surface-300 px-3 py-2 text-sm tabular-nums"
+            [attr.aria-invalid]="showError('salary')"
+            aria-describedby="error-salary"
+          />
+          <p
+            id="error-salary"
+            data-testid="error-salary"
+            aria-live="polite"
+            class="mt-1 text-xs text-red-700"
+          >
+            {{ showError('salary') ? errorText('salary') : '' }}
+          </p>
+        </div>
+
+        <div>
+          <label for="field-hireDate" class="text-sm font-medium text-surface-800">Hire date</label>
+          <input
+            id="field-hireDate"
+            data-testid="field-hireDate"
+            type="date"
+            formControlName="hireDate"
+            class="mt-1 w-full rounded-md border border-surface-300 px-3 py-2 text-sm"
+            [attr.min]="earliestHireDate"
+            [attr.max]="today"
+            [attr.aria-invalid]="showError('hireDate')"
+            aria-describedby="error-hireDate"
+          />
+          <p
+            id="error-hireDate"
+            data-testid="error-hireDate"
+            aria-live="polite"
+            class="mt-1 text-xs text-red-700"
+          >
+            {{ showError('hireDate') ? errorText('hireDate') : '' }}
+          </p>
+        </div>
+
+        <div class="mt-2 flex justify-between gap-2">
+          <button
+            pButton
+            type="button"
+            data-testid="cancel"
+            [outlined]="true"
+            [disabled]="saving()"
+            (click)="cancel()"
+          >
+            Cancel
+          </button>
+          <button
+            pButton
+            type="submit"
+            data-testid="save"
+            [loading]="saving()"
+            [disabled]="saving() || stale()"
+            [attr.aria-busy]="saving()"
+          >
+            Save
+          </button>
+        </div>
+      </form>
+    }
+  </div>
+</p-drawer>

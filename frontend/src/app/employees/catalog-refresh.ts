@@ -11,6 +11,6 @@ export class CatalogRefresh {
   readonly requested$ = this.requests.asObservable();
 
   request(target?: { readonly page: number }): void {
-    void target;
+    this.requests.next(target);
   }
 }

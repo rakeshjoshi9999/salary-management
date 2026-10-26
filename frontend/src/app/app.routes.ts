@@ -12,6 +12,7 @@ export const routes: Routes = [
   {
     path: 'catalog',
     loadComponent: () => import('./employees/catalog-page').then((m) => m.CatalogPage),
+    loadChildren: () => import('./employees/catalog.routes').then((m) => m.drawerRoutes),
     title: 'Catalog · Salary Management',
   },
   {
