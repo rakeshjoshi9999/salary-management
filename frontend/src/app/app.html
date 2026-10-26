@@ -109,7 +109,9 @@
     </div>
   }
 
-  <p-toast position="top-right" />
+  <!-- Top centre: clear of the drawer's close, edit and delete buttons; narrower on phones so the
+       close button stays free. A hovered toast pauses, so it must never sit on a control. -->
+  <p-toast position="top-center" [breakpoints]="{ '640px': { width: 'calc(100vw - 8rem)' } }" />
 
   <main>
     <router-outlet />
