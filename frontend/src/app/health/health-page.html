@@ -2,7 +2,7 @@
   <div class="rounded-md border border-surface-200 bg-surface-0 p-6">
     @if (phase() === 'pending') {
       <div data-testid="health-pending" class="flex items-start gap-3">
-        <i class="pi pi-spin pi-spinner mt-1 text-surface-500" aria-hidden="true"></i>
+        <app-icon name="spinner" class="mt-1 text-surface-500" />
         <div>
           <p class="font-medium text-surface-900">Checking the API</p>
           <!-- ADR-004: the free instance sleeps, so say so rather than spin silently. -->
@@ -14,7 +14,7 @@
       </div>
     } @else if (phase() === 'reachable') {
       <div data-testid="health-reachable" class="flex items-start gap-3">
-        <i class="pi pi-check-circle mt-1 text-green-600" aria-hidden="true"></i>
+        <app-icon name="check-circle" class="mt-1 text-green-600" />
         <div>
           <p class="font-medium text-surface-900">API reachable, database connected</p>
           <p class="mt-1 text-sm text-surface-600">
@@ -25,7 +25,7 @@
       </div>
     } @else {
       <div data-testid="health-unreachable" class="flex items-start gap-3">
-        <i class="pi pi-times-circle mt-1 text-red-600" aria-hidden="true"></i>
+        <app-icon name="x-circle" class="mt-1 text-red-600" />
         <div>
           <p class="font-medium text-surface-900">Could not confirm the API is healthy</p>
           <p class="mt-1 text-sm text-surface-600">{{ detail() }}</p>

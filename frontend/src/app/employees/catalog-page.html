@@ -106,7 +106,7 @@
     </div>
 
     <button pButton type="button" data-testid="add-employee" class="lg:ml-auto" (click)="add()">
-      <i class="pi pi-plus mr-2" aria-hidden="true"></i>Add employee
+      <app-icon name="plus" class="mr-2" />Add employee
     </button>
   </div>
 
@@ -138,7 +138,7 @@
           state="empty"
           message="No employees yet"
           actionLabel="Add employee"
-          actionIcon="pi pi-plus"
+          actionIcon="plus"
           [primaryAction]="true"
           actionId="empty-add"
           (action)="add()"

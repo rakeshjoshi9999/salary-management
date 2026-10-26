@@ -22,6 +22,7 @@ import { Employee, EmployeeFields } from '../core/api.models';
 import { ApiError } from '../core/api-error';
 import { CLOCK, todayUtc } from '../core/clock';
 import { ReferenceStore } from '../core/reference.store';
+import { Icon } from '../shared/icon';
 import { MoneyPipe } from '../shared/money.pipe';
 import { StatePanel } from '../shared/state-panel';
 import { CatalogRefresh } from './catalog-refresh';
@@ -46,7 +47,15 @@ type ViewStatus = 'loading' | 'ready' | 'not-found' | 'error';
  */
 @Component({
   selector: 'app-employee-drawer',
-  imports: [ReactiveFormsModule, DrawerModule, ButtonModule, SkeletonModule, MoneyPipe, StatePanel],
+  imports: [
+    ReactiveFormsModule,
+    DrawerModule,
+    ButtonModule,
+    SkeletonModule,
+    MoneyPipe,
+    StatePanel,
+    Icon,
+  ],
   templateUrl: './employee-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

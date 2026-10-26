@@ -11,15 +11,17 @@
 >
   <div data-testid="drawer" class="flex h-full flex-col gap-4">
     <div class="flex items-start justify-between gap-4">
-      <h2 class="text-lg font-semibold text-surface-900">{{ title() }}</h2>
+      <h2 class="text-lg font-semibold text-surface-900" [class.sr-only]="mode === 'view'">
+        {{ title() }}
+      </h2>
       <button
         type="button"
         data-testid="drawer-close"
-        class="rounded-md p-2 text-surface-600 hover:text-surface-900"
+        class="ml-auto rounded-md p-2 text-surface-600 hover:text-surface-900"
         aria-label="Close"
         (click)="close()"
       >
-        <i class="pi pi-times" aria-hidden="true"></i>
+        <app-icon name="close" size="1.25em" />
       </button>
     </div>
 
@@ -74,7 +76,7 @@
         </div>
         <div class="mt-auto flex justify-between gap-2 pt-4">
           <button pButton type="button" data-testid="edit-button" (click)="edit()">
-            <i class="pi pi-pencil mr-2" aria-hidden="true"></i>Edit
+            <app-icon name="pencil" class="mr-2" />Edit
           </button>
           <button
             pButton
@@ -86,7 +88,7 @@
             [disabled]="deleting()"
             (click)="confirmDelete()"
           >
-            <i class="pi pi-trash mr-2" aria-hidden="true"></i>Delete
+            <app-icon name="trash" class="mr-2" />Delete
           </button>
         </div>
       }

@@ -22,6 +22,7 @@ import {
 
 import { Employee, EmployeePage, SortField } from '../core/api.models';
 import { ReferenceStore } from '../core/reference.store';
+import { Icon } from '../shared/icon';
 import { MoneyPipe } from '../shared/money.pipe';
 import { StatePanel } from '../shared/state-panel';
 import {
@@ -64,6 +65,7 @@ export const SORT_OPTIONS = [
     ButtonModule,
     MoneyPipe,
     StatePanel,
+    Icon,
     DecimalPipe,
   ],
   templateUrl: './catalog-page.html',

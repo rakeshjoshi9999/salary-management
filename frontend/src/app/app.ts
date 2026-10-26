@@ -7,6 +7,7 @@ import { ToastModule } from 'primeng/toast';
 
 import { ColdStartTracker } from './core/cold-start';
 import { ReferenceStore } from './core/reference.store';
+import { Icon } from './shared/icon';
 
 /**
  * The app shell: top bar, phone menu, toasts, and the two app-wide banners (cold start, reference
@@ -22,6 +23,7 @@ import { ReferenceStore } from './core/reference.store';
     ConfirmDialogModule,
     DrawerModule,
     ToastModule,
+    Icon,
   ],
   templateUrl: './app.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -2,13 +2,14 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { ButtonModule } from 'primeng/button';
 
 import { environment } from '../../environments/environment';
+import { Icon } from '../shared/icon';
 import { HealthService } from './health.service';
 
 type Phase = 'pending' | 'reachable' | 'unreachable';
 
 @Component({
   selector: 'app-health-page',
-  imports: [ButtonModule],
+  imports: [ButtonModule, Icon],
   templateUrl: './health-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

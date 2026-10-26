@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 
+import { Icon, IconName } from './icon';
+
 export type PanelState = 'loading' | 'empty' | 'error';
 
 /**
@@ -10,7 +12,7 @@ export type PanelState = 'loading' | 'empty' | 'error';
  */
 @Component({
   selector: 'app-state-panel',
-  imports: [ButtonModule, SkeletonModule],
+  imports: [ButtonModule, SkeletonModule, Icon],
   host: { class: 'block' },
   template: `
     <div
@@ -53,8 +55,8 @@ export type PanelState = 'loading' | 'empty' | 'error';
             [outlined]="state() === 'empty' && !primaryAction()"
             (click)="action.emit()"
           >
-            @if (actionIcon()) {
-              <i [class]="actionIcon() + ' mr-2'" aria-hidden="true"></i>
+            @if (actionIcon(); as icon) {
+              <app-icon [name]="icon" class="mr-2" />
             }
             {{ buttonLabel() }}
           </button>
@@ -72,8 +74,8 @@ export class StatePanel {
   readonly actionLabel = input('');
   /** Test id for the action button, so pages keep their own (catalog-retry, empty-add, ...). */
   readonly actionId = input('state-action');
-  /** A PrimeIcons class for the action, e.g. `pi pi-plus`. */
-  readonly actionIcon = input('');
+  /** An icon for the action, e.g. `plus`. */
+  readonly actionIcon = input<IconName | ''>('');
   /** The screen's main call to action: solid rather than outlined. */
   readonly primaryAction = input(false);
   readonly action = output<void>();
