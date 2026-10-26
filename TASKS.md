@@ -104,7 +104,7 @@ can reach its database.
 - [x] **6.2** Idempotent seed runner: exactly 10,000 rows, rerun creates no duplicates
 - [x] **6.3** Batch inserts; measure and record seed time in `docs/PERFORMANCE.md`; end the seed with
       `VACUUM ANALYZE employee`, run outside the seed transaction (VACUUM cannot run inside one), or search skips the trigram indexes until autovacuum runs (4.5)
-- [ ] **6.4** Run the seed against the stage database, then once against production; re-run the list
+- [x] **6.4** Run the seed against the stage database, then once against production; re-run the list
       query plans on seeded stage, including the deep page and sorts on tied columns, and add them to
       `docs/PERFORMANCE.md` (ADR-045)
 
