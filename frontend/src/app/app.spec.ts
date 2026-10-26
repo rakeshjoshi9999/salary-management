@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
+import { provideShellTesting } from './core/testing/provide-shell-testing';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
+      providers: provideShellTesting(),
     }).compileComponents();
   });
 

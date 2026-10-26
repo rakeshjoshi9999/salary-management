@@ -1,15 +1,14 @@
-import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController } from '@angular/common/http/testing';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router, Routes, provideRouter } from '@angular/router';
-import { MessageService } from 'primeng/api';
+import { Router, Routes } from '@angular/router';
 
 import { App } from './app';
 import { routes } from './app.routes';
 import { apiUrl } from './core/api-url';
 import { ColdStartTracker } from './core/cold-start';
 import { REFERENCE } from './core/testing/fixtures';
+import { provideShellTesting } from './core/testing/provide-shell-testing';
 
 @Component({ template: '<p>stub</p>', changeDetection: ChangeDetectionStrategy.OnPush })
 class StubPage {}
@@ -31,12 +30,7 @@ describe('App shell', () => {
   async function create(withRoutes: Routes): Promise<void> {
     TestBed.configureTestingModule({
       imports: [App],
-      providers: [
-        provideRouter(withRoutes),
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        MessageService,
-      ],
+      providers: provideShellTesting(withRoutes),
     });
     fixture = TestBed.createComponent(App);
     controller = TestBed.inject(HttpTestingController);

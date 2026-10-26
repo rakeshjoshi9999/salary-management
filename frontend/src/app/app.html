@@ -1,16 +1,117 @@
-<!--
-  Application shell: product identity lives here, routed views render into the
-  outlet and own their own content. Keeping the single h1 in the shell means a
-  routed page cannot accidentally introduce a second one.
--->
 <div class="min-h-screen bg-surface-50 pb-16">
-  <header class="mx-auto max-w-2xl px-6 pt-16">
-    <h1 class="text-2xl font-semibold tracking-tight text-surface-900">{{ title() }}</h1>
-    <p class="mt-2 text-sm text-surface-600">
-      Walking skeleton — no features yet. This page exists to prove the browser can reach the API,
-      and the API its database.
-    </p>
+  <header class="border-b border-surface-200 bg-surface-0">
+    <div class="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3">
+      <!-- The one h1 lives in the shell, so a routed page cannot add a second. -->
+      <h1 class="text-lg font-semibold tracking-tight text-surface-900">
+        <a routerLink="/">Salary Management</a>
+      </h1>
+
+      <nav
+        data-testid="top-nav"
+        aria-label="Main"
+        class="ml-auto hidden items-center gap-1 sm:flex"
+      >
+        @for (link of links; track link.path) {
+          <a
+            [routerLink]="link.path"
+            routerLinkActive="bg-surface-100 text-surface-900"
+            [routerLinkActiveOptions]="{ exact: link.exact }"
+            ariaCurrentWhenActive="page"
+            class="rounded-md px-3 py-2 text-sm font-medium text-surface-600 hover:text-surface-900"
+            >{{ link.label }}</a
+          >
+        }
+        <a
+          routerLink="/settings"
+          routerLinkActive="bg-surface-100 text-surface-900"
+          ariaCurrentWhenActive="page"
+          aria-label="Settings"
+          class="rounded-md px-3 py-2 text-surface-600 hover:text-surface-900"
+          ><i class="pi pi-cog" aria-hidden="true"></i
+        ></a>
+      </nav>
+
+      <button
+        type="button"
+        #menuButton
+        data-testid="menu-button"
+        class="ml-auto rounded-md p-2 text-surface-700 sm:hidden"
+        aria-label="Open menu"
+        aria-controls="mobile-menu"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="menuOpen.set(true)"
+      >
+        <i class="pi pi-bars" aria-hidden="true"></i>
+      </button>
+    </div>
   </header>
 
-  <router-outlet />
+  <p-drawer
+    [(visible)]="menuOpen"
+    position="right"
+    header="Menu"
+    styleClass="w-64"
+    (onHide)="menuButton.focus()"
+  >
+    <nav id="mobile-menu" data-testid="mobile-menu" aria-label="Main" class="flex flex-col gap-1">
+      @for (link of links; track link.path) {
+        <a
+          [routerLink]="link.path"
+          routerLinkActive="bg-surface-100"
+          [routerLinkActiveOptions]="{ exact: link.exact }"
+          ariaCurrentWhenActive="page"
+          class="rounded-md px-3 py-2 text-surface-800"
+          (click)="menuOpen.set(false)"
+          >{{ link.label }}</a
+        >
+      }
+      <a
+        routerLink="/settings"
+        routerLinkActive="bg-surface-100"
+        ariaCurrentWhenActive="page"
+        class="rounded-md px-3 py-2 text-surface-800"
+        (click)="menuOpen.set(false)"
+        >Settings</a
+      >
+    </nav>
+  </p-drawer>
+
+  <!-- The live region is always present so screen readers announce the text when it appears. -->
+  <div role="status" aria-live="polite">
+    @if (coldStart.waking()) {
+      <div
+        data-testid="cold-start-banner"
+        class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900"
+      >
+        <i class="pi pi-spin pi-spinner mr-2" aria-hidden="true"></i>
+        Waking the server… this can take up to a minute.
+      </div>
+    }
+  </div>
+
+  @if (reference.status() === 'error') {
+    <div
+      data-testid="reference-error"
+      role="alert"
+      class="flex items-center justify-center gap-3 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-900"
+    >
+      Couldn't load countries, departments and job titles. Nothing works without them.
+      <button
+        pButton
+        type="button"
+        size="small"
+        severity="danger"
+        data-testid="reference-retry"
+        (click)="reference.retry()"
+      >
+        Retry
+      </button>
+    </div>
+  }
+
+  <p-toast position="top-right" />
+
+  <main>
+    <router-outlet />
+  </main>
 </div>
