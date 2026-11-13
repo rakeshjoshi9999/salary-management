@@ -41,6 +41,7 @@
   --app-warn-soft: #fffbeb; /* amber-50 */
   --app-warn-line: #fde68a; /* amber-200 */
   --app-success: #15803d; /* green-700 */
+  --app-selected: #eef2ff; /* indigo-50: the Catalog row open in the drawer */
 }
 
 .app-dark {
@@ -59,6 +60,7 @@
   --app-warn-soft: #451a03; /* amber-950 */
   --app-warn-line: #78350f; /* amber-900 */
   --app-success: #4ade80; /* green-400 */
+  --app-selected: #1e1b4b; /* indigo-950 */
 }
 
 @theme inline {
@@ -76,6 +78,7 @@
   --color-warn-soft: var(--app-warn-soft);
   --color-warn-line: var(--app-warn-line);
   --color-success: var(--app-success);
+  --color-selected: var(--app-selected);
 }
 
 @theme {

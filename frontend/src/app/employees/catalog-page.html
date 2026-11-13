@@ -1,155 +1,217 @@
 <section class="mx-auto max-w-7xl px-4">
-  <app-page-header heading="Catalog" />
+  <app-page-header heading="Catalog">
+    <button pButton type="button" data-testid="add-employee" (click)="add()">
+      <app-icon name="plus" class="mr-2" />Add employee
+    </button>
+  </app-page-header>
 
-  <!-- Search and filters. On phones the filters fold into a panel (UI_DESIGN.md). -->
-  <div class="flex flex-col gap-3 lg:flex-row lg:items-start">
-    <div class="flex-1">
-      <label for="catalog-search" class="sr-only">Search name or email</label>
-      <input
-        id="catalog-search"
-        data-testid="search-input"
-        type="search"
-        autocomplete="off"
-        placeholder="Search name or email"
-        maxlength="254"
-        class="w-full rounded-md border border-line-strong bg-card px-3 py-2 text-sm"
-        aria-describedby="catalog-search-hint"
-        [value]="searchText()"
-        (input)="onSearchInput($event)"
-      />
-      <div id="catalog-search-hint" aria-live="polite">
-        @if (searchHint()) {
-          <p data-testid="search-hint" class="mt-1 text-xs text-ink-muted">
-            Type at least 2 characters
-          </p>
-        }
+  <!-- One card: toolbar, active-filter chips, the list and its paginator (ADR-054). -->
+  <div class="rounded-2xl border border-line bg-card shadow-sm">
+    <!-- Search and filters. On phones the filters fold into a panel (UI_DESIGN.md). -->
+    <div class="flex flex-col gap-3 border-b border-line p-4 lg:flex-row lg:items-start">
+      <div class="flex-1">
+        <label for="catalog-search" class="sr-only">Search name or email</label>
+        <div class="relative">
+          <app-icon
+            name="search"
+            class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-muted"
+          />
+          <input
+            id="catalog-search"
+            data-testid="search-input"
+            type="search"
+            autocomplete="off"
+            placeholder="Search name or email"
+            maxlength="254"
+            class="w-full rounded-lg border border-line-strong bg-card py-2 pr-3 pl-9 text-sm text-ink placeholder:text-ink-muted"
+            aria-describedby="catalog-search-hint"
+            [value]="searchText()"
+            (input)="onSearchInput($event)"
+          />
+        </div>
+        <div id="catalog-search-hint" aria-live="polite">
+          @if (searchHint()) {
+            <p data-testid="search-hint" class="mt-1 text-xs text-ink-muted">
+              Type at least 2 characters
+            </p>
+          }
+        </div>
+      </div>
+
+      <div class="flex gap-2 sm:hidden">
+        <button
+          type="button"
+          data-testid="filters-toggle"
+          class="flex-1 rounded-lg border border-line-strong bg-card px-3 py-2 text-sm text-ink"
+          [attr.aria-expanded]="filtersOpen()"
+          aria-controls="catalog-filters"
+          (click)="filtersOpen.set(!filtersOpen())"
+        >
+          Filters ({{ filterCount() }})
+        </button>
+        <label for="catalog-sort" class="sr-only">Sort</label>
+        <select
+          id="catalog-sort"
+          data-testid="sort-select"
+          class="flex-1 rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
+          [value]="sortValue()"
+          (change)="setSort($any($event.target).value)"
+        >
+          @for (option of sortOptions; track option.value) {
+            <option [value]="option.value" [selected]="option.value === sortValue()">
+              {{ option.label }}
+            </option>
+          }
+        </select>
+      </div>
+
+      <div
+        id="catalog-filters"
+        class="grid gap-2 sm:grid sm:grid-cols-3 lg:flex"
+        [class.hidden]="!filtersOpen()"
+      >
+        <label class="sr-only" for="filter-country">Country</label>
+        <select
+          id="filter-country"
+          data-testid="filter-country"
+          class="rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
+          [disabled]="!reference.ready()"
+          (change)="setCountry($any($event.target).value)"
+        >
+          <option value="">All countries</option>
+          @for (country of reference.countries(); track country.code) {
+            <option [value]="country.code" [selected]="country.code === query().country">
+              {{ country.name }}
+            </option>
+          }
+        </select>
+
+        <label class="sr-only" for="filter-department">Department</label>
+        <select
+          id="filter-department"
+          data-testid="filter-department"
+          class="rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
+          [disabled]="!reference.ready()"
+          (change)="setDepartment($any($event.target).value)"
+        >
+          <option value="">All departments</option>
+          @for (department of reference.departments(); track department.name) {
+            <option [value]="department.name" [selected]="department.name === query().department">
+              {{ department.name }}
+            </option>
+          }
+        </select>
+
+        <label class="sr-only" for="filter-title">Job title</label>
+        <select
+          id="filter-title"
+          data-testid="filter-title"
+          class="rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
+          [disabled]="!reference.ready()"
+          (change)="setTitle($any($event.target).value)"
+        >
+          <option value="">All job titles</option>
+          @for (title of titleOptions(); track title) {
+            <option [value]="title" [selected]="title === query().jobTitle">{{ title }}</option>
+          }
+        </select>
       </div>
     </div>
 
-    <div class="flex gap-2 sm:hidden">
-      <button
-        type="button"
-        data-testid="filters-toggle"
-        class="flex-1 rounded-md border border-line-strong bg-card px-3 py-2 text-sm"
-        [attr.aria-expanded]="filtersOpen()"
-        aria-controls="catalog-filters"
-        (click)="filtersOpen.set(!filtersOpen())"
+    @if (chips().length > 0) {
+      <div
+        data-testid="filter-chips"
+        role="group"
+        aria-label="Active filters"
+        class="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3"
       >
-        Filters ({{ filterCount() }})
-      </button>
-      <label for="catalog-sort" class="sr-only">Sort</label>
-      <select
-        id="catalog-sort"
-        data-testid="sort-select"
-        class="flex-1 rounded-md border border-line-strong bg-card px-2 py-2 text-sm"
-        [value]="sortValue()"
-        (change)="setSort($any($event.target).value)"
-      >
-        @for (option of sortOptions; track option.value) {
-          <option [value]="option.value" [selected]="option.value === sortValue()">
-            {{ option.label }}
-          </option>
+        @for (chip of chips(); track chip.key) {
+          <span
+            [attr.data-testid]="'chip-' + chip.key"
+            class="inline-flex items-center gap-1 rounded-full bg-subtle py-1 pr-1 pl-3 text-sm text-ink"
+          >
+            <span data-testid="chip-label">{{ chip.label }}</span>
+            <button
+              type="button"
+              [attr.id]="'chip-remove-' + chip.key"
+              [attr.data-testid]="'chip-remove-' + chip.key"
+              class="grid size-6 place-items-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-line-strong hover:text-ink"
+              [attr.aria-label]="'Remove filter ' + chip.label"
+              (click)="removeFilter(chip.key)"
+            >
+              <app-icon name="close" size="0.85em" />
+            </button>
+          </span>
         }
-      </select>
-    </div>
+        <button
+          type="button"
+          data-testid="clear-all-filters"
+          class="ml-1 rounded-md px-2 py-1 text-sm font-medium text-primary hover:underline"
+          (click)="clearFilters()"
+        >
+          Clear all
+        </button>
+      </div>
+    }
 
-    <div
-      id="catalog-filters"
-      class="grid gap-2 sm:grid sm:grid-cols-3 lg:flex"
-      [class.hidden]="!filtersOpen()"
-    >
-      <label class="sr-only" for="filter-country">Country</label>
-      <select
-        id="filter-country"
-        data-testid="filter-country"
-        class="rounded-md border border-line-strong bg-card px-2 py-2 text-sm"
-        [disabled]="!reference.ready()"
-        (change)="setCountry($any($event.target).value)"
-      >
-        <option value="">All countries</option>
-        @for (country of reference.countries(); track country.code) {
-          <option [value]="country.code" [selected]="country.code === query().country">
-            {{ country.name }}
-          </option>
-        }
-      </select>
-
-      <label class="sr-only" for="filter-department">Department</label>
-      <select
-        id="filter-department"
-        data-testid="filter-department"
-        class="rounded-md border border-line-strong bg-card px-2 py-2 text-sm"
-        [disabled]="!reference.ready()"
-        (change)="setDepartment($any($event.target).value)"
-      >
-        <option value="">All departments</option>
-        @for (department of reference.departments(); track department.name) {
-          <option [value]="department.name" [selected]="department.name === query().department">
-            {{ department.name }}
-          </option>
-        }
-      </select>
-
-      <label class="sr-only" for="filter-title">Job title</label>
-      <select
-        id="filter-title"
-        data-testid="filter-title"
-        class="rounded-md border border-line-strong bg-card px-2 py-2 text-sm"
-        [disabled]="!reference.ready()"
-        (change)="setTitle($any($event.target).value)"
-      >
-        <option value="">All job titles</option>
-        @for (title of titleOptions(); track title) {
-          <option [value]="title" [selected]="title === query().jobTitle">{{ title }}</option>
-        }
-      </select>
-    </div>
-
-    <button pButton type="button" data-testid="add-employee" class="lg:ml-auto" (click)="add()">
-      <app-icon name="plus" class="mr-2" />Add employee
-    </button>
-  </div>
-
-  <div class="mt-4">
     @if (status() === 'error') {
-      <app-state-panel
-        data-testid="catalog-error"
-        state="error"
-        message="Couldn't load employees"
-        detail="Check your connection and try again."
-        actionId="catalog-retry"
-        (action)="retry()"
-      />
+      <div class="p-4">
+        <app-state-panel
+          data-testid="catalog-error"
+          state="error"
+          message="Couldn't load employees"
+          detail="Check your connection and try again."
+          actionId="catalog-retry"
+          (action)="retry()"
+        />
+      </div>
     } @else if (result() === null) {
-      <app-state-panel data-testid="catalog-skeleton" state="loading" message="Loading employees" />
+      <div class="p-4">
+        <app-state-panel
+          data-testid="catalog-skeleton"
+          state="loading"
+          message="Loading employees"
+        />
+      </div>
     } @else if (total() === 0) {
-      @if (filtered()) {
-        <app-state-panel
-          data-testid="no-matches"
-          state="empty"
-          message="No one matches these filters"
-          actionLabel="Clear filters"
-          actionId="clear-filters"
-          (action)="clearFilters()"
-        />
-      } @else {
-        <app-state-panel
-          data-testid="empty-catalog"
-          state="empty"
-          message="No employees yet"
-          actionLabel="Add employee"
-          actionIcon="plus"
-          [primaryAction]="true"
-          actionId="empty-add"
-          (action)="add()"
-        />
-      }
+      <div class="p-4">
+        @if (searchOnly()) {
+          <app-state-panel
+            data-testid="no-matches"
+            state="empty"
+            message="No one matches this search"
+            actionLabel="Clear search"
+            actionId="clear-search"
+            (action)="clearSearch()"
+          />
+        } @else if (filtered()) {
+          <app-state-panel
+            data-testid="no-matches"
+            state="empty"
+            message="No one matches these filters"
+            actionLabel="Clear filters"
+            actionId="clear-filters"
+            (action)="clearFilters()"
+          />
+        } @else {
+          <app-state-panel
+            data-testid="empty-catalog"
+            state="empty"
+            message="No employees yet"
+            actionLabel="Add employee"
+            actionIcon="plus"
+            [primaryAction]="true"
+            actionId="empty-add"
+            (action)="add()"
+          />
+        }
+      </div>
     } @else {
       <div
         data-testid="catalog-results"
         [attr.data-loading]="status() === 'loading'"
         [attr.aria-busy]="status() === 'loading'"
-        class="transition-opacity"
+        class="transition-opacity duration-150"
         [class.opacity-50]="status() === 'loading'"
       >
         <!-- Desktop and tablet: a table. Phones: cards. Both render; CSS shows one (ADR-051). -->
@@ -157,7 +219,7 @@
           <p-table [value]="rows()" dataKey="id" styleClass="text-sm">
             <ng-template #header>
               <tr>
-                <th scope="col" [attr.aria-sort]="ariaSort('fullName')">
+                <th scope="col" class="!pl-4" [attr.aria-sort]="ariaSort('fullName')">
                   <button
                     type="button"
                     data-testid="sort-fullName"
@@ -184,7 +246,7 @@
                 </th>
                 <th
                   scope="col"
-                  class="hidden lg:table-cell"
+                  class="hidden !pr-4 lg:table-cell"
                   [attr.aria-sort]="ariaSort('hireDate')"
                 >
                   <button
@@ -200,56 +262,88 @@
               </tr>
             </ng-template>
             <ng-template #body let-employee>
-              <!-- The name is a real link (keyboard, new tab); the row click is a mouse shortcut. -->
+              <!-- The name is a real link (keyboard, new tab); the row click is a mouse shortcut.
+                   The row open in the drawer is marked for screen readers and by colour. -->
               <tr
                 [attr.data-testid]="'row-' + employee.id"
-                class="cursor-pointer hover:bg-canvas"
+                [attr.aria-current]="employee.id === openId() ? 'true' : null"
+                class="cursor-pointer transition-colors duration-150 hover:!bg-subtle"
+                [class.!bg-selected]="employee.id === openId()"
                 (click)="open(employee)"
               >
-                <td>
-                  <a
-                    class="font-medium text-ink hover:underline"
-                    [routerLink]="[employee.id]"
-                    queryParamsHandling="preserve"
-                    (click)="$event.stopPropagation()"
-                    >{{ employee.fullName }}</a
-                  >
-                  <div class="text-xs text-ink-muted">{{ employee.email }}</div>
+                <td class="!pl-4">
+                  <div class="flex items-center gap-3">
+                    <span
+                      data-testid="avatar"
+                      aria-hidden="true"
+                      class="grid size-9 shrink-0 place-items-center rounded-full bg-subtle text-xs font-semibold text-primary"
+                      >{{ initials(employee.fullName) }}</span
+                    >
+                    <div class="min-w-0">
+                      <a
+                        class="font-medium text-ink hover:underline"
+                        [routerLink]="[employee.id]"
+                        queryParamsHandling="preserve"
+                        (click)="$event.stopPropagation()"
+                        >{{ employee.fullName }}</a
+                      >
+                      <div class="truncate text-xs text-ink-muted">{{ employee.email }}</div>
+                    </div>
+                  </div>
                 </td>
-                <td>{{ employee.jobTitle }}</td>
-                <td class="hidden lg:table-cell">{{ employee.department }}</td>
-                <td>{{ employee.countryCode }}</td>
-                <td class="text-right tabular-nums">
+                <td class="text-ink">{{ employee.jobTitle }}</td>
+                <td class="hidden text-ink-muted lg:table-cell">{{ employee.department }}</td>
+                <td>
+                  <span
+                    class="rounded-md bg-subtle px-1.5 py-0.5 text-xs font-medium text-ink-muted"
+                    >{{ employee.countryCode }}</span
+                  >
+                </td>
+                <td class="whitespace-nowrap text-right font-medium tabular-nums text-ink">
                   {{ employee.salary | money: employee.currency }}
                 </td>
-                <td class="hidden tabular-nums lg:table-cell">{{ employee.hireDate }}</td>
+                <td class="hidden !pr-4 tabular-nums text-ink-muted lg:table-cell">
+                  {{ employee.hireDate }}
+                </td>
               </tr>
             </ng-template>
           </p-table>
         </div>
 
-        <ul class="flex flex-col gap-2 sm:hidden">
+        <ul class="flex flex-col divide-y divide-line sm:hidden">
           @for (employee of rows(); track employee.id) {
             <li>
               <button
                 type="button"
                 [attr.data-testid]="'card-' + employee.id"
-                class="w-full rounded-md border border-line bg-card p-3 text-left"
+                [attr.aria-current]="employee.id === openId() ? 'true' : null"
+                class="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-subtle"
+                [class.bg-selected]="employee.id === openId()"
                 (click)="open(employee)"
               >
-                <span class="block font-medium text-ink">{{ employee.fullName }}</span>
-                <span class="block text-sm text-ink-muted">
-                  {{ employee.jobTitle }} · {{ employee.countryCode }}
-                </span>
-                <span class="block text-sm tabular-nums text-ink">
-                  {{ employee.salary | money: employee.currency }}
+                <span
+                  data-testid="avatar"
+                  aria-hidden="true"
+                  class="grid size-10 shrink-0 place-items-center rounded-full bg-subtle text-sm font-semibold text-primary"
+                  >{{ initials(employee.fullName) }}</span
+                >
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate font-medium text-ink">{{ employee.fullName }}</span>
+                  <span class="block truncate text-sm text-ink-muted">
+                    {{ employee.jobTitle }} · {{ employee.countryCode }}
+                  </span>
+                  <span class="block text-sm font-medium tabular-nums text-ink">
+                    {{ employee.salary | money: employee.currency }}
+                  </span>
                 </span>
               </button>
             </li>
           }
         </ul>
 
-        <div class="mt-3 flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+        <div
+          class="flex flex-col items-center gap-2 border-t border-line px-4 py-3 sm:flex-row sm:justify-between"
+        >
           <p data-testid="range-text" class="text-sm text-ink-muted">
             {{ range().from | number }}–{{ range().to | number }} of {{ total() | number }}
           </p>

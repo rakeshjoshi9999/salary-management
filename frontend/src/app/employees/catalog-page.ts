@@ -1,7 +1,15 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  Injector,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -24,6 +32,7 @@ import {
 import { Employee, EmployeePage, SortField } from '../core/api.models';
 import { ReferenceStore } from '../core/reference.store';
 import { Icon } from '../shared/icon';
+import { initials } from '../shared/initials';
 import { MoneyPipe } from '../shared/money.pipe';
 import { StatePanel } from '../shared/state-panel';
 import {
@@ -38,6 +47,8 @@ import {
 import { CatalogRefresh } from './catalog-refresh';
 import { EmployeeService } from './employee.service';
 import { PageHeader } from '../shared/page-header';
+
+type FilterKey = 'country' | 'department' | 'jobTitle';
 
 /** Why a load happened: a refresh after a save or delete steps back from an emptied page quietly. */
 type LoadReason = 'user' | 'refresh';
@@ -83,6 +94,7 @@ export class CatalogPage {
   private readonly employees = inject(EmployeeService);
   private readonly toast = inject(MessageService);
   private readonly refresh = inject(CatalogRefresh);
+  private readonly injector = inject(Injector);
   protected readonly reference = inject(ReferenceStore);
 
   protected readonly query = signal<CatalogQuery>(DEFAULT_QUERY);
@@ -100,6 +112,38 @@ export class CatalogPage {
     this.reference.titlesFor(this.query().department),
   );
   protected readonly filterCount = computed(() => activeFilterCount(this.query()));
+  /** The active filters as removable chips, in the toolbar's order. */
+  protected readonly chips = computed(() => {
+    const { country, department, jobTitle } = this.query();
+    const chips: { key: FilterKey; label: string }[] = [];
+    if (country) {
+      chips.push({
+        key: 'country',
+        label: `Country: ${this.reference.country(country)?.name ?? country}`,
+      });
+    }
+    if (department) {
+      chips.push({ key: 'department', label: `Department: ${department}` });
+    }
+    if (jobTitle) {
+      chips.push({ key: 'jobTitle', label: `Job title: ${jobTitle}` });
+    }
+    return chips;
+  });
+  /** A search with no filters: the empty state offers Clear search, since clearing filters would do nothing. */
+  protected readonly searchOnly = computed(
+    () => Boolean(this.query().q) && this.filterCount() === 0,
+  );
+  /** The employee open in the drawer, from the child route, so their row can be marked. */
+  protected readonly openId = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      startWith(null),
+      map(() => Number(this.route.firstChild?.snapshot?.paramMap.get('id')) || null),
+    ),
+    { initialValue: null },
+  );
+  protected readonly initials = initials;
   protected readonly filtered = computed(() => hasAnyFilter(this.query()));
   protected readonly sortValue = computed(
     () => `${this.query().sortField},${this.query().sortDirection}`,
@@ -260,8 +304,38 @@ export class CatalogPage {
     void this.router.navigate(['new'], { relativeTo: this.route, queryParamsHandling: 'preserve' });
   }
 
+  /** The removed chip's button disappears, so focus moves to the next chip, or to the search box. */
+  protected removeFilter(key: FilterKey): void {
+    const chips = this.chips();
+    const index = chips.findIndex((chip) => chip.key === key);
+    const neighbour = chips[index + 1] ?? chips[index - 1];
+    this.navigate({ ...this.query(), [key]: undefined, page: 0 }, false, () =>
+      neighbour ? `chip-remove-${neighbour.key}` : 'catalog-search',
+    );
+  }
+
+  /** The three filters only; the search, sort and page size stay (the engineer's call in 8.10). */
   protected clearFilters(): void {
-    void this.router.navigate([], { relativeTo: this.route });
+    this.cancelPendingSearch(this.searchText());
+    this.navigate(
+      { ...this.query(), country: undefined, department: undefined, jobTitle: undefined, page: 0 },
+      false,
+      () => 'catalog-search',
+    );
+  }
+
+  protected clearSearch(): void {
+    this.searchText.set('');
+    this.cancelPendingSearch('');
+    this.navigate({ ...this.query(), q: undefined, page: 0 }, false, () => 'catalog-search');
+  }
+
+  /** A search still in the debounce must not land after a clear and undo it. */
+  private cancelPendingSearch(text: string): void {
+    if (this.searchPending) {
+      this.searchPending = false;
+      this.search$.next(text);
+    }
   }
 
   protected retry(): void {
@@ -313,12 +387,17 @@ export class CatalogPage {
     });
   }
 
-  private navigate(query: CatalogQuery, replaceUrl = false): void {
+  /** `focusAfter` names the id to focus once the new state has rendered. */
+  private navigate(query: CatalogQuery, replaceUrl = false, focusAfter?: () => string): void {
     this.linkToastShown = replaceUrl && this.linkToastShown;
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: toQueryParams(query),
-      replaceUrl,
-    });
+    void this.router
+      .navigate([], { relativeTo: this.route, queryParams: toQueryParams(query), replaceUrl })
+      .then(() => {
+        if (focusAfter) {
+          afterNextRender(() => document.getElementById(focusAfter())?.focus(), {
+            injector: this.injector,
+          });
+        }
+      });
   }
 }
