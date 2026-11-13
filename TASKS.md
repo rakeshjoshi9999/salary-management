@@ -138,5 +138,5 @@ can reach its database.
 - [x] **8.9** UI redesign, Insights: bento grid, money in full, the doughnut themed for both modes
 - [x] **8.10** UI redesign, Catalog: the table in a card, toolbar, active-filter chips, avatars, cards on phones
 - [x] **8.11** UI redesign, drawer: profile header, salary block, tenure, grouped form, danger area for Delete
-- [ ] **8.12** UI redesign, Settings and states; `UI_DESIGN.md` updated to the new screens; README screenshots
+- [x] **8.12** UI redesign, Settings and states; `UI_DESIGN.md` updated to the new screens; README screenshots
       retaken

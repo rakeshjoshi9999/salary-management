@@ -1,16 +1,37 @@
 # UI Design
 
-Screens, user flows and states for v1, designed in task 2.5. The decisions are in ADR-027 to ADR-029.
+Screens, user flows and states for v1, designed in task 2.5 (ADR-027 to ADR-029) and redesigned in
+tasks 8.8–8.12 (ADR-054, ADR-055). The behaviour rules below are those of 2.5 unless marked otherwise.
 This is the source for phase 7: the API calls refer to [`openapi.yaml`](openapi.yaml), and the
 structure to [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+## Look
+
+- **Palette:** a PrimeNG preset over Aura with indigo for primary (600 in light, 400 in dark) and slate
+  for surfaces. The app's own colour tokens (`canvas`, `card`, `subtle`, `line`, `line-strong`, `ink`,
+  `ink-muted`, `danger`, `danger-soft`, `danger-line`, `warn`, `warn-soft`, `warn-line`, `success`,
+  `selected`) live in `styles.css` and switch with the theme. Templates use these and PrimeNG's `primary`
+  and `primary-contrast`, never raw palette classes (ADR-054).
+- **Theme:** System, Light or Dark from a toggle in the top bar, remembered per browser. An inline
+  script in `index.html` applies it before Angular starts, so a dark page never flashes white.
+- **Type:** Inter, self-hosted, with tabular figures for amounts and for counts that line up.
+- **Motion:** 150–250 ms CSS transitions, the drawer slide and skeletons; the Insights bars grow in once
+  over 600 ms. All of it is off under `prefers-reduced-motion`.
+- **Accessibility:** axe (WCAG 2.1 AA, contrast included) checks Insights, the Catalog (filtered, and with the drawer in view mode) and Settings, in both themes, at desktop and phone width, in the
+  End-to-end job. The add and edit form, the delete dialog and the empty and error states are not
+  scanned.
 
 ## Navigation and routes
 
 ```
 +-----------------------------------------------------------------+
-| Salary Management        [Insights]   Catalog            ⚙      |
+| [◆] Salary Management   (Insights) Catalog               ⚙  ◐  |
 +-----------------------------------------------------------------+
+| Page title                                     [page actions]   |   <- sticky from 640 px
 ```
+
+Phones keep the brand and the theme toggle in the top bar and move the links to bottom tabs:
+`[Insights] [Catalog] [Settings]`. The ☰ menu of ADR-052 is gone (ADR-054).
 
 | Route | Screen | Notes |
 |---|---|---|
@@ -29,58 +50,39 @@ structure to [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ### Insights dashboard (`/`)
 
-Desktop:
+Desktop (≥ 1024 px, four columns):
 ```
 +-----------------------------------------------------------------+
-| Salary Management        [Insights]   Catalog            ⚙      |
-+-----------------------------------------------------------------+
-| Country [India (INR)       v]                                   |
-|                                                                 |
-| +-----------+ +-----------+ +-----------+ +---------+ +--------+|
-| | Headcount | | Median    | | Average   | | Min     | | Max    ||
-| |   2,000   | | INR       | | INR       | | INR     | | INR    ||
-| |           | |1,890,000.00| |2,150,000.37| |410,000.00| |9,800,000.00||
-| +-----------+ +-----------+ +-----------+ +---------+ +--------+|
-|                                                                 |
-| Average salary by job title (INR)        | Headcount by dept    |
-| Engineering Manager  ████████████ 5,8..  |     .---.            |
-|                     Engineering · 40     |   /  2,000 \  ■ Eng  |
-| Senior Software Eng. █████████  4,1..    |   \  total /    640 32%|
-|                     Engineering · 180    |     '---'     ■ Sales|
-| Software Engineer    ██████     2,4..    |                410 21%|
-| ...                                      |   ...                |
+| Insights                               Country [India (INR)  v] |
+| +---------------------------+ +-------------+ +-------------+   |
+| | Median salary             | | Headcount   | | Average     |   |
+| | INR 1,108,000.00          | | 3,500       | | INR 1,526,… |   |
+| |                           | +-------------+ +-------------+   |
+| | Half of the 3,500 employ- | | Min         | | Max         |   |
+| | ees in India earn this or | | INR 400,0…  | | INR 4,995,… |   |
+| | less, and half this or …  | +-------------+ +-------------+   |
+| +---------------------------+                                   |
+| +---------------------------+ +-------------------------------+ |
+| | Average salary by title   | | Headcount by department       | |
+| | Operations Manager  INR … | |   (doughnut)  ● Eng 1,500 43% | |
+| | Operations · 86           | |               ● Sales 656 19% | |
+| | ███████████████           | |                               | |
+| +---------------------------+ +-------------------------------+ |
 +-----------------------------------------------------------------+
 ```
 
-Phone (stacked):
-```
-+---------------------------+
-| Salary Mgmt          ☰    |
-+---------------------------+
-| [India (INR)          v]  |
-| +----------+ +----------+ |
-| |Headcount | | Median   | |
-| |  2,000   | |INR 1.89M…| |
-| +----------+ +----------+ |
-| +----------+ +----------+ |
-| | Average  | | Min/Max  | |
-| +----------+ +----------+ |
-| Headcount by department   |
-|        (doughnut)         |
-|  ■ Engineering  640  32%  |
-| Avg salary by job title   |
-| Eng. Manager ████ 5.8M…   |
-+---------------------------+
-```
+From 768 px it is two columns (the median and the breakdowns span both); below that, one column. The
+wireframe truncates amounts for space; the screen shows them in full.
 
-- **Stat cards** show headcount, median, average, min and max. Money is shown in full (see Formatting);
-  on narrow cards, long values wrap rather than abbreviate.
-- **Average by job title** is a table with inline CSS bars (no chart library). Each row has the title,
-  a bar scaled to the highest average, the exact amount, and the department and headcount as a second
-  line. Sorted by average, highest first (ADR-017).
-- **Headcount by department** is a Chart.js doughnut (ADR-029). The total is in the centre, and the
-  legend lists each department with count and percentage, because angles are hard to compare. Sorted
-  by headcount, highest first.
+- **A bento grid.** The median leads in an indigo tile with a plain-words note; headcount, average, min
+  and max sit beside it; the two breakdowns run below.
+- **Money is shown in full, on one line**, in every tile. Container queries step the type down instead of
+  wrapping, sized so the API's longest amount (`999,999,999,999.99`) fits; tested at 390, 768, 1024
+  and 1280 px.
+- **Average by job title** is a table with CSS bars (ADR-029): title and department · headcount on the
+  left, the amount beside them, the bar below. Sorted by average, highest first (ADR-017).
+- **Headcount by department** is a Chart.js doughnut (ADR-029) with the total in the centre and a legend
+  of count and share. Its colours follow the theme (600s on white, 400s on slate-900, each at least 3:1).
 - Changing the country updates `?country=` only. It does **not** change the saved default.
 
 ### Catalog (`/catalog`)
@@ -88,42 +90,30 @@ Phone (stacked):
 Desktop:
 ```
 +---------------------------------------------------------------------------+
-| Salary Management        Insights   [Catalog]                       ⚙     |
-+---------------------------------------------------------------------------+
-| [Search name or email___________] [Country v] [Department v] [Title v]    |
-|                                                       [+ Add employee]    |
-|---------------------------------------------------------------------------|
-| Name ▲              Title            Dept         Ctry  Salary      Hired  |
-| Asha Rao            Software Eng.    Engineering  IN    INR 2,400,000.00  2021-04-12 |
-| asha.rao@acme.com                                                         |
-| Ben Ode             QA Engineer      Engineering  GB    GBP 48,000.00     2019-11-02 |
-| ben.ode@acme.com                                                          |
-| ...                                                                       |
-|---------------------------------------------------------------------------|
-| 1–20 of 10,000                         [<] 1 2 3 … 500 [>]  [20 v]/page   |
+| Catalog                                               [+ Add employee]    |
+| +-----------------------------------------------------------------------+ |
+| | [Search name or email______] [Country v] [Department v] [Title v]     | |
+| | (Country: India x) (Department: Engineering x)  Clear all             | |
+| |-----------------------------------------------------------------------| |
+| | Name ▲                  Title           Dept   Ctry  Salary    Hired  | |
+| | (AR) Asha Rao           Software Eng.   Eng.   IN    INR 2,400… 2021… | |
+| |      asha.rao@acme.example                                            | |
+| |-----------------------------------------------------------------------| |
+| | 1–20 of 1,500                      [<] 1 2 3 … 75 [>]   [20 v]/page   | |
+| +-----------------------------------------------------------------------+ |
 +---------------------------------------------------------------------------+
 ```
 
-Phone (rows become cards):
-```
-+---------------------------+
-| Salary Mgmt          ☰    |
-+---------------------------+
-| [Search name or email___] |
-| [Filters (2) v] [Sort v]  |
-| [+ Add employee]          |
-| +-----------------------+ |
-| | Asha Rao              | |
-| | Software Eng. · IN    | |
-| | INR 2,400,000.00      | |
-| +-----------------------+ |
-| +-----------------------+ |
-| | Ben Ode  ...          | |
-| +-----------------------+ |
-| [<]   Page 1 of 500   [>] |
-+---------------------------+
-```
+Phone: the same card with search, `[Filters (2)] [Sort v]`, the chips, then rows as avatar cards
+(name, title · country, salary). The page header keeps Add employee.
 
+- **Active filters show as chips** (ADR-054), each with a named remove button. Removing a chip clears only
+  that filter; **Clear all**, and the empty state's **Clear filters**, clear country, department and job
+  title and keep the search, sort and page size (task 8.10). Focus moves to the next chip, else the
+  previous one; after Clear all, to the search box. With only a search and no matches, the empty state offers **Clear search** instead.
+- **Rows and cards have initials avatars** (first and last name), hidden from screen readers.
+- **The employee open in the drawer is marked:** `aria-current="true"` and a highlighted row.
+- The column header does not stick (ADR-055); the page header does, from 640 px.
 - **Search** is debounced (300 ms) and only sent at 2+ characters (ADR-016). One character shows the
   hint "Type at least 2 characters" and keeps the previous results.
 - **Filters** have one value each. Picking a department narrows the title dropdown to that
@@ -141,21 +131,29 @@ Phone (rows become cards):
 ### Employee drawer (`/catalog/:id`, `/catalog/new`, `/catalog/:id/edit`)
 
 ```
-+----------------------------+          +----------------------------+
-| Asha Rao                 x |          | Edit employee            x |
-| asha.rao@acme.com          |          | Full name  [Asha Rao_____] |
-|                            |          | Email      [asha.rao@ac..] |
-| Software Engineer          |          | Department [Engineering v] |
-| Engineering · India        |          | Job title  [Software En v] |
-|                            |          | Country    [India       v] |
-| INR 2,400,000.00           |          | Salary INR [2400000.00___] |
-| Hired 2021-04-12           |          | Hire date  [2021-04-12 📅] |
-|                            |          |                            |
-| [Edit]          [Delete]   |          | [Cancel]           [Save]  |
-+----------------------------+          +----------------------------+
-          view                                 edit / add
++------------------------------+          +------------------------------+
+|                            x |          | Edit employee              x |
+| (AR) Asha Rao                |          | Person                       |
+|      asha.rao@acme.example ⧉ |          |   Full name [Asha Rao_____]  |
+|      [Engineering] · India   |          |   Email     [asha.rao@ac..]  |
+| +--------------------------+ |          | Role                         |
+| | Annual salary            | |          |   Department [Engineering v] |
+| | INR 2,400,000.00         | |          |   Job title  [Software En v] |
+| +--------------------------+ |          |   Hire date  [2021-04-12]    |
+| Title      Software Engineer |          | Pay                          |
+| Country          India · INR |          |   Country    [India       v] |
+| Hired  2021-04-12 · 5 yrs 6… |          |   Salary INR [2400000.00__]  |
+| [Edit]                       |          |------------------------------|
+| Delete employee     [Delete] |          | [Cancel]             [Save]  | <- stays in view
++------------------------------+          +------------------------------+
+          view                                   edit / add
 ```
 
+- **Tenure** counts whole years and months to today (UTC, injected clock); a month counts once its day is
+  reached. "Under a month" for a new hire.
+- **Copy email** writes to the clipboard, and a polite live region says "Email copied", or "Couldn't copy
+  the email".
+- **Delete sits in a danger area** at the bottom of view mode, apart from Edit (ADR-054).
 - The drawer opens on the right over the list, and the list keeps its filters and scroll. On phones
   it is full-screen.
 - **One form component for add and edit.** Add starts empty at `/catalog/new`.
@@ -194,9 +192,12 @@ it). There is no undo, because restore is not exposed (ADR-011).
 ```
 +---------------------------------------------+
 | Settings                                    |
-| Default country for Insights                |
-| [India (INR)                v]   [Save]     |
-| Currency follows the country.               |
+| +-----------------------------------------+ |
+| | Default country                         | |
+| | Insights opens on this country.         | |
+| | [India (INR)                v]   [Save] | |
+| | Currency follows the country: INR       | |
+| +-----------------------------------------+ |
 +---------------------------------------------+
 ```
 
@@ -279,13 +280,15 @@ flowchart LR
 
 ## States
 
-Every data view handles each state (`CLAUDE.md`). The cold-start banner applies app-wide, on top of
-whichever state is showing.
+Every data view handles each state (`CLAUDE.md`). The shared empty and error panels (Catalog,
+Insights and Settings errors) lead with a decorative icon; the Insights empty state and the drawer's
+not-found panel do not.
+The cold-start banner applies app-wide, on top of whichever state is showing.
 
 | View | Loading | Empty | Error |
 |---|---|---|---|
 | Insights | Skeleton cards and bars | "No employees in {country} yet", with a link to the Catalog | "Couldn't load insights" + Retry |
-| Catalog list | Skeleton rows; existing rows dim while a new page loads | No employees at all: "No employees yet" + Add. No matches: "No one matches these filters" + Clear filters | "Couldn't load employees" + Retry |
+| Catalog list | Skeleton rows; existing rows dim while a new page loads | No employees at all: "No employees yet" + Add. No matches: "No one matches these filters" + Clear filters, or with only a search, "No one matches this search" + Clear search | "Couldn't load employees" + Retry |
 | Drawer view | Skeleton | — | 404: "This employee no longer exists" + Close |
 | Drawer form | Save button spinner; inputs locked | — | Field errors; 409 banners (stale, duplicate email); other errors as a toast, with edits kept |
 | Settings | Skeleton dropdown | — | "Couldn't load settings" + Retry |
@@ -303,6 +306,7 @@ whichever state is showing.
 
 | Width | Layout |
 |---|---|
-| ≥ 1024 px | As drawn: full table, drawer about 420 px on the right, dashboard in two columns |
-| 640–1023 px | The table drops the department and hire date columns (they stay in the drawer); the drawer is wider; the dashboard is one column |
-| < 640 px | Cards instead of table rows, filters in a panel, a full-screen drawer, stacked cards, and a ☰ menu for the top bar |
+| ≥ 1024 px | Bento Insights in four columns; the full Catalog table; the drawer about 448 px on the right |
+| 768–1023 px | Insights in two columns; the table drops the department and hire date columns (they stay in the drawer); a wider drawer |
+| 640–767 px | As above, with Insights in one column |
+| < 640 px | Insights in one column; avatar cards instead of table rows, filters in a panel; a full-screen drawer; bottom tabs instead of top-bar links |

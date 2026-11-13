@@ -37,7 +37,7 @@ The same few mistakes recur, which is the useful finding. Each links to cases in
 | **Ignoring a standing instruction** | Batched questions after "ask me one by one" (1.11, and again in 7); five slices in one session against the one-slice rule (2.1–2.5); the prompt log it had mandated, skipped for eight slices (1.x) | The engineer, each time |
 | **Placeholders and commands that break when pasted** | `<SM_PGHOST>` pasted into `DB_URL` (1.7); `<stage-host>` run literally in psql (6.4) | The engineer's failed run |
 | **What only a real browser shows** | No icon rendered anywhere, from phase 1 to phase 7, because PrimeIcons was never installed; unit tests in jsdom passed throughout | Screenshots taken by the AI at the end of phase 7 |
-| **Checking the wrong thing** | Stage "deployed" judged by a health check an old build also passes (1.11–3.3); proposed evidence for a production change taken from stage (1.12) | The engineer's "check again"; the reviewer |
+| **Checking the wrong thing** | Stage "deployed" judged by a health check an old build also passes (1.11–3.3); proposed evidence for a production change taken from stage (1.12); seeding advice based on a stale local `main` (deploy) | The engineer's "check again"; the reviewer |
 
 ### Where the engineer chose differently
 
@@ -57,13 +57,18 @@ The AI recommended; the engineer decided. The records say so wherever the engine
 | Job titles | Independent of department (changed after pushback) | Dependent on department | ADR-008 |
 | Promotion cadence | Per slice | Once per phase | ADR-030 |
 | Phase 3 in one session | All six slices | One slice | 3.2 row |
+| Redesign scope | A visual reskin on the current layouts | A full redesign | ADR-054 |
+| App shell | A left sidebar | A refined top bar | ADR-054 |
+| Dark mode | Light only | Follow the OS, with a toggle | ADR-054 |
+| Insights layout | A median hero with a range strip | A bento grid | ADR-054 |
 
 ### Prompts
 
 Every slice's prompt, decisions, approved test list and outcome are in [`prompts/`](prompts/):
 requirement analysis (`0.0`), environment (`1.1`–`1.12`), design (`2.1`–`2.5`), employee CRUD
 (`3.0`–`3.7`), finding employees (`4.1`–`4.5`), insights (`5.1`–`5.6`), seeding (`6.1`–`6.4`),
-frontend (`7.1`–`7.8`, with the combined test list in `7.1`), docs and submission (`8.1`), and two
+frontend (`7.1`–`7.8`, with the combined test list in `7.1`), docs and submission (`8.1`), the UI
+redesign (`8.8`–`8.12`), and two
 process changes (`process-stage-branch`, `process-workflow-check`).
 
 ## Tools
@@ -80,6 +85,8 @@ Newest first. One entry per notable AI interaction. Prompts are saved verbatim i
 
 | Date | Task | What AI did | What I changed / caught | Why |
 |---|---|---|---|---|
+| 2026-11-13 | 8.8–8.12 | Used the ui-ux-pro-max skill for a starting direction, asked fourteen redesign decisions one at a time (ADR-054) and one more during the work (ADR-055), then built five slices test-first with the reviewer on every test and implementation step; checked the look with its own screenshots in both themes | **The engineer chose a full redesign, a top bar, dark mode with a toggle and a bento grid over the AI's recommendations, and then asked for all five slices in one session.** The reviewer confirmed committed backspace bytes in an axe regex (the dark check could never pass), and caught a theme service that would blank the app with blocked site data, a long-amount test using 13 digits the API cannot return, a median sentence that was false when salaries tie, a job-title table quietly turned into a list against ADR-029, and focus lost when a filter chip disappeared. **The AI also made four commits (all of 8.8) on local `main` because the engineer had switched branches for seeding;** caught before any push and moved to `stage` | Visual work still needs behaviour tests, axe and a real look in a browser; and check the branch before committing |
+| 2026-11-13 | deploy | Diagnosed a production Render deploy: a non-JDBC `DB_URL`, then a rejected Neon password, then an unseeded database; gave seeding steps | **Told the engineer to seed from `main` after checking only the local branch, which was stale;** the run seeded nothing. Corrected after the engineer pasted the deploy log showing `origin/main` was current | Check the remote, not the local copy, before claiming what a branch contains |
 | 2026-10-26 | 7.1–7.8 | Sent all thirteen phase 7 decisions in one message, was told "Ask me one by one", then asked them singly (ADR-051, all on the AI's recommendation); wrote all eight test lists for one batch approval; built 7.1→7.8 test-first with the reviewer at each step, then ran the Playwright paths locally and took screenshots at desktop and phone width | **The engineer had to correct the AI's batching despite a saved instruction to ask one at a time**; the memory now says "ask all questions" still means one by one. The reviewer caught tests that wrong code would pass (fixtures whose order matched a sort, a test reloading a country absent from the fixture) and real bugs (the add form submitting empty fields while reference data loaded, a stale refresh flag, a double toast). **Screenshots, not tests, showed that no icon rendered**: PrimeIcons was never installed, since phase 1 | Unit tests in jsdom cannot see what a user sees: a page needs one look in a real browser before it ships |
 | 2026-10-26 | 6.4 | Gave the engineer the steps to seed stage and capture its list plans from their own shell (ADR-049: the AI has no Neon credentials); recorded the stage seed time (3.9 s) and the stage plans in `docs/PERFORMANCE.md`; asked whether to reset the Neon stage branch at each promotion, which became ADR-050 (never reset) | **The AI's psql command kept `<stage-host>` placeholders, which the engineer ran literally;** the AI then gave a command with the real host taken from the seed log and the password kept in `PGPASSWORD`. The AI's own script edit to the plans table dropped the local timing column; it caught that in its own diff review and rewrote the rows before committing. The AI also asked the engineer to confirm that the endpoint in the seed log belonged to stage, not production, before pushing | A command the engineer will paste is complete or has its placeholders called out; review your own diff before committing, even for docs |
 | 2026-10-26 | 6.1–6.4 | At the engineer's request, asked all twelve phase 6 questions up front in three batches rather than one by one (ADR-049); built the generator, the idempotent seeder and the `seed` profile test-first (24 tests); measured the seed at 2.0–2.2 s locally; wrote a read-only psql plan script and found that deep pages switch to a full scan plus sort on tie-heavy seeded data | **Chose Datafaker over the AI's recommendation of hand-written name lists;** the AI pinned the version and added a golden test so an upgrade cannot silently change the seed. The reviewer found the id-collision test could pass with the wrong id block (`V..V+49`), so a range assertion was added, and noted an unguarded race (a first API create during the seed of an empty database), now documented | An id scheme that is safe only against one optimizer's semantics needs a test that checks the scheme itself, not one that waits for a collision |
@@ -130,6 +137,12 @@ was supervised.
 - **Offered two technically wrong options in 2.2 and only caught them after they were answered.**
   `percentile_cont` computes in double precision, and Postgres `round()` is not HALF_EVEN. Both were
   corrected in ADR-017 before any code was written, but they should have been checked before being offered.
+- **Committed to the wrong branch (8.8).** Four commits landed on local `main` after the engineer had
+  checked it out to seed production; caught before any push and moved to `stage` by fast-forward.
+- **Committed a test that could not fail (8.8).** A script wrote backspace bytes where `\b` was meant
+  in the axe helper's regex; the reviewer confirmed it and a `fix:` commit restored it.
+- **Wrote a false sentence into a test (8.9).** "Half … earn less than this" is untrue when
+  salaries tie at the median; the reviewer caught it before it shipped.
 - **Broke a deploy with its own placeholder convention.** The setup guide wrote
   `<SM_PGHOST>`; the angle brackets were pasted into `DB_URL` and Render failed with
   `UnknownHostException` on a bracketed hostname.

@@ -17,6 +17,16 @@ One entry per completed phase of [`TASKS.md`](TASKS.md), newest first. Format ba
 - `SMOKE-TEST.md`: the live smoke test (read-only checks passed at desktop and phone width).
 - A demo video script and a reply email draft, for the engineer to record and send.
 
+### Changed
+- A UI redesign in five test-first slices, 8.8 to 8.12 (ADR-054, ADR-055): an indigo and slate theme
+  over Aura with Inter, light and dark modes from a System/Light/Dark toggle that never flashes white, a
+  refined top bar with bottom tabs on phones, a bento Insights with full amounts on one line and a
+  themed doughnut, the Catalog in one card with filter chips and avatars, and a drawer with a profile
+  header, tenure, a grouped form and Delete in a danger area.
+- Clear filters now keeps the search, sort and page size, matching the new Clear all; a search with no
+  matches offers Clear search.
+- axe accessibility checks (WCAG 2.1 AA) on Insights, the Catalog (filtered, and with the drawer in view mode) and Settings, in both themes, at desktop and phone width, in the End-to-end job.
+
 ## Phase 7 — Frontend features (2026-10-26)
 
 ### Added

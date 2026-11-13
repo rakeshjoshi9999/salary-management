@@ -32,6 +32,7 @@ answers in about 114 ms and a country's insights in about 79 ms, measured from I
 | Min, max, average and median per country; average by job title; headcount by department | One call per country, every statistic aggregated in SQL, an exact median | ADR-017, ADR-022, ADR-047 |
 | Insights in under 1 second | 0.4–3 ms on the database server; 79 ms live, warm | [`PERFORMANCE.md`](docs/PERFORMANCE.md) |
 | Deterministic, idempotent seed of 10,000 employees, in under 10 seconds | A `seed` Spring profile; 2.0–4.2 s locally, on stage and in production | ADR-049 |
+| Readable in light and dark, on phones and desktops (added in the redesign) | A token-based theme with a System/Light/Dark toggle; checked at 390 px and up | axe on Insights, Catalog and Settings in both themes; ADR-054 |
 | Default country for Insights (added during design) | A backend setting, India until changed | ADR-028 |
 
 <p>
