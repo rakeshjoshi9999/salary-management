@@ -26,6 +26,9 @@ One entry per completed phase of [`TASKS.md`](TASKS.md), newest first. Format ba
 - From 640 px (on screens at least 600 px tall) the Catalog card and the Insights job-title card stop at
   the screen height and scroll inside, with a sticky column header and a pinned paginator in the Catalog; the page no longer scrolls
   behind the open drawer (ADR-056, which supersedes ADR-055).
+- From 1024 px wide the Insights page fits one screen: the job-title card fills the space under the
+  tiles (at least 18 rem) and its scroll area has a thin scrollbar with a transparent track instead of a
+  dark strip (ADR-057).
 - Clear filters now keeps the search, sort and page size, matching the new Clear all; a search with no
   matches offers Clear search.
 - axe accessibility checks (WCAG 2.1 AA) on Insights, the Catalog (filtered, and with the drawer in view mode) and Settings, in both themes, at desktop and phone width, in the End-to-end job.

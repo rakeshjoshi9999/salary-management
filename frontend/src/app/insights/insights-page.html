@@ -53,7 +53,7 @@
            of wrapping, sized for the API's longest amount. -->
       <div
         data-testid="insights-bento"
-        class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4"
+        class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:tall:h-[max(calc(100dvh-11.25rem),34rem)] lg:tall:grid-rows-[auto_auto_minmax(0,1fr)]"
       >
         <div
           data-testid="stat-median"
@@ -104,19 +104,21 @@
 
         <section
           data-testid="tile-titles"
-          class="flex flex-col rounded-2xl border border-line bg-card p-5 shadow-sm sm:tall:max-h-[calc(100dvh-11.25rem)] md:col-span-2"
+          class="flex flex-col rounded-2xl border border-line bg-card p-5 shadow-sm sm:max-lg:tall:max-h-[calc(100dvh-11.25rem)] md:col-span-2 lg:tall:min-h-[18rem]"
         >
           <h3 class="font-semibold text-ink">Average salary by job title</h3>
           <p class="text-sm text-ink-muted">{{ data.currency }}, highest first</p>
           <!-- A table with CSS bars: labelled rows read better than a chart (ADR-029). The amount
                sits beside the title and the bar below it, so neither shares a narrow column. -->
-          <!-- From 640 px the card stops at the screen and the table scrolls under the fixed title (ADR-056). -->
+          <!-- From 640 px the card stops at the screen and the table scrolls under the fixed title
+               (ADR-056). From 1024 px it fills the space under the tiles, so the page fits one screen
+               (ADR-057); a thin scrollbar with a transparent track keeps the scroll area quiet. -->
           <div
             data-testid="title-scroll"
             role="region"
             aria-label="Average salary by job title"
             tabindex="0"
-            class="mt-4 min-h-0 flex-1 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:overflow-y-auto"
+            class="mt-4 min-h-0 flex-1 thin-scroll rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:overflow-y-auto"
           >
             <table class="w-full text-sm">
               <thead class="sr-only">

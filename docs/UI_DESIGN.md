@@ -81,8 +81,10 @@ wireframe truncates amounts for space; the screen shows them in full.
   and 1280 px.
 - **Average by job title** is a table with CSS bars (ADR-029): title and department · headcount on the
   left, the amount beside them, the bar below. Sorted by average, highest first (ADR-017). From 640 px
-  (on screens at least 600 px tall) the card is no taller than the screen: its title stays and the table scrolls inside, as a named,
-  keyboard-focusable region (ADR-056).
+  (on screens at least 600 px tall) the card is no taller than the screen: its title stays and the table
+  scrolls inside, as a named, keyboard-focusable region (ADR-056). From 1024 px it fills the space under
+  the tiles, so the whole Insights page fits one screen (ADR-057), with a floor of 18 rem; a shorter
+  screen scrolls the page instead. The scroll area has a thin scrollbar with a transparent track.
 - **Headcount by department** is a Chart.js doughnut (ADR-029) with the total in the centre and a legend
   of count and share. Its colours follow the theme (600s on white, 400s on slate-900, each at least 3:1).
 - Changing the country updates `?country=` only. It does **not** change the saved default.

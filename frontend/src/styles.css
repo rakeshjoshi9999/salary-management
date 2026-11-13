@@ -45,6 +45,7 @@
   --app-warn-line: #fde68a; /* amber-200 */
   --app-success: #15803d; /* green-700 */
   --app-selected: #eef2ff; /* indigo-50: the Catalog row open in the drawer */
+  --app-scroll-thumb: #64748b; /* slate-500: 4.8:1 on white */
 }
 
 .app-dark {
@@ -64,6 +65,7 @@
   --app-warn-line: #78350f; /* amber-900 */
   --app-success: #4ade80; /* green-400 */
   --app-selected: #1e1b4b; /* indigo-950 */
+  --app-scroll-thumb: #94a3b8; /* slate-400: 6.5:1 on slate-900 */
 }
 
 @theme inline {
@@ -104,6 +106,12 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
+}
+
+/* A thin scrollbar whose track is transparent, so a scroll area inside a card has no dark strip (ADR-057). */
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scroll-thumb) transparent;
 }
 
 /* Motion is decoration here: with reduced motion, everything moves instantly (ADR-054). */
