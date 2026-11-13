@@ -394,8 +394,9 @@ describe('CatalogPage', () => {
     expect(router.url).toBe('/catalog/new');
   });
 
-  it('no matches shows "No one matches these filters"; Clear filters goes to /catalog', async () => {
-    await open('/catalog?country=DE&q=zzz');
+  it('no matches shows "No one matches these filters"; Clear filters keeps the search, sort and size', async () => {
+    // Changed in task 8.10 with the engineer's OK: Clear filters now matches the chip row's Clear all.
+    await open('/catalog?q=zzz&country=DE&sort=salary,desc&size=50');
     await respond(page([], { totalItems: 0, totalPages: 0 }));
 
     expect(byTestId('no-matches')?.textContent).toContain('No one matches these filters');
@@ -403,7 +404,7 @@ describe('CatalogPage', () => {
 
     (byTestId('clear-filters') as HTMLButtonElement).click();
     await settle();
-    expect(router.url).toBe('/catalog');
+    expect(router.url).toBe('/catalog?q=zzz&sort=salary,desc&size=50');
     listRequest();
   });
 
@@ -420,6 +421,119 @@ describe('CatalogPage', () => {
 
     expect(byTestId('catalog-error')).toBeNull();
     expect(byTestId('row-101')).toBeTruthy();
+  });
+
+  describe('redesign (task 8.10)', () => {
+    const chipLabels = () =>
+      Array.from(root().querySelectorAll('[data-testid="chip-label"]')).map((label) =>
+        label.textContent?.replace(/\s+/g, ' ').trim(),
+      );
+
+    it('shows each active filter as a chip', async () => {
+      await open('/catalog?country=IN&department=Engineering&jobTitle=QA%20Engineer');
+      await respond(page([ASHA]));
+
+      expect(byTestId('filter-chips')).toBeTruthy();
+      expect(chipLabels()).toEqual([
+        'Country: India',
+        'Department: Engineering',
+        'Job title: QA Engineer',
+      ]);
+    });
+
+    it('names each chip remove button for screen readers', async () => {
+      await open('/catalog?country=IN');
+      await respond(page([ASHA]));
+
+      expect(byTestId('chip-remove-country')?.getAttribute('aria-label')).toBe(
+        'Remove filter Country: India',
+      );
+    });
+
+    it('removing a chip clears only that filter', async () => {
+      await open(
+        '/catalog?q=asha&country=IN&department=Engineering&sort=salary,desc&page=2&size=50',
+      );
+      await respond(page([ASHA], { page: 2, size: 50, totalItems: 200, totalPages: 4 }));
+
+      (byTestId('chip-remove-country') as HTMLButtonElement).click();
+      await settle();
+
+      expect(router.url).toBe('/catalog?q=asha&department=Engineering&sort=salary,desc&size=50');
+      listRequest().flush(page([ASHA]));
+    });
+
+    it('Clear all removes every filter but keeps the search, sort and page size', async () => {
+      await open(
+        '/catalog?q=asha&country=IN&department=Engineering&jobTitle=QA%20Engineer&sort=salary,desc&page=1&size=50',
+      );
+      await respond(page([ASHA], { page: 1, size: 50, totalItems: 60, totalPages: 2 }));
+
+      (byTestId('clear-all-filters') as HTMLButtonElement).click();
+      await settle();
+
+      expect(router.url).toBe('/catalog?q=asha&sort=salary,desc&size=50');
+      listRequest().flush(page([ASHA]));
+    });
+
+    it('hides the chip row and Clear all without filters', async () => {
+      await open('/catalog?q=asha');
+      await respond(page([ASHA]));
+
+      expect(byTestId('filter-chips')).toBeNull();
+      expect(chipLabels()).toEqual([]);
+      expect(byTestId('clear-all-filters')).toBeNull();
+    });
+
+    it('shows initials avatars in rows and cards, hidden from screen readers', async () => {
+      await open('/catalog');
+      await respond(page([ASHA]));
+
+      for (const id of ['row-101', 'card-101']) {
+        const avatar = byTestId(id)?.querySelector('[data-testid="avatar"]');
+        expect(avatar?.textContent?.trim(), id).toBe('AR');
+        expect(avatar?.getAttribute('aria-hidden'), id).toBe('true');
+      }
+    });
+
+    it('marks the row of the open employee, following the drawer', async () => {
+      await open('/catalog/101');
+      await respond(page([ASHA, BEN]));
+      const current = () =>
+        ['row-101', 'row-102'].filter(
+          (id) => byTestId(id)?.getAttribute('aria-current') === 'true',
+        );
+      expect(current()).toEqual(['row-101']);
+
+      await router.navigateByUrl('/catalog/102');
+      await settle();
+      expect(current()).toEqual(['row-102']);
+
+      await router.navigateByUrl('/catalog');
+      await settle();
+      expect(current()).toEqual([]);
+    });
+
+    it('puts the one Add employee button in the page header', async () => {
+      await open('/catalog');
+      await respond(page([ASHA]));
+
+      expect(root().querySelectorAll('[data-testid="add-employee"]')).toHaveLength(1);
+      expect(root().querySelector('app-page-header [data-testid="add-employee"]')).toBeTruthy();
+    });
+
+    it('no matches for a search alone offers Clear search, keeping the sort and size', async () => {
+      await open('/catalog?q=zzz&sort=salary,desc&size=50');
+      await respond(page([], { totalItems: 0, totalPages: 0 }));
+
+      expect(byTestId('no-matches')?.textContent).toContain('No one matches this search');
+
+      (byTestId('clear-search') as HTMLButtonElement).click();
+      await settle();
+
+      expect(router.url).toBe('/catalog?sort=salary,desc&size=50');
+      listRequest();
+    });
   });
 
   it('clicking a row opens /catalog/:id and keeps the list query', async () => {
