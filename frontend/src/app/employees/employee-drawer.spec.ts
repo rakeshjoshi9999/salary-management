@@ -108,6 +108,118 @@ describe('EmployeeDrawer', () => {
 
   // View
 
+  describe('redesign (task 8.11)', () => {
+    const textOf = (testId: string) => q(testId)?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+
+    async function showAsha(): Promise<void> {
+      await open('/catalog/101');
+      getRequest().flush(ASHA);
+      await settle();
+    }
+
+    /** Only the clipboard is replaced; the rest of jsdom's navigator stays real. */
+    function stubClipboard(writeText: (text: string) => Promise<void>): void {
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    }
+
+    afterEach(() => {
+      delete (navigator as { clipboard?: unknown }).clipboard;
+    });
+
+    it('shows a profile header with avatar, name, email and department badge', async () => {
+      await showAsha();
+
+      const header = q('profile-header');
+      const avatar = header?.querySelector('[data-testid="avatar"]');
+      expect(avatar?.textContent?.trim()).toBe('AR');
+      expect(avatar?.getAttribute('aria-hidden')).toBe('true');
+      expect(header?.querySelector('[data-testid="employee-name"]')?.textContent?.trim()).toBe(
+        'Asha Rao',
+      );
+      expect(textOf('profile-header')).toContain('asha.rao@acme.example');
+      expect(textOf('department-badge')).toBe('Engineering');
+    });
+
+    it('shows the salary in its own block', async () => {
+      await showAsha();
+
+      expect(textOf('salary-block')).toBe('Annual salary INR 2,400,000.00');
+    });
+
+    it('lists title, country and hire date with tenure', async () => {
+      await showAsha();
+
+      expect(textOf('detail-title')).toContain('Software Engineer');
+      expect(textOf('detail-country')).toContain('India · INR');
+      expect(textOf('detail-hired')).toContain('2021-04-12 · 5 yrs 6 mos');
+    });
+
+    it('copies the email and announces it once copied', async () => {
+      let finish: () => void = () => undefined;
+      const writeText = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+      stubClipboard(writeText);
+      await showAsha();
+      const copy = q('copy-email') as HTMLButtonElement;
+      expect(copy).toBeTruthy();
+      expect(copy.getAttribute('aria-label')).toBe('Copy email');
+      // Present before the click, so screen readers announce the text when it arrives.
+      expect(q('copy-status')?.getAttribute('aria-live')).toBe('polite');
+
+      copy.click();
+      await settle();
+      expect(writeText).toHaveBeenCalledWith('asha.rao@acme.example');
+      expect(textOf('copy-status')).toBe('');
+
+      finish();
+      await settle();
+      expect(textOf('copy-status')).toBe('Email copied');
+    });
+
+    it('says when copying fails', async () => {
+      stubClipboard(() => Promise.reject(new Error('denied')));
+      await showAsha();
+
+      (q('copy-email') as HTMLButtonElement).click();
+      await settle();
+
+      expect(textOf('copy-status')).toBe("Couldn't copy the email");
+    });
+
+    it('groups the form as Person, Role and Pay', async () => {
+      await openEdit();
+
+      const groups = Array.from(document.querySelectorAll('form fieldset')).map((set) => ({
+        legend: set.querySelector('legend')?.textContent?.trim(),
+        fields: Array.from(set.querySelectorAll('[data-testid^="field-"]')).map((f) =>
+          f.getAttribute('data-testid'),
+        ),
+      }));
+
+      expect(groups).toEqual([
+        { legend: 'Person', fields: ['field-fullName', 'field-email'] },
+        { legend: 'Role', fields: ['field-department', 'field-jobTitle', 'field-hireDate'] },
+        { legend: 'Pay', fields: ['field-countryCode', 'field-salary'] },
+      ]);
+    });
+
+    it('keeps Cancel and Save in the form footer', async () => {
+      await openEdit();
+
+      const footer = q('form-footer');
+      expect(footer?.querySelector('[data-testid="cancel"]')).toBeTruthy();
+      expect(footer?.querySelector('[data-testid="save"]')).toBeTruthy();
+    });
+
+    it('puts Delete in a danger area apart from Edit', async () => {
+      await showAsha();
+
+      const danger = q('danger-zone');
+      expect(q('edit-button')).toBeTruthy();
+      expect(danger?.querySelector('[data-testid="delete-button"]')).toBeTruthy();
+      expect(danger?.querySelector('[data-testid="edit-button"]')).toBeNull();
+    });
+  });
+
   it('loads the employee by id and shows the details', async () => {
     await open('/catalog/101');
     getRequest().flush(ASHA);
