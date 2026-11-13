@@ -171,6 +171,8 @@ describe('EmployeeDrawer', () => {
       expect(textOf('copy-status')).toBe('');
 
       finish();
+      // Let the awaiting copy continue before asking Angular whether rendering is pending.
+      await Promise.resolve();
       await settle();
       expect(textOf('copy-status')).toBe('Email copied');
     });
