@@ -133,3 +133,15 @@ test('changes the scrollbar thumb with the theme', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect.poll(async () => (await scrollbar(page)).color).not.toBe(light);
 });
+
+test('keeps the screen-height cap and page scroll on a tablet', async ({ page }) => {
+  // Below 1024 px the layout stacks and cannot fit one screen: ADR-056's cap applies, the page scrolls.
+  await open(page, 768, 1024);
+
+  const tile = page.getByTestId('tile-titles');
+  expect((await tile.boundingBox())!.height).toBeLessThanOrEqual(1024);
+  expect(
+    await tile.getByTestId('title-scroll').evaluate((el) => el.scrollHeight > el.clientHeight + 1),
+  ).toBe(true);
+  expect(await pageOverflow(page)).toBeGreaterThan(0);
+});
