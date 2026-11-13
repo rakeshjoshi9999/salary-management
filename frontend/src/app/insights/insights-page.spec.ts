@@ -163,9 +163,18 @@ describe('InsightsPage', () => {
   it('explains the median in the hero tile', async () => {
     await showIndia();
 
+    // "Earn less than this" would be false when salaries tie at the median.
     expect(text('stat-median')).toContain(
-      'Half of the 3,500 employees in India earn less than this.',
+      'Half of the 3,500 employees in India earn this or less, and half this or more.',
     );
+  });
+
+  it('describes a median of one employee without halves', async () => {
+    await open('/?country=IN');
+    insightsRequest('IN').flush({ ...INDIA, salary: { ...INDIA.salary, headcount: 1 } });
+    await settle();
+
+    expect(text('stat-median')).toContain("This is the salary of India's one employee.");
   });
 
   it('puts the country picker in the page header', async () => {
