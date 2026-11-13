@@ -21,7 +21,7 @@ const stubRoutes: Routes = [
   { path: 'settings', component: StubPage },
 ];
 
-/** The app shell: top bar, phone menu, and the app-wide banners (UI_DESIGN.md, ADR-051). */
+/** The app shell: top bar, phone tabs, theme toggle and the app-wide banners (ADR-051, ADR-054). */
 describe('App shell', () => {
   let fixture: ComponentFixture<App>;
   let controller: HttpTestingController;
@@ -75,17 +75,46 @@ describe('App shell', () => {
     expect(nav.querySelector('a[href="/"]')?.getAttribute('aria-current')).toBeNull();
   });
 
-  it('opens a menu with the same links on phones', async () => {
+  it('shows the brand mark linking home', async () => {
     await create(stubRoutes);
-    expect(document.querySelector('[data-testid="mobile-menu"]')).toBeNull();
 
-    (byTestId('menu-button') as HTMLButtonElement).click();
+    const brand = byTestId('brand') as HTMLAnchorElement;
+
+    expect(brand.closest('h1')).toBeTruthy();
+    expect(brand.getAttribute('href')).toBe('/');
+    expect(brand.textContent?.trim()).toBe('Salary Management');
+    expect(brand.querySelector('svg')).toBeTruthy();
+  });
+
+  it('labels the theme toggle with the current and next mode', async () => {
+    await create(stubRoutes);
+    const toggle = byTestId('theme-toggle') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-label')).toBe('Theme: System. Switch to light');
+
+    toggle.click();
     await fixture.whenStable();
 
-    const menu = document.querySelector('[data-testid="mobile-menu"]') as HTMLElement;
-    expect(menu).toBeTruthy();
-    const hrefs = Array.from(menu.querySelectorAll('a')).map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(['/', '/catalog', '/settings']);
+    expect(toggle.getAttribute('aria-label')).toBe('Theme: Light. Switch to dark');
+  });
+
+  it('shows bottom tabs with the same links on phones', async () => {
+    await create(stubRoutes);
+
+    const tabs = byTestId('bottom-nav') as HTMLElement;
+    const links = Array.from(tabs.querySelectorAll('a'));
+
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/', '/catalog', '/settings']);
+    expect(links.map((a) => a.textContent?.trim())).toEqual(['Insights', 'Catalog', 'Settings']);
+  });
+
+  it('marks the current section in the bottom tabs', async () => {
+    await create(stubRoutes);
+
+    await navigate('/catalog');
+
+    const tabs = byTestId('bottom-nav') as HTMLElement;
+    const current = Array.from(tabs.querySelectorAll('a[aria-current="page"]'));
+    expect(current.map((a) => a.getAttribute('href'))).toEqual(['/catalog']);
   });
 
   it('shows the cold-start banner while the server is waking', async () => {
