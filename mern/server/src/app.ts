@@ -1,6 +1,9 @@
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type Express, type Router } from 'express';
 
+import { createAuthRouter } from './auth/routes.js';
+import { createTokenService } from './auth/tokens.js';
 import type { Config } from './config.js';
 import { createErrorHandler, notFound } from './problem.js';
 
@@ -22,17 +25,21 @@ export const BODY_LIMIT = '100kb';
  * test calls the app directly, and `server.ts` is the only place that opens a socket. The order of
  * `use` calls is the order requests flow through, so the 404 and error handlers come last.
  */
-export function createApp({ config, ping, routes }: AppDeps): Express {
+export function createApp({ config, ping, routes, now = () => new Date() }: AppDeps): Express {
   const app = express();
   app.disable('x-powered-by'); // do not advertise the framework
 
   app.use(cors({ origin: config.corsAllowedOrigins }));
   app.use(express.json({ limit: BODY_LIMIT }));
+  app.use(cookieParser()); // fills `req.cookies`; the refresh token travels in a cookie
 
   app.get('/health', async (_req, res) => {
     const up = await ping();
     res.status(up ? 200 : 503).json({ status: up ? 'UP' : 'DOWN' });
   });
+
+  const tokens = createTokenService(config, now);
+  app.use('/auth', createAuthRouter({ config, tokens, now }));
 
   if (routes) {
     app.use(routes);
