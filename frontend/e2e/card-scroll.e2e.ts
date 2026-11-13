@@ -134,3 +134,33 @@ test('holds the page and the list still behind the open drawer', async ({ page }
     expect(await rowsArea(page).evaluate((el) => el.scrollTop)).toBe(rowsBefore);
   }
 });
+
+test('does not scroll the page beside a capped card', async ({ page }, testInfo) => {
+  desktopOnly(testInfo.project.name);
+  for (const [width, height] of [
+    [1280, 800],
+    [768, 1024],
+  ] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto('/catalog?size=100');
+    await page.locator('[data-testid^="row-"]').first().waitFor();
+
+    // A page scrollbar next to the card's own would be two scrollbars side by side.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollHeight - document.documentElement.clientHeight,
+    );
+    expect(overflow, `${width}x${height}`).toBeLessThanOrEqual(0);
+  }
+});
+
+test('keeps the rows usable on a short landscape screen', async ({ page }, testInfo) => {
+  desktopOnly(testInfo.project.name);
+  // Wide enough for the table, too short for a cap: the page scrolls instead of squeezing the rows.
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.goto('/catalog?size=100');
+  await page.locator('[data-testid^="row-"]').first().waitFor();
+
+  const rows = await box(rowsArea(page));
+
+  expect(rows.height).toBeGreaterThanOrEqual(200);
+});
