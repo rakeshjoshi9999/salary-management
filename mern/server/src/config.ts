@@ -19,8 +19,15 @@ export class ConfigError extends Error {
  * here, once, at the edge: the rest of the app only sees a typed `Config`.
  */
 const environment = z.object({
-  MONGODB_URI: z.string().min(1),
-  PORT: z.coerce.number().int().min(0).max(65535).default(8082),
+  MONGODB_URI: z.string().trim().min(1),
+  // `Number('')` is 0, so a blank `PORT=` line would pass as "any free port". Check the text first.
+  PORT: z
+    .string()
+    .trim()
+    .min(1)
+    .transform(Number)
+    .pipe(z.number().int().min(0).max(65535))
+    .default(8082),
   // One origin for now; splitting a comma-separated list arrives with its first real use.
   CORS_ALLOWED_ORIGINS: z
     .string()
