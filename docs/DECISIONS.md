@@ -126,6 +126,7 @@ raising its budget (ADR-052). The full list is in [`AI_USAGE.md`](AI_USAGE.md#wh
 | ADR-051 | Frontend build: hand-written models, RxJS services with signal pages, the URL as list state, CI E2E | Accepted | 2026-10-26 |
 | ADR-052 | Trim the app shell under the default budget; the end-to-end job gates deploys | Accepted | 2026-10-26 |
 | ADR-053 | Phase 8: reviewer-first docs, live warm measurements, a supervised smoke test, an annotated history | Accepted | 2026-10-26 |
+| ADR-054 | UI redesign: refined top bar, Indigo preset, dark mode with a toggle, bento Insights | Accepted | 2026-11-13 |
 
 ---
 
@@ -2087,6 +2088,63 @@ is fast-forward only, ADR-048); the two rewrites before 1.11 are listed in `WORK
 - Live timings are a snapshot of one day on Render's free tier from one machine, labelled as such.
 - Production keeps one soft-deleted test employee from the smoke test, and its settings version moves on.
 - The history guide lists imperfections publicly, by the engineer's choice.
+
+---
+
+## ADR-054 — UI redesign: refined top bar, Indigo preset, dark mode with a toggle, bento Insights
+
+- **Date:** 2026-11-13
+- **Status:** Accepted
+- **Task:** 8.8–8.12. Builds on ADR-005 (Tailwind with PrimeNG), ADR-027 (screens), ADR-029 (Chart.js).
+  Replaces the phone menu of ADR-052 with bottom tabs; every other part of ADR-027 and ADR-052 stands.
+
+### Context
+The app works, but it is stock PrimeNG Aura with little visual hierarchy. The engineer asked for a
+redesign of the whole UI before submission, using the ui-ux-pro-max skill for direction (it suggested a
+data-dense dashboard style, a deep blue or indigo primary, and tabular figures). `REQUIREMENTS.md` says
+nothing about look or theming, and dark mode is not on its out-of-scope list. The behaviour in
+`UI_DESIGN.md` (routes, URL-held list state, validation, the drawer pattern, money in full) is tested
+and must not regress. 8.4 and 8.5 are still open, so the work must be stoppable part-way. Each decision
+was asked one at a time.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Scope | Visual reskin on the current layouts · **Full redesign, layouts included** · theme tokens only | Full redesign |
+| App shell | Left sidebar, bottom tabs on phones · **Refined top bar: brand mark, pill tabs, ⚙ right, a sticky page header per screen with its title and actions; bottom tabs on phones** · sidebar plus a global Ctrl+K search (a new feature) | Refined top bar |
+| Palette | **Indigo-600 primary, slate neutrals, slate-50 page and white cards, amber accent, red only for destructive** · deep blue and amber (the skill's pick) · teal and zinc | Indigo and slate |
+| Dark mode | Light only · follow the OS · **follow the OS, with a toggle** | OS plus toggle |
+| Theme choice | **localStorage per browser, a top-bar toggle cycling System → Light → Dark, applied by an inline script in `index.html` before Angular starts** · a server setting in `app_settings` (a migration, an API change, and no theme until a cold Render wakes) · localStorage with the control on Settings | Browser, top bar |
+| Typeface | **Inter, self-hosted with `@fontsource-variable/inter`, tabular figures for amounts** · Inter from Google Fonts (a third-party request) · the system stack · Fira Sans with Fira Code | Inter, self-hosted |
+| Insights | A median hero card with a min-to-max range strip · five restyled KPI cards · **a bento grid of mixed tile sizes** | Bento |
+| Money in tiles | **In full everywhere, as now: tiles holding money are never narrower than the longest value, and type steps down with container queries instead of wrapping** · compact (4.99M) with the full value on demand · compact on phones only | In full |
+| Catalog | **The table in one card, a toolbar with search and filters, removable active-filter chips with Clear all, initials avatars, a sticky header, the open row highlighted; cards on phones** · the same without chips · a docked master-detail split view | Card table with chips |
+| Drawer | **A profile header (initials avatar, name, copyable email, department badge), a salary block, a details list with tenure from the injected `Clock`; edit and add grouped as Person, Role and Pay with a sticky footer; Delete in a danger area at the bottom of view mode** · the same without tenure · restyle in place | Profile header with tenure |
+| Motion | **CSS only, 150–250 ms: hover and focus, the drawer slide, skeletons, bars growing once; all of it off under `prefers-reduced-motion`** · a library (GSAP or Motion) with count-up numbers · none | Subtle CSS |
+| Slicing | Five tasks, one per session: 8.8 foundation, 8.9 Insights, 8.10 Catalog, 8.11 drawer, 8.12 Settings, states and docs; stage after each, one promotion to `main` at the end · **the five tasks in one session, each with its own loop and commits** · one big slice | Five tasks, one session |
+| Visual checks | **Behaviour and structure in specs and Playwright, plus `@axe-core/playwright` in light and dark on every screen; the look is judged by the engineer on stage** · the same plus `toHaveScreenshot` baselines (font rendering differs between Windows and Linux CI) · no new tooling | Behaviour plus axe |
+| Axe on pages not yet redesigned | **Fix whatever axe finds in 8.8, so every push to stage is accessible** · check each page only in its own task | Fix in 8.8 |
+
+### Decision
+As chosen above, by the engineer: each on the AI's recommendation except the scope (full redesign
+over a reskin), the shell (the refined top bar over a sidebar), the dark-mode toggle (over light only)
+and the bento Insights (over a hero with a range strip). The engineer first chose five sessions, then,
+once the test list for 8.8 was ready, chose to complete all five tasks in this session. Every colour lives in one `definePreset` over
+Aura, so PrimeNG components and the `tailwindcss-primeui` classes follow the same tokens in both
+modes; components use token classes only, never raw colours. Icons stay inline Lucide SVGs
+(`shared/icon.ts`). Toasts stay at the top centre.
+
+### Consequences
+- Two new dependencies: `@fontsource-variable/inter` (runtime; the font files are separate assets,
+  not part of the initial JS budget of ADR-052) and `@axe-core/playwright` (dev only).
+- The phone ☰ menu and its Escape handling go; the spec that opens it is retired with the engineer's
+  OK, and bottom tabs get their own tests.
+- Between 8.8 and 8.11, stage shows the new shell and dark mode over pages not yet redesigned. The
+  Chart.js doughnut draws on a canvas, so it takes dark colours only in 8.9.
+- `UI_DESIGN.md` is updated to the new screens in 8.12, which supersedes its wireframes; its
+  behaviour rules are unchanged except for the phone menu.
+- The README screenshots (ADR-053) go stale and are retaken in 8.12, before the demo video (8.5).
+- The theme choice is per browser: a new browser starts on System.
 
 ---
 
