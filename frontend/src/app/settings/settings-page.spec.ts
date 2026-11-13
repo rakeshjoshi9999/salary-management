@@ -180,4 +180,13 @@ describe('SettingsPage', () => {
     expect(q('settings-currency')?.textContent).toContain('EUR');
     expect(q('settings-currency')?.textContent).not.toContain('INR');
   });
+
+  it('introduces the default country with a heading and what it does', async () => {
+    await open();
+    await loaded();
+
+    const card = q('settings-card');
+    expect(card?.querySelector('h3')?.textContent?.trim()).toBe('Default country');
+    expect(card?.textContent).toContain('Insights opens on this country');
+  });
 });
