@@ -35,9 +35,17 @@ export const THEME_STORAGE = new InjectionToken<ThemeStorage>('THEME_STORAGE', {
   factory: browserStorage,
 });
 
+/** Without matchMedia (jsdom, some old browsers) the OS counts as light and never changes. */
+const LIGHT_OS = {
+  matches: false,
+  addEventListener: () => undefined,
+  removeEventListener: () => undefined,
+} as unknown as MediaQueryList;
+
 export const MATCH_MEDIA = new InjectionToken<(query: string) => MediaQueryList>('MATCH_MEDIA', {
   providedIn: 'root',
-  factory: () => (query: string) => window.matchMedia(query),
+  factory: () => (query: string) =>
+    typeof window.matchMedia === 'function' ? window.matchMedia(query) : LIGHT_OS,
 });
 
 const NEXT: Record<ThemeMode, ThemeMode> = { system: 'light', light: 'dark', dark: 'system' };
@@ -61,7 +69,8 @@ export class ThemeService {
 
   readonly mode = this.current.asReadonly();
   readonly nextMode = computed(() => NEXT[this.current()]);
-  private readonly dark = computed(
+  /** Whether the page is dark now, for what CSS cannot reach (the doughnut's canvas). */
+  readonly dark = computed(
     () => this.current() === 'dark' || (this.current() === 'system' && this.osDark()),
   );
 

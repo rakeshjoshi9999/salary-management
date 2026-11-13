@@ -12,6 +12,7 @@ import { ApiError } from '../core/api-error';
 import { ReferenceStore } from '../core/reference.store';
 import { SettingsService } from '../settings/settings.service';
 import { MoneyPipe } from '../shared/money.pipe';
+import { Icon, IconName } from '../shared/icon';
 import { StatePanel } from '../shared/state-panel';
 import { DepartmentDoughnut } from './department-doughnut';
 import { InsightsService } from './insights.service';
@@ -19,6 +20,14 @@ import { PageHeader } from '../shared/page-header';
 
 /** India until the HR Manager chooses otherwise (ADR-028), and the fallback if settings fail. */
 const FALLBACK_COUNTRY = 'IN';
+
+interface StatTile {
+  id: string;
+  label: string;
+  icon: IconName;
+  value: number | null;
+  money: boolean;
+}
 
 type Loaded =
   { ok: true; insights: CountryInsights } | { ok: false; code: CountryCode; error: unknown };
@@ -38,6 +47,7 @@ type Loaded =
     MoneyPipe,
     DecimalPipe,
     StatePanel,
+    Icon,
   ],
   templateUrl: './insights-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -67,7 +77,27 @@ export class InsightsPage {
       width: highest > 0 ? `${Math.round((row.average / highest) * 1000) / 10}%` : '0%',
     }));
   });
-  protected readonly skeletonCards = [0, 1, 2, 3, 4];
+  protected readonly skeletonCards = [0, 1, 2, 3];
+
+  /** The four tiles beside the median, in reading order. */
+  protected readonly stats = computed((): StatTile[] => {
+    const salary = this.insights()?.salary;
+    if (!salary) {
+      return [];
+    }
+    return [
+      {
+        id: 'stat-headcount',
+        label: 'Headcount',
+        icon: 'users',
+        value: salary.headcount,
+        money: false,
+      },
+      { id: 'stat-average', label: 'Average', icon: 'chart', value: salary.average, money: true },
+      { id: 'stat-min', label: 'Min', icon: 'trending-down', value: salary.min, money: true },
+      { id: 'stat-max', label: 'Max', icon: 'trending-up', value: salary.max, money: true },
+    ];
+  });
 
   private readonly retry$ = new Subject<void>();
 

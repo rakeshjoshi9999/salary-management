@@ -14,7 +14,9 @@ export type IconName =
   | 'monitor'
   | 'chart'
   | 'users'
-  | 'wallet';
+  | 'wallet'
+  | 'trending-up'
+  | 'trending-down';
 
 /**
  * Inline SVG icons, sized to the surrounding text and coloured by it. Decorative: the control that
@@ -91,6 +93,14 @@ export type IconName =
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
           <circle cx="9" cy="7" r="4" />
           <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+        }
+        @case ('trending-up') {
+          <path d="M22 7 13.5 15.5 8.5 10.5 2 17" />
+          <path d="M16 7h6v6" />
+        }
+        @case ('trending-down') {
+          <path d="M22 17 13.5 8.5 8.5 13.5 2 7" />
+          <path d="M16 17h6v-6" />
         }
         @case ('wallet') {
           <path
