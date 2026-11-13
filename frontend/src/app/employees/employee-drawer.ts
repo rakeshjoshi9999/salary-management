@@ -23,8 +23,10 @@ import { ApiError } from '../core/api-error';
 import { CLOCK, todayUtc } from '../core/clock';
 import { ReferenceStore } from '../core/reference.store';
 import { Icon } from '../shared/icon';
+import { initials } from '../shared/initials';
 import { MoneyPipe } from '../shared/money.pipe';
 import { StatePanel } from '../shared/state-panel';
+import { tenure } from '../shared/tenure';
 import { CatalogRefresh } from './catalog-refresh';
 import { EmployeeService } from './employee.service';
 import {
@@ -123,6 +125,14 @@ export class EmployeeDrawer {
     const code = this.employee()?.countryCode;
     return this.reference.country(code)?.name ?? code ?? '';
   });
+  protected readonly initials = initials;
+  /** Time since hiring, against the injected clock's UTC date. */
+  protected readonly tenure = computed(() => {
+    const hireDate = this.employee()?.hireDate;
+    return hireDate ? tenure(hireDate, this.today) : '';
+  });
+  /** Read out by a live region after a copy; empty until the copy has finished. */
+  protected readonly copyStatus = signal('');
   protected readonly title = computed(() => {
     if (this.mode === 'add') return 'Add employee';
     if (this.mode === 'edit') return 'Edit employee';
@@ -178,6 +188,21 @@ export class EmployeeDrawer {
       return;
     }
     this.navigateTo(['/catalog']);
+  }
+
+  /** No clipboard (an insecure origin) throws inside the try, so it reads as a failed copy. */
+  protected async copyEmail(): Promise<void> {
+    const email = this.employee()?.email;
+    if (!email) {
+      return;
+    }
+    this.copyStatus.set('');
+    try {
+      await navigator.clipboard.writeText(email);
+      this.copyStatus.set('Email copied');
+    } catch {
+      this.copyStatus.set("Couldn't copy the email");
+    }
   }
 
   protected edit(): void {

@@ -58,26 +58,92 @@
       </div>
     } @else if (mode === 'view') {
       @if (employee(); as e) {
-        <div data-testid="employee-details" class="flex flex-col gap-4">
-          <div>
-            <p data-testid="employee-name" class="text-xl font-semibold text-ink">
-              {{ e.fullName }}
+        <div data-testid="employee-details" class="flex flex-col gap-5">
+          <div data-testid="profile-header" class="flex items-start gap-4">
+            <span
+              data-testid="avatar"
+              aria-hidden="true"
+              class="grid size-14 shrink-0 place-items-center rounded-full bg-primary text-lg font-semibold text-primary-contrast"
+              >{{ initials(e.fullName) }}</span
+            >
+            <div class="min-w-0">
+              <p data-testid="employee-name" class="text-xl font-semibold text-ink">
+                {{ e.fullName }}
+              </p>
+              <div class="flex items-center gap-1">
+                <p class="truncate text-sm text-ink-muted">{{ e.email }}</p>
+                <button
+                  type="button"
+                  data-testid="copy-email"
+                  aria-label="Copy email"
+                  title="Copy email"
+                  class="grid size-7 shrink-0 place-items-center rounded-md text-ink-muted transition-colors duration-150 hover:bg-subtle hover:text-ink"
+                  (click)="copyEmail()"
+                >
+                  <app-icon name="copy" size="0.95em" />
+                </button>
+              </div>
+              <p class="mt-2 text-sm text-ink-muted">
+                <span
+                  data-testid="department-badge"
+                  class="rounded-full bg-subtle px-2 py-0.5 text-xs font-medium text-ink"
+                  >{{ e.department }}</span
+                >
+                · {{ countryName() }}
+              </p>
+              <p
+                data-testid="copy-status"
+                aria-live="polite"
+                class="mt-1 min-h-4 text-xs text-ink-muted"
+              >
+                {{ copyStatus() }}
+              </p>
+            </div>
+          </div>
+
+          <div data-testid="salary-block" class="rounded-xl bg-subtle p-4">
+            <p class="text-sm text-ink-muted">Annual salary</p>
+            <p class="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-ink">
+              {{ e.salary | money: e.currency }}
             </p>
-            <p class="text-sm text-ink-muted">{{ e.email }}</p>
           </div>
+
+          <dl class="divide-y divide-line text-sm">
+            <div data-testid="detail-title" class="flex justify-between gap-4 py-2.5">
+              <dt class="text-ink-muted">Title</dt>
+              <dd class="text-right text-ink">{{ e.jobTitle }}</dd>
+            </div>
+            <div data-testid="detail-country" class="flex justify-between gap-4 py-2.5">
+              <dt class="text-ink-muted">Country</dt>
+              <dd class="text-right text-ink">{{ countryName() }} · {{ e.currency }}</dd>
+            </div>
+            <div data-testid="detail-hired" class="flex justify-between gap-4 py-2.5">
+              <dt class="text-ink-muted">Hired</dt>
+              <dd class="text-right tabular-nums text-ink">
+                {{ e.hireDate }}
+                @if (tenure()) {
+                  · {{ tenure() }}
+                }
+              </dd>
+            </div>
+          </dl>
+
           <div>
-            <p class="text-ink">{{ e.jobTitle }}</p>
-            <p class="text-sm text-ink-muted">{{ e.department }} · {{ countryName() }}</p>
+            <button pButton type="button" data-testid="edit-button" (click)="edit()">
+              <app-icon name="pencil" class="mr-2" />Edit
+            </button>
           </div>
-          <p class="text-lg font-semibold tabular-nums text-ink">
-            {{ e.salary | money: e.currency }}
-          </p>
-          <p class="text-sm text-ink-muted">Hired {{ e.hireDate }}</p>
         </div>
-        <div class="mt-auto flex justify-between gap-2 pt-4">
-          <button pButton type="button" data-testid="edit-button" (click)="edit()">
-            <app-icon name="pencil" class="mr-2" />Edit
-          </button>
+
+        <!-- Delete apart from Edit, at the bottom: hard to hit by mistake (ADR-054). -->
+        <div
+          data-testid="danger-zone"
+          class="mt-auto flex items-center justify-between gap-3 rounded-xl border border-danger-line p-4"
+        >
+          <div>
+            <p class="text-sm font-medium text-ink">Delete employee</p>
+            <p class="text-xs text-ink-muted">Removes them from the Catalog and Insights.</p>
+          </div>
           <button
             pButton
             type="button"
@@ -123,176 +189,183 @@
           </div>
         }
 
-        <div>
-          <label for="field-fullName" class="text-sm font-medium text-ink">Full name</label>
-          <input
-            id="field-fullName"
-            data-testid="field-fullName"
-            formControlName="fullName"
-            autocomplete="off"
-            class="mt-1 w-full rounded-md border border-line-strong px-3 py-2 text-sm"
-            [attr.aria-invalid]="showError('fullName')"
-            aria-describedby="error-fullName"
-          />
-          <p
-            id="error-fullName"
-            data-testid="error-fullName"
-            aria-live="polite"
-            class="mt-1 text-xs text-danger"
-          >
-            {{ showError('fullName') ? errorText('fullName') : '' }}
-          </p>
-        </div>
+        <fieldset class="flex flex-col gap-3 rounded-xl border border-line p-4">
+          <legend class="px-1 text-sm font-semibold text-ink">Person</legend>
+          <div>
+            <label for="field-fullName" class="text-sm font-medium text-ink">Full name</label>
+            <input
+              id="field-fullName"
+              data-testid="field-fullName"
+              formControlName="fullName"
+              autocomplete="off"
+              class="mt-1 w-full rounded-lg border border-line-strong bg-card px-3 py-2 text-sm text-ink"
+              [attr.aria-invalid]="showError('fullName')"
+              aria-describedby="error-fullName"
+            />
+            <p
+              id="error-fullName"
+              data-testid="error-fullName"
+              aria-live="polite"
+              class="mt-1 text-xs text-danger"
+            >
+              {{ showError('fullName') ? errorText('fullName') : '' }}
+            </p>
+          </div>
+          <div>
+            <label for="field-email" class="text-sm font-medium text-ink">Email</label>
+            <input
+              id="field-email"
+              data-testid="field-email"
+              type="email"
+              formControlName="email"
+              autocomplete="off"
+              class="mt-1 w-full rounded-lg border border-line-strong bg-card px-3 py-2 text-sm text-ink"
+              [attr.aria-invalid]="showError('email')"
+              aria-describedby="error-email"
+            />
+            <p
+              id="error-email"
+              data-testid="error-email"
+              aria-live="polite"
+              class="mt-1 text-xs text-danger"
+            >
+              {{ showError('email') ? errorText('email') : '' }}
+            </p>
+          </div>
+        </fieldset>
+        <fieldset class="flex flex-col gap-3 rounded-xl border border-line p-4">
+          <legend class="px-1 text-sm font-semibold text-ink">Role</legend>
+          <div>
+            <label for="field-department" class="text-sm font-medium text-ink">Department</label>
+            <select
+              id="field-department"
+              data-testid="field-department"
+              formControlName="department"
+              class="mt-1 w-full rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
+              [attr.aria-invalid]="showError('department')"
+              aria-describedby="error-department"
+            >
+              <option value="">Choose a department</option>
+              @for (department of reference.departments(); track department.name) {
+                <option [value]="department.name">{{ department.name }}</option>
+              }
+            </select>
+            <p
+              id="error-department"
+              data-testid="error-department"
+              aria-live="polite"
+              class="mt-1 text-xs text-danger"
+            >
+              {{ showError('department') ? errorText('department') : '' }}
+            </p>
+          </div>
+          <div>
+            <label for="field-jobTitle" class="text-sm font-medium text-ink">Job title</label>
+            <select
+              id="field-jobTitle"
+              data-testid="field-jobTitle"
+              formControlName="jobTitle"
+              class="mt-1 w-full rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink disabled:bg-subtle"
+              [attr.aria-invalid]="showError('jobTitle')"
+              aria-describedby="error-jobTitle"
+            >
+              <option value="">
+                {{ department() ? 'Choose a job title' : 'Choose a department first' }}
+              </option>
+              @for (title of titleOptions(); track title) {
+                <option [value]="title">{{ title }}</option>
+              }
+            </select>
+            <p
+              id="error-jobTitle"
+              data-testid="error-jobTitle"
+              aria-live="polite"
+              class="mt-1 text-xs text-danger"
+            >
+              {{ showError('jobTitle') ? errorText('jobTitle') : '' }}
+            </p>
+          </div>
+          <div>
+            <label for="field-hireDate" class="text-sm font-medium text-ink">Hire date</label>
+            <input
+              id="field-hireDate"
+              data-testid="field-hireDate"
+              type="date"
+              formControlName="hireDate"
+              class="mt-1 w-full rounded-lg border border-line-strong bg-card px-3 py-2 text-sm text-ink"
+              [attr.min]="earliestHireDate"
+              [attr.max]="today"
+              [attr.aria-invalid]="showError('hireDate')"
+              aria-describedby="error-hireDate"
+            />
+            <p
+              id="error-hireDate"
+              data-testid="error-hireDate"
+              aria-live="polite"
+              class="mt-1 text-xs text-danger"
+            >
+              {{ showError('hireDate') ? errorText('hireDate') : '' }}
+            </p>
+          </div>
+        </fieldset>
+        <fieldset class="flex flex-col gap-3 rounded-xl border border-line p-4">
+          <legend class="px-1 text-sm font-semibold text-ink">Pay</legend>
+          <div>
+            <label for="field-countryCode" class="text-sm font-medium text-ink">Country</label>
+            <select
+              id="field-countryCode"
+              data-testid="field-countryCode"
+              formControlName="countryCode"
+              class="mt-1 w-full rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
+              [attr.aria-invalid]="showError('countryCode')"
+              aria-describedby="error-countryCode"
+            >
+              <option value="">Choose a country</option>
+              @for (country of reference.countries(); track country.code) {
+                <option [value]="country.code">{{ country.name }}</option>
+              }
+            </select>
+            <p
+              id="error-countryCode"
+              data-testid="error-countryCode"
+              aria-live="polite"
+              class="mt-1 text-xs text-danger"
+            >
+              {{ showError('countryCode') ? errorText('countryCode') : '' }}
+            </p>
+          </div>
+          <div>
+            <label for="field-salary" class="text-sm font-medium text-ink">
+              Annual salary
+              <!-- Currency follows the country; it is never an input (ADR-014). -->
+              <span data-testid="salary-currency" class="text-ink-muted">{{ currency() }}</span>
+            </label>
+            <input
+              id="field-salary"
+              data-testid="field-salary"
+              formControlName="salary"
+              inputmode="decimal"
+              autocomplete="off"
+              class="mt-1 w-full rounded-lg border border-line-strong bg-card px-3 py-2 text-sm text-ink tabular-nums"
+              [attr.aria-invalid]="showError('salary')"
+              aria-describedby="error-salary"
+            />
+            <p
+              id="error-salary"
+              data-testid="error-salary"
+              aria-live="polite"
+              class="mt-1 text-xs text-danger"
+            >
+              {{ showError('salary') ? errorText('salary') : '' }}
+            </p>
+          </div>
+        </fieldset>
 
-        <div>
-          <label for="field-email" class="text-sm font-medium text-ink">Email</label>
-          <input
-            id="field-email"
-            data-testid="field-email"
-            type="email"
-            formControlName="email"
-            autocomplete="off"
-            class="mt-1 w-full rounded-md border border-line-strong px-3 py-2 text-sm"
-            [attr.aria-invalid]="showError('email')"
-            aria-describedby="error-email"
-          />
-          <p
-            id="error-email"
-            data-testid="error-email"
-            aria-live="polite"
-            class="mt-1 text-xs text-danger"
-          >
-            {{ showError('email') ? errorText('email') : '' }}
-          </p>
-        </div>
-
-        <div>
-          <label for="field-department" class="text-sm font-medium text-ink">Department</label>
-          <select
-            id="field-department"
-            data-testid="field-department"
-            formControlName="department"
-            class="mt-1 w-full rounded-md border border-line-strong bg-card px-2 py-2 text-sm"
-            [attr.aria-invalid]="showError('department')"
-            aria-describedby="error-department"
-          >
-            <option value="">Choose a department</option>
-            @for (department of reference.departments(); track department.name) {
-              <option [value]="department.name">{{ department.name }}</option>
-            }
-          </select>
-          <p
-            id="error-department"
-            data-testid="error-department"
-            aria-live="polite"
-            class="mt-1 text-xs text-danger"
-          >
-            {{ showError('department') ? errorText('department') : '' }}
-          </p>
-        </div>
-
-        <div>
-          <label for="field-jobTitle" class="text-sm font-medium text-ink">Job title</label>
-          <select
-            id="field-jobTitle"
-            data-testid="field-jobTitle"
-            formControlName="jobTitle"
-            class="mt-1 w-full rounded-md border border-line-strong bg-card px-2 py-2 text-sm disabled:bg-subtle"
-            [attr.aria-invalid]="showError('jobTitle')"
-            aria-describedby="error-jobTitle"
-          >
-            <option value="">
-              {{ department() ? 'Choose a job title' : 'Choose a department first' }}
-            </option>
-            @for (title of titleOptions(); track title) {
-              <option [value]="title">{{ title }}</option>
-            }
-          </select>
-          <p
-            id="error-jobTitle"
-            data-testid="error-jobTitle"
-            aria-live="polite"
-            class="mt-1 text-xs text-danger"
-          >
-            {{ showError('jobTitle') ? errorText('jobTitle') : '' }}
-          </p>
-        </div>
-
-        <div>
-          <label for="field-countryCode" class="text-sm font-medium text-ink">Country</label>
-          <select
-            id="field-countryCode"
-            data-testid="field-countryCode"
-            formControlName="countryCode"
-            class="mt-1 w-full rounded-md border border-line-strong bg-card px-2 py-2 text-sm"
-            [attr.aria-invalid]="showError('countryCode')"
-            aria-describedby="error-countryCode"
-          >
-            <option value="">Choose a country</option>
-            @for (country of reference.countries(); track country.code) {
-              <option [value]="country.code">{{ country.name }}</option>
-            }
-          </select>
-          <p
-            id="error-countryCode"
-            data-testid="error-countryCode"
-            aria-live="polite"
-            class="mt-1 text-xs text-danger"
-          >
-            {{ showError('countryCode') ? errorText('countryCode') : '' }}
-          </p>
-        </div>
-
-        <div>
-          <label for="field-salary" class="text-sm font-medium text-ink">
-            Annual salary
-            <!-- Currency follows the country; it is never an input (ADR-014). -->
-            <span data-testid="salary-currency" class="text-ink-muted">{{ currency() }}</span>
-          </label>
-          <input
-            id="field-salary"
-            data-testid="field-salary"
-            formControlName="salary"
-            inputmode="decimal"
-            autocomplete="off"
-            class="mt-1 w-full rounded-md border border-line-strong px-3 py-2 text-sm tabular-nums"
-            [attr.aria-invalid]="showError('salary')"
-            aria-describedby="error-salary"
-          />
-          <p
-            id="error-salary"
-            data-testid="error-salary"
-            aria-live="polite"
-            class="mt-1 text-xs text-danger"
-          >
-            {{ showError('salary') ? errorText('salary') : '' }}
-          </p>
-        </div>
-
-        <div>
-          <label for="field-hireDate" class="text-sm font-medium text-ink">Hire date</label>
-          <input
-            id="field-hireDate"
-            data-testid="field-hireDate"
-            type="date"
-            formControlName="hireDate"
-            class="mt-1 w-full rounded-md border border-line-strong px-3 py-2 text-sm"
-            [attr.min]="earliestHireDate"
-            [attr.max]="today"
-            [attr.aria-invalid]="showError('hireDate')"
-            aria-describedby="error-hireDate"
-          />
-          <p
-            id="error-hireDate"
-            data-testid="error-hireDate"
-            aria-live="polite"
-            class="mt-1 text-xs text-danger"
-          >
-            {{ showError('hireDate') ? errorText('hireDate') : '' }}
-          </p>
-        </div>
-
-        <div class="mt-2 flex justify-between gap-2">
+        <!-- Stays in view at the bottom of the drawer while the fields scroll (ADR-054). -->
+        <div
+          data-testid="form-footer"
+          class="sticky bottom-0 -mx-1 mt-2 flex justify-between gap-2 border-t border-line bg-card px-1 py-3"
+        >
           <button
             pButton
             type="button"
