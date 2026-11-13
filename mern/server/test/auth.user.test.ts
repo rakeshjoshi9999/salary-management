@@ -76,6 +76,14 @@ describe('users', () => {
   });
 
   describe('seedHrManager', () => {
+    it('seedRejectsAWeakPassword', async () => {
+      await expect(seedHrManager({ email: 'hr@example.com', password: 'a' })).rejects.toThrow(
+        /password/i,
+      );
+
+      expect(await User.countDocuments()).toBe(0); // no account, least of all the top role
+    });
+
     it('seedCreatesTheHrManagerAndIsIdempotent', async () => {
       await seedHrManager({ email: 'hr@example.com', password: PASSWORD });
       await seedHrManager({ email: 'hr@example.com', password: PASSWORD });

@@ -1,6 +1,6 @@
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 import request from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../src/app.js';
 import { RefreshToken } from '../src/auth/refresh-token.model.js';
@@ -42,6 +42,10 @@ describe('the auth endpoints', () => {
     await RefreshToken.deleteMany({});
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   const app = (config: Config = testConfig()) =>
     createApp({ config, ping: async () => true, now: clock.now });
 
@@ -79,6 +83,16 @@ describe('the auth endpoints', () => {
         .send({ email: 'ANA@example.com', password: PASSWORD });
 
       expectProblem(res, 409, 'EMAIL_TAKEN');
+    });
+
+    it('registerRejectsAPasswordLongerThan72Bytes', async () => {
+      // 40 characters but 80 bytes: bcrypt would silently ignore everything after byte 72.
+      const res = await request(app())
+        .post('/auth/register')
+        .send({ email: 'ana@example.com', password: 'é'.repeat(40) });
+
+      expectProblem(res, 400, 'VALIDATION_FAILED');
+      expect(res.body.detail).toMatch(/password/i);
     });
 
     it.each([
@@ -207,18 +221,54 @@ describe('the auth endpoints', () => {
       expectProblem(afterwards, 401, 'INVALID_TOKEN'); // even the newest token died with the family
     });
 
-    it('twoSimultaneousRefreshesOfOneTokenYieldExactlyOneSuccess', async () => {
+    it('twoSimultaneousRefreshesOfOneTokenLeaveNoLiveToken', async () => {
       const { refreshToken } = await registerAndLogin(app(), 'ana@example.com');
+      const { familyId } = (await RefreshToken.findOne().lean())!;
 
-      // Both requests can read the token as unused; only an atomic update lets one of them win.
-      const [a, b] = await Promise.all([
+      // Both requests can read the token as unused; only an atomic update lets one of them win. Two
+      // parties held one token, so reuse detection must end the family however the race falls: the
+      // winner may get a 200 whose token is revoked a moment later, or be refused too.
+      const results = await Promise.all([
         request(app()).post('/auth/refresh').set('Cookie', withCookie(refreshToken)),
         request(app()).post('/auth/refresh').set('Cookie', withCookie(refreshToken)),
       ]);
 
-      const [winner, loser] = a.status === 200 ? [a, b] : [b, a];
-      expect(winner.status).toBe(200);
-      expectProblem(loser, 401, 'REFRESH_TOKEN_REUSED');
+      const refused = results.filter((res) => res.status !== 200);
+      expect(refused.length).toBeGreaterThanOrEqual(1); // never two successes
+      refused.forEach((res) => expectProblem(res, 401, 'REFRESH_TOKEN_REUSED'));
+      expect(await RefreshToken.countDocuments({ familyId })).toBe(0); // no live token survives
+    });
+
+    it('refreshRevokesItsSuccessorIfTheFamilyWasRevokedMidRotation', async () => {
+      const { refreshToken } = await registerAndLogin(app(), 'ana@example.com');
+      const { familyId } = (await RefreshToken.findOne().lean())!;
+      // A replay elsewhere revokes the family after this request claimed the token but before it
+      // stored its successor. Without a re-check, the successor would live on in a revoked family.
+      const create = RefreshToken.create.bind(RefreshToken) as (
+        ...args: unknown[]
+      ) => Promise<unknown>;
+      vi.spyOn(RefreshToken, 'create').mockImplementationOnce((async (...args: unknown[]) => {
+        await RefreshToken.deleteMany({ familyId });
+        return create(...args);
+      }) as never);
+
+      const res = await request(app())
+        .post('/auth/refresh')
+        .set('Cookie', withCookie(refreshToken));
+
+      expectProblem(res, 401, 'REFRESH_TOKEN_REUSED');
+      expect(await RefreshToken.countDocuments({ familyId })).toBe(0);
+    });
+
+    it('treatsAMalformedRefreshCookieAsNoToken', async () => {
+      // cookie-parser turns a `j:` cookie into an object; the server must not trust the type.
+      const malformed = 'refreshToken=j:{"a":1}';
+
+      const refresh = await request(app()).post('/auth/refresh').set('Cookie', malformed);
+      const logout = await request(app()).post('/auth/logout').set('Cookie', malformed);
+
+      expectProblem(refresh, 401, 'UNAUTHENTICATED');
+      expect(logout.status).toBe(204);
     });
 
     it('rejectsAnExpiredRefreshToken', async () => {
