@@ -5,6 +5,9 @@ export interface Config {
   mongodbUri: string;
   corsAllowedOrigins: string[];
   nodeEnv: 'development' | 'test' | 'production';
+  jwtAccessSecret: string;
+  accessTokenTtlSeconds: number;
+  refreshTokenTtlSeconds: number;
 }
 
 /** Every problem found in the environment, so one run shows all of them. */
@@ -50,5 +53,8 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     mongodbUri: MONGODB_URI,
     corsAllowedOrigins: CORS_ALLOWED_ORIGINS,
     nodeEnv: NODE_ENV,
+    jwtAccessSecret: '',
+    accessTokenTtlSeconds: 0,
+    refreshTokenTtlSeconds: 0,
   };
 }

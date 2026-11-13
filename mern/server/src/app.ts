@@ -10,6 +10,8 @@ export interface AppDeps {
   ping: () => Promise<boolean>;
   /** Routes mounted before the 404 and error handlers. */
   routes?: Router;
+  /** The clock, injected so tests control token expiry. Defaults to the real time. */
+  now?: () => Date;
 }
 
 /** Larger bodies get a 413. Set here, by the app, so it holds for every route. */

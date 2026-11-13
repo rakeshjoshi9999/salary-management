@@ -12,6 +12,9 @@ const config: Config = {
   mongodbUri: 'unused: these tests need no database',
   corsAllowedOrigins: [ALLOWED],
   nodeEnv: 'test',
+  jwtAccessSecret: 'unused: these tests need no tokens',
+  accessTokenTtlSeconds: 900,
+  refreshTokenTtlSeconds: 604800,
 };
 
 /** Routes that exist only to exercise the middleware around them. */

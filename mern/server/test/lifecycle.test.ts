@@ -34,6 +34,9 @@ describe('the server lifecycle', () => {
     mongodbUri: mongo.uri,
     corsAllowedOrigins: [],
     nodeEnv: 'test',
+    jwtAccessSecret: 'unused: these tests need no tokens',
+    accessTokenTtlSeconds: 900,
+    refreshTokenTtlSeconds: 604800,
   });
 
   it('reports UP on /health while MongoDB is connected', async () => {
