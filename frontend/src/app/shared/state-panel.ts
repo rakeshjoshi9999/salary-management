@@ -29,6 +29,17 @@ export type PanelState = 'loading' | 'empty' | 'error';
           }
         </div>
       } @else {
+        <span
+          data-testid="state-icon"
+          aria-hidden="true"
+          [class]="
+            state() === 'error'
+              ? 'mx-auto mb-3 grid size-11 place-items-center rounded-full bg-card text-danger'
+              : 'mx-auto mb-3 grid size-11 place-items-center rounded-full bg-subtle text-primary'
+          "
+        >
+          <app-icon [name]="state() === 'error' ? 'x-circle' : 'users'" size="1.35em" />
+        </span>
         <p [class]="state() === 'error' ? 'font-medium text-danger' : 'font-medium text-ink'">
           {{ message() }}
         </p>
@@ -83,9 +94,9 @@ export class StatePanel {
   protected readonly frame = computed(() => {
     switch (this.state()) {
       case 'error':
-        return 'rounded-md border border-danger-line bg-danger-soft p-6 text-center';
+        return 'rounded-2xl border border-danger-line bg-danger-soft p-8 text-center';
       case 'empty':
-        return 'rounded-md border border-line bg-card p-6 text-center';
+        return 'rounded-2xl border border-dashed border-line-strong bg-card p-8 text-center';
       default:
         return '';
     }

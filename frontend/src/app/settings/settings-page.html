@@ -1,7 +1,11 @@
 <section class="mx-auto max-w-2xl px-4">
   <app-page-header heading="Settings" />
 
-  <div class="rounded-md border border-line bg-card p-6">
+  <div data-testid="settings-card" class="rounded-2xl border border-line bg-card p-6 shadow-sm">
+    <h3 class="font-semibold text-ink">Default country</h3>
+    <p class="mt-1 mb-5 text-sm text-ink-muted">
+      Insights opens on this country. Picking another country on Insights does not change it.
+    </p>
     @if (status() === 'error') {
       <app-state-panel
         data-testid="settings-error"
@@ -25,7 +29,7 @@
           <select
             id="settings-country"
             data-testid="settings-country"
-            class="flex-1 rounded-md border border-line-strong bg-card px-2 py-2 text-sm"
+            class="flex-1 rounded-lg border border-line-strong bg-card px-3 py-2 text-sm text-ink"
             aria-describedby="settings-currency"
             [disabled]="saving()"
             (change)="choose($any($event.target).value)"
