@@ -11,9 +11,9 @@ const SCHEMES = ['light', 'dark'] as const;
 async function expectNoViolations(page: Page, scheme: (typeof SCHEMES)[number]): Promise<void> {
   // A dark run on a page that stayed light would check nothing about dark mode.
   if (scheme === 'dark') {
-    await expect(page.locator('html')).toHaveClass(/app-dark/);
+    await expect(page.locator('html')).toHaveClass(/\bapp-dark\b/);
   } else {
-    await expect(page.locator('html')).not.toHaveClass(/app-dark/);
+    await expect(page.locator('html')).not.toHaveClass(/\bapp-dark\b/);
   }
   // Contrast measured mid-fade is flaky: let entrances (drawer slide, skeletons) finish first.
   await page.waitForFunction(() =>
