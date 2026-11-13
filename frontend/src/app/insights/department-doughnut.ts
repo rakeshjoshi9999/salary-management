@@ -10,6 +10,9 @@ import { DepartmentHeadcount } from '../core/api.models';
  */
 const COLOURS = ['#2563eb', '#16a34a', '#ea580c', '#9333ea', '#0891b2', '#a16207'];
 
+export const LIGHT_SLICES: readonly string[] = COLOURS;
+export const DARK_SLICES: readonly string[] = COLOURS;
+
 /**
  * Headcount by department as a Chart.js doughnut (ADR-029). Angles are hard to compare, so the total
  * sits in the centre and the legend lists each department's count and share.

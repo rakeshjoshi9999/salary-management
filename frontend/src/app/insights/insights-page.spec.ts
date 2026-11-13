@@ -142,6 +142,38 @@ describe('InsightsPage', () => {
     insightsRequest('IN').flush(INDIA);
   });
 
+  it('lays out the metrics as a bento grid', async () => {
+    await showIndia();
+
+    const tiles = Array.from(
+      q('insights-bento')?.querySelectorAll('[data-testid^="stat-"], [data-testid^="tile-"]') ?? [],
+    ).map((tile) => tile.getAttribute('data-testid'));
+
+    expect(tiles).toEqual([
+      'stat-median',
+      'stat-headcount',
+      'stat-average',
+      'stat-min',
+      'stat-max',
+      'tile-titles',
+      'tile-departments',
+    ]);
+  });
+
+  it('explains the median in the hero tile', async () => {
+    await showIndia();
+
+    expect(text('stat-median')).toContain(
+      'Half of the 3,500 employees in India earn less than this.',
+    );
+  });
+
+  it('puts the country picker in the page header', async () => {
+    await showIndia();
+
+    expect(root().querySelector('app-page-header [data-testid="insights-country"]')).toBeTruthy();
+  });
+
   it('shows five cards: headcount, median, average, min and max', async () => {
     await showIndia();
 

@@ -163,4 +163,33 @@ describe('ThemeService', () => {
 
     expect(isDark()).toBe(true);
   });
+
+  describe('browser defaults', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    });
+
+    it('treats a missing matchMedia as a light OS', () => {
+      // As in jsdom and some old browsers; stubbed so a test-setup polyfill cannot hide the fallback.
+      vi.stubGlobal('matchMedia', undefined);
+      const matchMedia = TestBed.inject(MATCH_MEDIA);
+
+      const query = matchMedia('(prefers-color-scheme: dark)');
+
+      expect(query.matches).toBe(false);
+      expect(() => query.addEventListener('change', () => undefined)).not.toThrow();
+    });
+
+    it('keeps the choice in memory when localStorage is unreachable', () => {
+      vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+        throw new DOMException('Blocked', 'SecurityError');
+      });
+
+      const fallback = TestBed.inject(THEME_STORAGE);
+      fallback.setItem(THEME_STORAGE_KEY, 'dark');
+
+      expect(fallback.getItem(THEME_STORAGE_KEY)).toBe('dark');
+    });
+  });
 });
