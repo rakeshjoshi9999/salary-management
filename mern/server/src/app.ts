@@ -1,6 +1,8 @@
+import cors from 'cors';
 import express, { type Express, type Router } from 'express';
 
 import type { Config } from './config.js';
+import { createErrorHandler, notFound } from './problem.js';
 
 export interface AppDeps {
   config: Config;
@@ -10,6 +12,32 @@ export interface AppDeps {
   routes?: Router;
 }
 
-export function createApp(_deps: AppDeps): Express {
-  return express();
+/** Larger bodies get a 413. Set here, by the app, so it holds for every route. */
+export const BODY_LIMIT = '100kb';
+
+/**
+ * Builds the Express app without listening on a port. Keeping that apart is what makes it testable: a
+ * test calls the app directly, and `server.ts` is the only place that opens a socket. The order of
+ * `use` calls is the order requests flow through, so the 404 and error handlers come last.
+ */
+export function createApp({ config, ping, routes }: AppDeps): Express {
+  const app = express();
+  app.disable('x-powered-by'); // do not advertise the framework
+
+  app.use(cors({ origin: config.corsAllowedOrigins }));
+  app.use(express.json({ limit: BODY_LIMIT }));
+
+  app.get('/health', async (_req, res) => {
+    const up = await ping();
+    res.status(up ? 200 : 503).json({ status: up ? 'UP' : 'DOWN' });
+  });
+
+  if (routes) {
+    app.use(routes);
+  }
+
+  app.use(notFound);
+  // Expected errors are not logged; in tests nothing is, so a deliberate failure stays quiet.
+  app.use(createErrorHandler(config.nodeEnv === 'test' ? () => undefined : console.error));
+  return app;
 }
