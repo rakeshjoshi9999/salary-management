@@ -127,6 +127,7 @@ raising its budget (ADR-052). The full list is in [`AI_USAGE.md`](AI_USAGE.md#wh
 | ADR-052 | Trim the app shell under the default budget; the end-to-end job gates deploys | Accepted | 2026-10-26 |
 | ADR-053 | Phase 8: reviewer-first docs, live warm measurements, a supervised smoke test, an annotated history | Accepted | 2026-10-26 |
 | ADR-054 | UI redesign: refined top bar, Indigo preset, dark mode with a toggle, bento Insights | Accepted | 2026-11-13 |
+| ADR-055 | The Catalog keeps no sticky column header | Accepted | 2026-11-13 |
 
 ---
 
@@ -2145,6 +2146,33 @@ modes; components use token classes only, never raw colours. Icons stay inline L
   behaviour rules are unchanged except for the phone menu.
 - The README screenshots (ADR-053) go stale and are retaken in 8.12, before the demo video (8.5).
 - The theme choice is per browser: a new browser starts on System.
+
+---
+
+## ADR-055 — The Catalog keeps no sticky column header
+
+- **Date:** 2026-11-13
+- **Status:** Accepted
+- **Task:** 8.10. Supersedes the "sticky header" in ADR-054's Catalog row; the rest of ADR-054 stands.
+
+### Context
+ADR-054 chose a sticky table header for the Catalog. The page header above the table (title and Add
+employee) is already sticky, and its height varies as it wraps, so the column header has no fixed offset
+to stick at. The implementation review found the header left out without a record.
+
+### Options considered
+| Option | Cost | Chosen |
+|---|---|---|
+| **No sticky column header** | At 100 rows per page the column names and sort buttons scroll away; one scroll brings them back | Yes |
+| The table scrolls inside the card, its header sticky at the top of that area | A scroll area inside a scrolling page: two scrollbars, scroll trapping on touch and trackpads, harder keyboard scrolling | No |
+| Measure the page header at runtime and stick below it | Layout-measuring code and tests, a one-frame jump on resize, and PrimeNG's table container can still defeat sticky positioning | No |
+
+### Decision
+No sticky column header, by the engineer, on the AI's recommendation.
+
+### Consequences
+- The page header (title and Add employee) stays in view from tablet up; the column header does not.
+- Revisit if HR uses 100 rows per page and misses the headers.
 
 ---
 
