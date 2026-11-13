@@ -476,6 +476,23 @@ describe('CatalogPage', () => {
       listRequest().flush(page([ASHA]));
     });
 
+    it('keeps keyboard focus when a chip or Clear all disappears', async () => {
+      await open('/catalog?country=IN&department=Engineering');
+      await respond(page([ASHA]));
+
+      (byTestId('chip-remove-country') as HTMLButtonElement).click();
+      await settle();
+      listRequest().flush(page([ASHA]));
+      await settle();
+      expect(document.activeElement?.getAttribute('data-testid')).toBe('chip-remove-department');
+
+      (byTestId('clear-all-filters') as HTMLButtonElement).click();
+      await settle();
+      listRequest().flush(page([ASHA]));
+      await settle();
+      expect(document.activeElement?.getAttribute('data-testid')).toBe('search-input');
+    });
+
     it('hides the chip row and Clear all without filters', async () => {
       await open('/catalog?q=asha');
       await respond(page([ASHA]));

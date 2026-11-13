@@ -54,6 +54,14 @@ for (const scheme of SCHEMES) {
       await expectNoViolations(page, scheme);
     });
 
+    test('has no axe violations on a filtered Catalog with its chips', async ({ page }) => {
+      await page.goto('/catalog?country=IN&department=Engineering');
+      await page.getByTestId('filter-chips').waitFor();
+      await page.getByTestId('catalog-results').waitFor();
+
+      await expectNoViolations(page, scheme);
+    });
+
     test('has no axe violations on Settings', async ({ page }) => {
       await page.goto('/settings');
       await expect(page.getByTestId('settings-country')).toBeEnabled();
