@@ -141,3 +141,4 @@ can reach its database.
 - [x] **8.12** UI redesign, Settings and states; `UI_DESIGN.md` updated to the new screens; README screenshots
       retaken
 - [x] **8.13** Long cards scroll inside themselves from tablet up; no page scroll behind the open drawer (ADR-056)
+- [ ] **8.14** Insights fits one screen on a desktop; the job-title scroll area gets a transparent track (ADR-057)

@@ -129,6 +129,7 @@ raising its budget (ADR-052). The full list is in [`AI_USAGE.md`](AI_USAGE.md#wh
 | ADR-054 | UI redesign: refined top bar, Indigo preset, dark mode with a toggle, bento Insights | Accepted | 2026-11-13 |
 | ADR-055 | The Catalog keeps no sticky column header | Superseded by ADR-056 | 2026-11-13 |
 | ADR-056 | Long cards scroll inside themselves from tablet up | Accepted | 2026-11-13 |
+| ADR-057 | On a desktop screen the Insights page fits one screen | Accepted | 2026-11-13 |
 
 ---
 
@@ -2214,6 +2215,41 @@ least 600 px tall: a landscape phone is 640 px or more wide but too short, and a
 high, so those screens scroll the page instead. The offset above the card is 11.25 rem (top bar, page
 header and the page's bottom padding, with 4 px to spare), so a capped card leaves no page scrollbar
 beside its own. Both have tests.
+
+---
+
+## ADR-057 — On a desktop screen the Insights page fits one screen
+
+- **Date:** 2026-11-13
+- **Status:** Accepted
+- **Task:** 8.14. Amends ADR-056 for the job-title card; the Catalog rules of ADR-056 stand.
+
+### Context
+ADR-056 capped the job-title card at the screen height. That card starts below the median tiles, so a
+capped card still ran past the bottom and the page scrolled beside the card's own scroll. The engineer
+asked for the card to be sized so the Insights page does not scroll, and for its scroll area to lose a
+black strip: the browser's default scrollbar track, which is dark against the card in dark mode.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Card height | **Fill the space left below the tiles, with a minimum of 18 rem** (the page then fits one screen from 1024 px wide and 600 px tall, and a shorter screen scrolls the page rather than crushing the card) · a fixed height such as 28 rem (fits one screen size only: a gap on tall screens, page scroll on short ones) · shrink the tiles above to make room (a bigger redesign of 8.9, for the same effect) | Fill the remainder, with a minimum |
+| Where | **From 1024 px wide (the four-column layout); tablets and phones keep ADR-056's cap and page scroll**, because below 1024 px the layout stacks the median, four figures, the titles and the chart, which cannot fit one screen · every width | Desktop widths |
+| Scrollbar | **A thin scrollbar with a transparent track and a quiet thumb** (CSS `scrollbar-color` and `scrollbar-width`; no library) · hide the scrollbar (keyboard and mouse users lose the cue that it scrolls) · restyle through `::-webkit-scrollbar` (not Firefox) | Thin, transparent track |
+
+### Decision
+As chosen, to the engineer's request; the height rule and the widths are the AI's default for it, flagged
+to the engineer. The scrollbar styling is applied to the Insights job-title card only; the Catalog's
+inner scroll keeps the default scrollbar until the engineer asks.
+
+### Consequences
+- From 1024 px wide and 600 px tall the Insights grid is one screen high: 100 vh minus the top bar, the
+  page header and the page padding (11.25 rem), but at least 34 rem, so on a screen shorter than about
+  724 px the page scrolls a little instead of crushing the card.
+- The job-title card's height now depends on the tiles above it (the median tile sets about 240 px), so
+  a test measures the page at four screen sizes.
+- A banner above the page (cold start, reference error) pushes the page down by its height, and the
+  page scrolls by that much while it shows.
 
 ---
 
