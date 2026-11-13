@@ -6,153 +6,161 @@
   </app-page-header>
 
   <!-- One card: toolbar, active-filter chips, the list and its paginator (ADR-054). -->
-  <div class="rounded-2xl border border-line bg-card shadow-sm">
-    <!-- Search and filters. On phones the filters fold into a panel (UI_DESIGN.md). -->
-    <div class="flex flex-col gap-3 border-b border-line p-4 lg:flex-row lg:items-start">
-      <div class="flex-1">
-        <label for="catalog-search" class="sr-only">Search name or email</label>
-        <div class="relative">
-          <app-icon
-            name="search"
-            class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-muted"
-          />
-          <input
-            id="catalog-search"
-            data-testid="search-input"
-            type="search"
-            autocomplete="off"
-            placeholder="Search name or email"
-            maxlength="254"
-            class="w-full rounded-lg border border-line-strong bg-card py-2 pr-3 pl-9 text-sm text-ink placeholder:text-ink-muted"
-            aria-describedby="catalog-search-hint"
-            [value]="searchText()"
-            (input)="onSearchInput($event)"
-          />
+  <!-- From 640 px the card stops at the screen and only the rows scroll (ADR-056). Two grid rows: the
+       controls, and the list area, which takes the rest. 11.25rem is the top bar, the page header and the page's bottom padding, with 4 px to spare;
+       screens under 600 px tall scroll the page instead. -->
+  <div
+    data-testid="catalog-card"
+    class="rounded-2xl border border-line bg-card shadow-sm sm:grid sm:grid-rows-[auto_minmax(0,1fr)] sm:tall:max-h-[calc(100dvh-11.25rem)]"
+  >
+    <div>
+      <!-- Search and filters. On phones the filters fold into a panel (UI_DESIGN.md). -->
+      <div class="flex flex-col gap-3 border-b border-line p-4 lg:flex-row lg:items-start">
+        <div class="flex-1">
+          <label for="catalog-search" class="sr-only">Search name or email</label>
+          <div class="relative">
+            <app-icon
+              name="search"
+              class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-muted"
+            />
+            <input
+              id="catalog-search"
+              data-testid="search-input"
+              type="search"
+              autocomplete="off"
+              placeholder="Search name or email"
+              maxlength="254"
+              class="w-full rounded-lg border border-line-strong bg-card py-2 pr-3 pl-9 text-sm text-ink placeholder:text-ink-muted"
+              aria-describedby="catalog-search-hint"
+              [value]="searchText()"
+              (input)="onSearchInput($event)"
+            />
+          </div>
+          <div id="catalog-search-hint" aria-live="polite">
+            @if (searchHint()) {
+              <p data-testid="search-hint" class="mt-1 text-xs text-ink-muted">
+                Type at least 2 characters
+              </p>
+            }
+          </div>
         </div>
-        <div id="catalog-search-hint" aria-live="polite">
-          @if (searchHint()) {
-            <p data-testid="search-hint" class="mt-1 text-xs text-ink-muted">
-              Type at least 2 characters
-            </p>
-          }
-        </div>
-      </div>
 
-      <div class="flex gap-2 sm:hidden">
-        <button
-          type="button"
-          data-testid="filters-toggle"
-          class="flex-1 rounded-lg border border-line-strong bg-card px-3 py-2 text-sm text-ink"
-          [attr.aria-expanded]="filtersOpen()"
-          aria-controls="catalog-filters"
-          (click)="filtersOpen.set(!filtersOpen())"
-        >
-          Filters ({{ filterCount() }})
-        </button>
-        <label for="catalog-sort" class="sr-only">Sort</label>
-        <select
-          id="catalog-sort"
-          data-testid="sort-select"
-          class="flex-1 rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
-          [value]="sortValue()"
-          (change)="setSort($any($event.target).value)"
-        >
-          @for (option of sortOptions; track option.value) {
-            <option [value]="option.value" [selected]="option.value === sortValue()">
-              {{ option.label }}
-            </option>
-          }
-        </select>
-      </div>
-
-      <div
-        id="catalog-filters"
-        class="grid gap-2 sm:grid sm:grid-cols-3 lg:flex"
-        [class.hidden]="!filtersOpen()"
-      >
-        <label class="sr-only" for="filter-country">Country</label>
-        <select
-          id="filter-country"
-          data-testid="filter-country"
-          class="rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
-          [disabled]="!reference.ready()"
-          (change)="setCountry($any($event.target).value)"
-        >
-          <option value="">All countries</option>
-          @for (country of reference.countries(); track country.code) {
-            <option [value]="country.code" [selected]="country.code === query().country">
-              {{ country.name }}
-            </option>
-          }
-        </select>
-
-        <label class="sr-only" for="filter-department">Department</label>
-        <select
-          id="filter-department"
-          data-testid="filter-department"
-          class="rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
-          [disabled]="!reference.ready()"
-          (change)="setDepartment($any($event.target).value)"
-        >
-          <option value="">All departments</option>
-          @for (department of reference.departments(); track department.name) {
-            <option [value]="department.name" [selected]="department.name === query().department">
-              {{ department.name }}
-            </option>
-          }
-        </select>
-
-        <label class="sr-only" for="filter-title">Job title</label>
-        <select
-          id="filter-title"
-          data-testid="filter-title"
-          class="rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
-          [disabled]="!reference.ready()"
-          (change)="setTitle($any($event.target).value)"
-        >
-          <option value="">All job titles</option>
-          @for (title of titleOptions(); track title) {
-            <option [value]="title" [selected]="title === query().jobTitle">{{ title }}</option>
-          }
-        </select>
-      </div>
-    </div>
-
-    @if (chips().length > 0) {
-      <div
-        data-testid="filter-chips"
-        role="group"
-        aria-label="Active filters"
-        class="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3"
-      >
-        @for (chip of chips(); track chip.key) {
-          <span
-            [attr.data-testid]="'chip-' + chip.key"
-            class="inline-flex items-center gap-1 rounded-full bg-subtle py-1 pr-1 pl-3 text-sm text-ink"
+        <div class="flex gap-2 sm:hidden">
+          <button
+            type="button"
+            data-testid="filters-toggle"
+            class="flex-1 rounded-lg border border-line-strong bg-card px-3 py-2 text-sm text-ink"
+            [attr.aria-expanded]="filtersOpen()"
+            aria-controls="catalog-filters"
+            (click)="filtersOpen.set(!filtersOpen())"
           >
-            <span data-testid="chip-label">{{ chip.label }}</span>
-            <button
-              type="button"
-              [attr.id]="'chip-remove-' + chip.key"
-              [attr.data-testid]="'chip-remove-' + chip.key"
-              class="grid size-6 place-items-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-line-strong hover:text-ink"
-              [attr.aria-label]="'Remove filter ' + chip.label"
-              (click)="removeFilter(chip.key)"
-            >
-              <app-icon name="close" size="0.85em" />
-            </button>
-          </span>
-        }
-        <button
-          type="button"
-          data-testid="clear-all-filters"
-          class="ml-1 rounded-md px-2 py-1 text-sm font-medium text-primary hover:underline"
-          (click)="clearFilters()"
+            Filters ({{ filterCount() }})
+          </button>
+          <label for="catalog-sort" class="sr-only">Sort</label>
+          <select
+            id="catalog-sort"
+            data-testid="sort-select"
+            class="flex-1 rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
+            [value]="sortValue()"
+            (change)="setSort($any($event.target).value)"
+          >
+            @for (option of sortOptions; track option.value) {
+              <option [value]="option.value" [selected]="option.value === sortValue()">
+                {{ option.label }}
+              </option>
+            }
+          </select>
+        </div>
+
+        <div
+          id="catalog-filters"
+          class="grid gap-2 sm:grid sm:grid-cols-3 lg:flex"
+          [class.hidden]="!filtersOpen()"
         >
-          Clear all
-        </button>
+          <label class="sr-only" for="filter-country">Country</label>
+          <select
+            id="filter-country"
+            data-testid="filter-country"
+            class="rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
+            [disabled]="!reference.ready()"
+            (change)="setCountry($any($event.target).value)"
+          >
+            <option value="">All countries</option>
+            @for (country of reference.countries(); track country.code) {
+              <option [value]="country.code" [selected]="country.code === query().country">
+                {{ country.name }}
+              </option>
+            }
+          </select>
+
+          <label class="sr-only" for="filter-department">Department</label>
+          <select
+            id="filter-department"
+            data-testid="filter-department"
+            class="rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
+            [disabled]="!reference.ready()"
+            (change)="setDepartment($any($event.target).value)"
+          >
+            <option value="">All departments</option>
+            @for (department of reference.departments(); track department.name) {
+              <option [value]="department.name" [selected]="department.name === query().department">
+                {{ department.name }}
+              </option>
+            }
+          </select>
+
+          <label class="sr-only" for="filter-title">Job title</label>
+          <select
+            id="filter-title"
+            data-testid="filter-title"
+            class="rounded-lg border border-line-strong bg-card px-2 py-2 text-sm text-ink"
+            [disabled]="!reference.ready()"
+            (change)="setTitle($any($event.target).value)"
+          >
+            <option value="">All job titles</option>
+            @for (title of titleOptions(); track title) {
+              <option [value]="title" [selected]="title === query().jobTitle">{{ title }}</option>
+            }
+          </select>
+        </div>
       </div>
-    }
+
+      @if (chips().length > 0) {
+        <div
+          data-testid="filter-chips"
+          role="group"
+          aria-label="Active filters"
+          class="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3"
+        >
+          @for (chip of chips(); track chip.key) {
+            <span
+              [attr.data-testid]="'chip-' + chip.key"
+              class="inline-flex items-center gap-1 rounded-full bg-subtle py-1 pr-1 pl-3 text-sm text-ink"
+            >
+              <span data-testid="chip-label">{{ chip.label }}</span>
+              <button
+                type="button"
+                [attr.id]="'chip-remove-' + chip.key"
+                [attr.data-testid]="'chip-remove-' + chip.key"
+                class="grid size-6 place-items-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-line-strong hover:text-ink"
+                [attr.aria-label]="'Remove filter ' + chip.label"
+                (click)="removeFilter(chip.key)"
+              >
+                <app-icon name="close" size="0.85em" />
+              </button>
+            </span>
+          }
+          <button
+            type="button"
+            data-testid="clear-all-filters"
+            class="ml-1 rounded-md px-2 py-1 text-sm font-medium text-primary hover:underline"
+            (click)="clearFilters()"
+          >
+            Clear all
+          </button>
+        </div>
+      }
+    </div>
 
     @if (status() === 'error') {
       <div class="p-4">
@@ -211,12 +219,18 @@
         data-testid="catalog-results"
         [attr.data-loading]="status() === 'loading'"
         [attr.aria-busy]="status() === 'loading'"
-        class="transition-opacity duration-150"
+        class="transition-opacity duration-150 sm:grid sm:min-h-0 sm:grid-rows-[minmax(0,1fr)_auto]"
         [class.opacity-50]="status() === 'loading'"
       >
         <!-- Desktop and tablet: a table. Phones: cards. Both render; CSS shows one (ADR-051). -->
-        <div class="hidden sm:block">
-          <p-table [value]="rows()" dataKey="id" styleClass="text-sm">
+        <div class="hidden sm:block sm:min-h-0 sm:overflow-hidden">
+          <p-table
+            [value]="rows()"
+            dataKey="id"
+            styleClass="text-sm"
+            [scrollable]="true"
+            scrollHeight="flex"
+          >
             <ng-template #header>
               <tr>
                 <th scope="col" class="!pl-4" [attr.aria-sort]="ariaSort('fullName')">

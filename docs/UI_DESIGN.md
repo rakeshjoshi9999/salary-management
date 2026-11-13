@@ -80,7 +80,9 @@ wireframe truncates amounts for space; the screen shows them in full.
   wrapping, sized so the API's longest amount (`999,999,999,999.99`) fits; tested at 390, 768, 1024
   and 1280 px.
 - **Average by job title** is a table with CSS bars (ADR-029): title and department · headcount on the
-  left, the amount beside them, the bar below. Sorted by average, highest first (ADR-017).
+  left, the amount beside them, the bar below. Sorted by average, highest first (ADR-017). From 640 px
+  (on screens at least 600 px tall) the card is no taller than the screen: its title stays and the table scrolls inside, as a named,
+  keyboard-focusable region (ADR-056).
 - **Headcount by department** is a Chart.js doughnut (ADR-029) with the total in the centre and a legend
   of count and share. Its colours follow the theme (600s on white, 400s on slate-900, each at least 3:1).
 - Changing the country updates `?country=` only. It does **not** change the saved default.
@@ -113,7 +115,10 @@ Phone: the same card with search, `[Filters (2)] [Sort v]`, the chips, then rows
   previous one; after Clear all, to the search box. With only a search and no matches, the empty state offers **Clear search** instead.
 - **Rows and cards have initials avatars** (first and last name), hidden from screen readers.
 - **The employee open in the drawer is marked:** `aria-current="true"` and a highlighted row.
-- The column header does not stick (ADR-055); the page header does, from 640 px.
+- **From 640 px, on screens at least 600 px tall, the card stops at the screen height and only the rows
+  scroll** (ADR-056): the toolbar and
+  chips stay on top, the column header sticks above the rows, and the range text and paginator stay
+  pinned at the bottom. The page header sticks too. On phones, and on short landscape screens, the page scrolls as one.
 - **Search** is debounced (300 ms) and only sent at 2+ characters (ADR-016). One character shows the
   hint "Type at least 2 characters" and keeps the previous results.
 - **Filters** have one value each. Picking a department narrows the title dropdown to that

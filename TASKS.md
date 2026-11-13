@@ -140,4 +140,4 @@ can reach its database.
 - [x] **8.11** UI redesign, drawer: profile header, salary block, tenure, grouped form, danger area for Delete
 - [x] **8.12** UI redesign, Settings and states; `UI_DESIGN.md` updated to the new screens; README screenshots
       retaken
-- [ ] **8.13** Long cards scroll inside themselves from tablet up; no page scroll behind the open drawer (ADR-056)
+- [x] **8.13** Long cards scroll inside themselves from tablet up; no page scroll behind the open drawer (ADR-056)

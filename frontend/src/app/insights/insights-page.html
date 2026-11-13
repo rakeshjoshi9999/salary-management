@@ -104,48 +104,57 @@
 
         <section
           data-testid="tile-titles"
-          class="rounded-2xl border border-line bg-card p-5 shadow-sm md:col-span-2"
+          class="flex flex-col rounded-2xl border border-line bg-card p-5 shadow-sm sm:tall:max-h-[calc(100dvh-11.25rem)] md:col-span-2"
         >
           <h3 class="font-semibold text-ink">Average salary by job title</h3>
           <p class="text-sm text-ink-muted">{{ data.currency }}, highest first</p>
           <!-- A table with CSS bars: labelled rows read better than a chart (ADR-029). The amount
                sits beside the title and the bar below it, so neither shares a narrow column. -->
-          <table class="mt-4 w-full text-sm">
-            <thead class="sr-only">
-              <tr>
-                <th scope="col">Job title</th>
-                <th scope="col">Average salary</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of titleRows(); track row.jobTitle) {
-                <tr data-testid="title-row" class="align-top">
-                  <th scope="row" class="w-full py-2 pr-3 text-left font-normal">
-                    <span data-testid="title-name" class="block font-medium text-ink">{{
-                      row.jobTitle
-                    }}</span>
-                    <span class="block text-xs text-ink-muted"
-                      >{{ row.department }} · {{ row.headcount | number }}</span
-                    >
-                    <div class="mt-1.5 h-2 rounded-full bg-subtle" aria-hidden="true">
-                      <div
-                        data-testid="title-bar"
-                        class="h-2 origin-left animate-grow-x rounded-full bg-primary"
-                        [style.width]="row.width"
-                      ></div>
-                    </div>
-                  </th>
-                  <td class="py-2 text-right">
-                    <span
-                      data-testid="title-amount"
-                      class="whitespace-nowrap font-medium tabular-nums text-ink"
-                      >{{ row.average | money: data.currency }}</span
-                    >
-                  </td>
+          <!-- From 640 px the card stops at the screen and the table scrolls under the fixed title (ADR-056). -->
+          <div
+            data-testid="title-scroll"
+            role="region"
+            aria-label="Average salary by job title"
+            tabindex="0"
+            class="mt-4 min-h-0 flex-1 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:overflow-y-auto"
+          >
+            <table class="w-full text-sm">
+              <thead class="sr-only">
+                <tr>
+                  <th scope="col">Job title</th>
+                  <th scope="col">Average salary</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (row of titleRows(); track row.jobTitle) {
+                  <tr data-testid="title-row" class="align-top">
+                    <th scope="row" class="w-full py-2 pr-3 text-left font-normal">
+                      <span data-testid="title-name" class="block font-medium text-ink">{{
+                        row.jobTitle
+                      }}</span>
+                      <span class="block text-xs text-ink-muted"
+                        >{{ row.department }} · {{ row.headcount | number }}</span
+                      >
+                      <div class="mt-1.5 h-2 rounded-full bg-subtle" aria-hidden="true">
+                        <div
+                          data-testid="title-bar"
+                          class="h-2 origin-left animate-grow-x rounded-full bg-primary"
+                          [style.width]="row.width"
+                        ></div>
+                      </div>
+                    </th>
+                    <td class="py-2 text-right">
+                      <span
+                        data-testid="title-amount"
+                        class="whitespace-nowrap font-medium tabular-nums text-ink"
+                        >{{ row.average | money: data.currency }}</span
+                      >
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section

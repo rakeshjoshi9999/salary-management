@@ -19,6 +19,9 @@
 /* `dark:` follows the class ThemeService puts on <html>, not the OS (ADR-054). */
 @custom-variant dark (&:where(.app-dark, .app-dark *));
 
+/* Screens tall enough for a card capped at the screen height (ADR-056); shorter ones scroll the page. */
+@custom-variant tall (@media (min-height: 600px));
+
 /*
  * The app's colour tokens (ADR-054). Templates use these, never raw palette classes: PrimeNG's
  * --p-surface-* keep the same order in both modes, so `bg-surface-0` would stay white in dark.

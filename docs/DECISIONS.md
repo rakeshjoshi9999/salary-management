@@ -2209,6 +2209,12 @@ flex scrolling, which also makes its header sticky, so ADR-055 is superseded.
 - The cap depends on the heights above the card (top bar, page header); a test checks the card ends
   inside the viewport at desktop width.
 
+**Addendum (2026-11-13, found in the 8.13 implementation review).** The cap applies only to screens at
+least 600 px tall: a landscape phone is 640 px or more wide but too short, and a cap left its rows 25 px
+high, so those screens scroll the page instead. The offset above the card is 11.25 rem (top bar, page
+header and the page's bottom padding, with 4 px to spare), so a capped card leaves no page scrollbar
+beside its own. Both have tests.
+
 ---
 
 ### Previously pending
