@@ -127,7 +127,8 @@ raising its budget (ADR-052). The full list is in [`AI_USAGE.md`](AI_USAGE.md#wh
 | ADR-052 | Trim the app shell under the default budget; the end-to-end job gates deploys | Accepted | 2026-10-26 |
 | ADR-053 | Phase 8: reviewer-first docs, live warm measurements, a supervised smoke test, an annotated history | Accepted | 2026-10-26 |
 | ADR-054 | UI redesign: refined top bar, Indigo preset, dark mode with a toggle, bento Insights | Accepted | 2026-11-13 |
-| ADR-055 | The Catalog keeps no sticky column header | Accepted | 2026-11-13 |
+| ADR-055 | The Catalog keeps no sticky column header | Superseded by ADR-056 | 2026-11-13 |
+| ADR-056 | Long cards scroll inside themselves from tablet up | Accepted | 2026-11-13 |
 
 ---
 
@@ -2152,7 +2153,7 @@ modes; components use token classes only, never raw colours. Icons stay inline L
 ## ADR-055 — The Catalog keeps no sticky column header
 
 - **Date:** 2026-11-13
-- **Status:** Accepted
+- **Status:** Superseded by ADR-056
 - **Task:** 8.10. Supersedes the "sticky header" in ADR-054's Catalog row; the rest of ADR-054 stands.
 
 ### Context
@@ -2173,6 +2174,40 @@ No sticky column header, by the engineer, on the AI's recommendation.
 ### Consequences
 - The page header (title and Add employee) stays in view from tablet up; the column header does not.
 - Revisit if HR uses 100 rows per page and misses the headers.
+
+---
+
+## ADR-056 — Long cards scroll inside themselves from tablet up
+
+- **Date:** 2026-11-13
+- **Status:** Accepted
+- **Task:** 8.13. Supersedes ADR-055 (no sticky column header); amends ADR-054's Catalog and Insights rows.
+
+### Context
+After the redesign went live, the engineer found the Catalog card and the "Average salary by job title"
+card running far past the bottom of the screen, and asked for both to stop at the screen height and
+scroll inside. They also found the page behind the open drawer still scrolled. ADR-055 had rejected
+in-card scrolling for its double scrollbars and touch trapping; the engineer now chose it for tablets and
+desktops, where neither cost applies much.
+
+### Options considered
+| Decision | Options | Chosen |
+|---|---|---|
+| Where | **From 640 px only; phones keep normal page scrolling** · everywhere, phones included (a short card, swipes trapped between card and page, bottom tabs eating space) | Tablet and desktop |
+| What stays fixed in the Catalog card | **Toolbar and chips at the top, the column header sticky at the top of the rows, the range text and paginator pinned at the bottom; only rows scroll** · only the toolbar fixed (pager at the end of the scroll) · the whole card scrolls (search scrolls away) | Rows only |
+| Job-title card | **Title fixed, the table scrolls, capped at the screen height** (the AI's default, stated to the engineer) | Title fixed |
+| Scroll behind the drawer | **Block page scroll while the modal drawer is open** (a bug, not a choice) | Blocked |
+
+### Decision
+As chosen above, by the engineer, each on the AI's recommendation. The Catalog table uses PrimeNG's
+flex scrolling, which also makes its header sticky, so ADR-055 is superseded.
+
+### Consequences
+- On tablets and desktops the Catalog and the job-title card each fit the screen; their rows scroll
+  inside. Keyboard users scroll them with the arrow keys once a row link has focus.
+- Phones are unchanged: one page scroll, as in ADR-054.
+- The cap depends on the heights above the card (top bar, page header); a test checks the card ends
+  inside the viewport at desktop width.
 
 ---
 
