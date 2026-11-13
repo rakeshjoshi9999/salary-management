@@ -35,7 +35,7 @@ describe('the app', () => {
   it('answers an unknown route with a 404 Problem Details', async () => {
     const res = await request(app()).get('/nope');
 
-    expectProblem(res, 404);
+    expectProblem(res, 404, 'NOT_FOUND');
   });
 
   it('answers malformed JSON with a 400 Problem Details, not an HTML page', async () => {
@@ -44,7 +44,7 @@ describe('the app', () => {
       .set('Content-Type', 'application/json')
       .send('{"a":');
 
-    expectProblem(res, 400);
+    expectProblem(res, 400, 'INVALID_JSON');
     expect(res.body.detail).toMatch(/json/i);
   });
 
@@ -59,14 +59,14 @@ describe('the app', () => {
     const big = await post('x'.repeat(150_000));
 
     expect(small.status).toBe(200);
-    expectProblem(big, 413);
+    expectProblem(big, 413, 'PAYLOAD_TOO_LARGE');
     expect(big.body.detail).toMatch(/too large|limit/i);
   });
 
   it('answers an unexpected error with a generic 500 and no stack trace', async () => {
     const res = await request(app()).get('/boom');
 
-    expectProblem(res, 500);
+    expectProblem(res, 500, 'INTERNAL_ERROR');
     expect(res.text).not.toContain('secret internal detail');
     expect(res.body).not.toHaveProperty('stack');
     expect(res.text).not.toMatch(/\bat .+:\d+:\d+/); // a stack frame, e.g. 'at fn (file.ts:1:2)'
@@ -75,7 +75,7 @@ describe('the app', () => {
   it('sends a rejected async handler to the error middleware (Express 5)', async () => {
     const res = await request(app()).get('/reject');
 
-    expectProblem(res, 500);
+    expectProblem(res, 500, 'INTERNAL_ERROR');
     expect(res.text).not.toContain('secret async detail');
   });
 
