@@ -207,6 +207,20 @@ describe('the auth endpoints', () => {
       expectProblem(afterwards, 401, 'INVALID_TOKEN'); // even the newest token died with the family
     });
 
+    it('twoSimultaneousRefreshesOfOneTokenYieldExactlyOneSuccess', async () => {
+      const { refreshToken } = await registerAndLogin(app(), 'ana@example.com');
+
+      // Both requests can read the token as unused; only an atomic update lets one of them win.
+      const [a, b] = await Promise.all([
+        request(app()).post('/auth/refresh').set('Cookie', withCookie(refreshToken)),
+        request(app()).post('/auth/refresh').set('Cookie', withCookie(refreshToken)),
+      ]);
+
+      const [winner, loser] = a.status === 200 ? [a, b] : [b, a];
+      expect(winner.status).toBe(200);
+      expectProblem(loser, 401, 'REFRESH_TOKEN_REUSED');
+    });
+
     it('rejectsAnExpiredRefreshToken', async () => {
       const { refreshToken } = await registerAndLogin(app(), 'ana@example.com');
       clock.advance((7 * 24 * 60 * 60 + 1) * 1000);
