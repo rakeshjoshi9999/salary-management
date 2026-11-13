@@ -5,3 +5,4 @@ coverage/
 *.log
 /docs
 DECISIONS.md
+!.env.example
