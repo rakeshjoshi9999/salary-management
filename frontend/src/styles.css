@@ -2,7 +2,7 @@
  * Tailwind 4 is configured in CSS, not a JS config file.
  *
  * tailwindcss-primeui exposes PrimeNG's theme tokens as Tailwind utilities,
- * so `bg-surface-50` and `text-primary` follow the active PrimeNG preset
+ * so `bg-primary` and `text-primary` follow the active PrimeNG preset
  * instead of being a second, drifting palette.
  *
  * Layer order is declared in app.config.ts via PrimeNG's cssLayer option:
@@ -15,3 +15,91 @@
 
 /* Playwright selectors in e2e/ look like class names; keep them out of the scan. */
 @source not "../e2e";
+
+/* `dark:` follows the class ThemeService puts on <html>, not the OS (ADR-054). */
+@custom-variant dark (&:where(.app-dark, .app-dark *));
+
+/*
+ * The app's colour tokens (ADR-054). Templates use these, never raw palette classes: PrimeNG's
+ * --p-surface-* keep the same order in both modes, so `bg-surface-0` would stay white in dark.
+ * Light is slate on a slate-50 page; dark is slate on a slate-950 page. Each text token passes
+ * 4.5:1 on card, canvas and subtle in its mode.
+ */
+:root {
+  color-scheme: light;
+  --app-canvas: #f8fafc; /* slate-50 */
+  --app-card: #ffffff;
+  --app-subtle: #f1f5f9; /* slate-100 */
+  --app-line: #e2e8f0; /* slate-200 */
+  --app-line-strong: #cbd5e1; /* slate-300 */
+  --app-ink: #0f172a; /* slate-900 */
+  --app-ink-muted: #475569; /* slate-600 */
+  --app-danger: #b91c1c; /* red-700 */
+  --app-danger-soft: #fef2f2; /* red-50 */
+  --app-danger-line: #fecaca; /* red-200 */
+  --app-warn: #92400e; /* amber-800 */
+  --app-warn-soft: #fffbeb; /* amber-50 */
+  --app-warn-line: #fde68a; /* amber-200 */
+  --app-success: #15803d; /* green-700 */
+}
+
+.app-dark {
+  color-scheme: dark;
+  --app-canvas: #020617; /* slate-950 */
+  --app-card: #0f172a; /* slate-900 */
+  --app-subtle: #1e293b; /* slate-800 */
+  --app-line: #1e293b; /* slate-800 */
+  --app-line-strong: #334155; /* slate-700 */
+  --app-ink: #f1f5f9; /* slate-100 */
+  --app-ink-muted: #cbd5e1; /* slate-300 */
+  --app-danger: #fca5a5; /* red-300 */
+  --app-danger-soft: #450a0a; /* red-950 */
+  --app-danger-line: #7f1d1d; /* red-900 */
+  --app-warn: #fcd34d; /* amber-300 */
+  --app-warn-soft: #451a03; /* amber-950 */
+  --app-warn-line: #78350f; /* amber-900 */
+  --app-success: #4ade80; /* green-400 */
+}
+
+@theme inline {
+  --color-canvas: var(--app-canvas);
+  --color-card: var(--app-card);
+  --color-subtle: var(--app-subtle);
+  --color-line: var(--app-line);
+  --color-line-strong: var(--app-line-strong);
+  --color-ink: var(--app-ink);
+  --color-ink-muted: var(--app-ink-muted);
+  --color-danger: var(--app-danger);
+  --color-danger-soft: var(--app-danger-soft);
+  --color-danger-line: var(--app-danger-line);
+  --color-warn: var(--app-warn);
+  --color-warn-soft: var(--app-warn-soft);
+  --color-warn-line: var(--app-warn-line);
+  --color-success: var(--app-success);
+}
+
+@theme {
+  --font-sans:
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: var(--app-canvas);
+    color: var(--app-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Motion is decoration here: with reduced motion, everything moves instantly (ADR-054). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}

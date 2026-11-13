@@ -1,12 +1,12 @@
-<section class="mx-auto max-w-7xl px-4 pt-6">
-  <h2 class="sr-only">Insights</h2>
+<section class="mx-auto max-w-7xl px-4">
+  <app-page-header heading="Insights" />
 
   <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-    <label for="insights-country" class="text-sm font-medium text-surface-800">Country</label>
+    <label for="insights-country" class="text-sm font-medium text-ink">Country</label>
     <select
       id="insights-country"
       data-testid="insights-country"
-      class="rounded-md border border-surface-300 bg-surface-0 px-2 py-2 text-sm sm:w-64"
+      class="rounded-md border border-line-strong bg-card px-2 py-2 text-sm sm:w-64"
       [disabled]="!reference.ready()"
       (change)="chooseCountry($any($event.target).value)"
     >
@@ -43,9 +43,9 @@
     } @else if (empty()) {
       <div
         data-testid="insights-empty"
-        class="rounded-md border border-surface-200 bg-surface-0 p-6 text-center"
+        class="rounded-md border border-line bg-card p-6 text-center"
       >
-        <p class="font-medium text-surface-900">No employees in {{ countryName() }} yet</p>
+        <p class="font-medium text-ink">No employees in {{ countryName() }} yet</p>
         <a routerLink="/catalog" class="mt-2 inline-block text-sm text-primary underline"
           >Go to the Catalog</a
         >
@@ -54,50 +54,41 @@
       @if (insights(); as data) {
         <!-- Stat cards: money in full, wrapping rather than abbreviating (UI_DESIGN.md). -->
         <dl class="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <div
-            data-testid="stat-headcount"
-            class="rounded-md border border-surface-200 bg-surface-0 p-4"
-          >
-            <dt class="text-xs font-medium uppercase text-surface-600">Headcount</dt>
-            <dd class="mt-1 text-2xl font-semibold tabular-nums text-surface-900">
+          <div data-testid="stat-headcount" class="rounded-md border border-line bg-card p-4">
+            <dt class="text-xs font-medium uppercase text-ink-muted">Headcount</dt>
+            <dd class="mt-1 text-2xl font-semibold tabular-nums text-ink">
               {{ data.salary.headcount | number }}
             </dd>
           </div>
-          <div
-            data-testid="stat-median"
-            class="rounded-md border border-surface-200 bg-surface-0 p-4"
-          >
-            <dt class="text-xs font-medium uppercase text-surface-600">Median</dt>
-            <dd class="mt-1 break-words font-semibold tabular-nums text-surface-900">
+          <div data-testid="stat-median" class="rounded-md border border-line bg-card p-4">
+            <dt class="text-xs font-medium uppercase text-ink-muted">Median</dt>
+            <dd class="mt-1 break-words font-semibold tabular-nums text-ink">
               {{ data.salary.median | money: data.currency }}
             </dd>
           </div>
-          <div
-            data-testid="stat-average"
-            class="rounded-md border border-surface-200 bg-surface-0 p-4"
-          >
-            <dt class="text-xs font-medium uppercase text-surface-600">Average</dt>
-            <dd class="mt-1 break-words font-semibold tabular-nums text-surface-900">
+          <div data-testid="stat-average" class="rounded-md border border-line bg-card p-4">
+            <dt class="text-xs font-medium uppercase text-ink-muted">Average</dt>
+            <dd class="mt-1 break-words font-semibold tabular-nums text-ink">
               {{ data.salary.average | money: data.currency }}
             </dd>
           </div>
-          <div data-testid="stat-min" class="rounded-md border border-surface-200 bg-surface-0 p-4">
-            <dt class="text-xs font-medium uppercase text-surface-600">Min</dt>
-            <dd class="mt-1 break-words font-semibold tabular-nums text-surface-900">
+          <div data-testid="stat-min" class="rounded-md border border-line bg-card p-4">
+            <dt class="text-xs font-medium uppercase text-ink-muted">Min</dt>
+            <dd class="mt-1 break-words font-semibold tabular-nums text-ink">
               {{ data.salary.min | money: data.currency }}
             </dd>
           </div>
-          <div data-testid="stat-max" class="rounded-md border border-surface-200 bg-surface-0 p-4">
-            <dt class="text-xs font-medium uppercase text-surface-600">Max</dt>
-            <dd class="mt-1 break-words font-semibold tabular-nums text-surface-900">
+          <div data-testid="stat-max" class="rounded-md border border-line bg-card p-4">
+            <dt class="text-xs font-medium uppercase text-ink-muted">Max</dt>
+            <dd class="mt-1 break-words font-semibold tabular-nums text-ink">
               {{ data.salary.max | money: data.currency }}
             </dd>
           </div>
         </dl>
 
         <div class="mt-6 grid gap-6 lg:grid-cols-2">
-          <section class="rounded-md border border-surface-200 bg-surface-0 p-4">
-            <h3 class="font-semibold text-surface-900">
+          <section class="rounded-md border border-line bg-card p-4">
+            <h3 class="font-semibold text-ink">
               Average salary by job title ({{ data.currency }})
             </h3>
             <!-- A table with CSS bars: labelled rows read better than a chart (ADR-029). -->
@@ -110,24 +101,24 @@
               </thead>
               <tbody>
                 @for (row of titleRows(); track row.jobTitle) {
-                  <tr data-testid="title-row" class="border-b border-surface-100 last:border-0">
+                  <tr data-testid="title-row" class="border-b border-line last:border-0">
                     <th scope="row" class="py-2 pr-3 text-left align-top font-normal">
-                      <span data-testid="title-name" class="block font-medium text-surface-900">{{
+                      <span data-testid="title-name" class="block font-medium text-ink">{{
                         row.jobTitle
                       }}</span>
-                      <span class="block text-xs text-surface-600"
+                      <span class="block text-xs text-ink-muted"
                         >{{ row.department }} · {{ row.headcount | number }}</span
                       >
                     </th>
                     <td class="w-1/2 py-2 align-top">
-                      <div class="h-3 rounded bg-surface-100" aria-hidden="true">
+                      <div class="h-3 rounded bg-subtle" aria-hidden="true">
                         <div
                           data-testid="title-bar"
                           class="h-3 rounded bg-primary"
                           [style.width]="row.width"
                         ></div>
                       </div>
-                      <span class="mt-1 block text-right tabular-nums text-surface-800">{{
+                      <span class="mt-1 block text-right tabular-nums text-ink">{{
                         row.average | money: data.currency
                       }}</span>
                     </td>
@@ -137,8 +128,8 @@
             </table>
           </section>
 
-          <section class="rounded-md border border-surface-200 bg-surface-0 p-4">
-            <h3 class="font-semibold text-surface-900">Headcount by department</h3>
+          <section class="rounded-md border border-line bg-card p-4">
+            <h3 class="font-semibold text-ink">Headcount by department</h3>
             <app-department-doughnut
               [departments]="data.headcountByDepartment"
               [total]="data.salary.headcount"

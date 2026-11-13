@@ -1,87 +1,64 @@
-<div class="min-h-screen bg-surface-50 pb-16">
-  <header class="border-b border-surface-200 bg-surface-0">
-    <div class="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3">
+<div class="min-h-screen bg-canvas pb-24 sm:pb-10">
+  <header class="sticky top-0 z-30 border-b border-line bg-card/85 backdrop-blur">
+    <div class="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4">
       <!-- The one h1 lives in the shell, so a routed page cannot add a second. -->
-      <h1 class="text-lg font-semibold tracking-tight text-surface-900">
-        <a routerLink="/">Salary Management</a>
+      <h1 class="shrink-0 text-base font-semibold tracking-tight">
+        <a
+          routerLink="/"
+          data-testid="brand"
+          class="flex items-center gap-2.5 rounded-md text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+        >
+          <span
+            class="grid size-8 place-items-center rounded-lg bg-primary text-primary-contrast shadow-sm"
+          >
+            <app-icon name="wallet" size="1.05em" />
+          </span>
+          Salary Management
+        </a>
       </h1>
 
-      <nav
-        data-testid="top-nav"
-        aria-label="Main"
-        class="ml-auto hidden items-center gap-1 sm:flex"
-      >
-        @for (link of links; track link.path) {
-          <a
-            [routerLink]="link.path"
-            routerLinkActive="bg-surface-100 text-surface-900"
-            [routerLinkActiveOptions]="{ exact: link.exact }"
-            ariaCurrentWhenActive="page"
-            class="rounded-md px-3 py-2 text-sm font-medium text-surface-600 hover:text-surface-900"
-            >{{ link.label }}</a
-          >
-        }
+      <nav data-testid="top-nav" aria-label="Main" class="hidden flex-1 items-center sm:flex">
+        <div class="flex items-center gap-1 rounded-full border border-line bg-subtle p-1">
+          @for (link of links; track link.path) {
+            <a
+              [routerLink]="link.path"
+              routerLinkActive="!bg-card !text-ink shadow-sm dark:!bg-line-strong"
+              [routerLinkActiveOptions]="{ exact: link.exact }"
+              ariaCurrentWhenActive="page"
+              class="rounded-full px-4 py-1.5 text-sm font-medium text-ink-muted transition-colors duration-150 hover:text-ink"
+              >{{ link.label }}</a
+            >
+          }
+        </div>
         <a
           routerLink="/settings"
-          routerLinkActive="bg-surface-100 text-surface-900"
+          routerLinkActive="!bg-subtle !text-ink"
           ariaCurrentWhenActive="page"
           aria-label="Settings"
-          class="rounded-md px-3 py-2 text-surface-600 hover:text-surface-900"
-          ><app-icon name="settings"
+          class="ml-auto grid size-9 place-items-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-subtle hover:text-ink"
+          ><app-icon name="settings" size="1.15em"
         /></a>
       </nav>
 
       <button
         type="button"
-        #menuButton
-        data-testid="menu-button"
-        class="ml-auto rounded-md p-2 text-surface-700 sm:hidden"
-        [attr.aria-label]="menuOpen() ? 'Close menu' : 'Open menu'"
-        [attr.aria-controls]="menuOpen() ? 'mobile-menu' : null"
-        [attr.aria-expanded]="menuOpen()"
-        (click)="menuOpen.set(!menuOpen())"
+        data-testid="theme-toggle"
+        class="ml-auto grid size-9 shrink-0 place-items-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-subtle hover:text-ink sm:ml-0"
+        [attr.aria-label]="themeLabel()"
+        [title]="themeLabel()"
+        (click)="theme.cycle()"
       >
-        <app-icon [name]="menuOpen() ? 'close' : 'menu'" size="1.4em" />
+        <app-icon [name]="themeIcon()" size="1.15em" />
       </button>
     </div>
   </header>
-
-  <!-- Phones: a panel under the top bar, opened and closed by the menu button (ADR-052). -->
-  @if (menuOpen()) {
-    <nav
-      id="mobile-menu"
-      data-testid="mobile-menu"
-      aria-label="Main"
-      class="flex flex-col gap-1 border-b border-surface-200 bg-surface-0 px-4 py-2 sm:hidden"
-    >
-      @for (link of links; track link.path) {
-        <a
-          [routerLink]="link.path"
-          routerLinkActive="bg-surface-100"
-          [routerLinkActiveOptions]="{ exact: link.exact }"
-          ariaCurrentWhenActive="page"
-          class="rounded-md px-3 py-2 text-surface-800"
-          (click)="menuOpen.set(false)"
-          >{{ link.label }}</a
-        >
-      }
-      <a
-        routerLink="/settings"
-        routerLinkActive="bg-surface-100"
-        ariaCurrentWhenActive="page"
-        class="rounded-md px-3 py-2 text-surface-800"
-        (click)="menuOpen.set(false)"
-        >Settings</a
-      >
-    </nav>
-  }
 
   <!-- The live region is always present so screen readers announce the text when it appears. -->
   <div role="status" aria-live="polite">
     @if (coldStart.waking()) {
       <div
         data-testid="cold-start-banner"
-        class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900"
+        class="border-b border-warn-line bg-warn-soft px-4 py-2 text-center text-sm text-warn"
       >
         <app-icon name="spinner" class="mr-2" />
         Waking the server… this can take up to a minute.
@@ -93,7 +70,7 @@
     <div
       data-testid="reference-error"
       role="alert"
-      class="flex items-center justify-center gap-3 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-900"
+      class="flex items-center justify-center gap-3 border-b border-danger-line bg-danger-soft px-4 py-2 text-sm text-danger"
     >
       Couldn't load countries, departments and job titles. Nothing works without them.
       <button
@@ -116,4 +93,27 @@
   <main>
     <router-outlet />
   </main>
+
+  <!-- Phones: bottom tabs within thumb reach, replacing the top bar's links (ADR-054). The drawer
+       and dialogs sit above them (PrimeNG overlays start at z-index 1100). -->
+  <nav
+    data-testid="bottom-nav"
+    aria-label="Main"
+    class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card/95 backdrop-blur sm:hidden"
+  >
+    <div class="grid grid-cols-3">
+      @for (tab of tabs; track tab.path) {
+        <a
+          [routerLink]="tab.path"
+          routerLinkActive="!text-primary"
+          [routerLinkActiveOptions]="{ exact: tab.exact }"
+          ariaCurrentWhenActive="page"
+          class="flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium text-ink-muted transition-colors duration-150"
+        >
+          <app-icon [name]="tab.icon" size="1.35em" />
+          <span>{{ tab.label }}</span>
+        </a>
+      }
+    </div>
+  </nav>
 </div>

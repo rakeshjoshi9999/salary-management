@@ -37,6 +37,7 @@ import {
 } from './catalog-query';
 import { CatalogRefresh } from './catalog-refresh';
 import { EmployeeService } from './employee.service';
+import { PageHeader } from '../shared/page-header';
 
 /** Why a load happened: a refresh after a save or delete steps back from an emptied page quietly. */
 type LoadReason = 'user' | 'refresh';
@@ -59,6 +60,7 @@ export const SORT_OPTIONS = [
 @Component({
   selector: 'app-catalog-page',
   imports: [
+    PageHeader,
     RouterOutlet,
     RouterLink,
     TableModule,

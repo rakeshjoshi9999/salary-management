@@ -10,6 +10,20 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <script>
+      // Before Angular starts: apply a stored or OS dark theme so a dark page never flashes white.
+      // ThemeService (core/theme.ts) takes over after boot; the key and class must match it.
+      (function () {
+        var mode = 'system';
+        try {
+          mode = localStorage.getItem('salary-management.theme') || 'system';
+        } catch (e) {}
+        var dark =
+          mode === 'dark' ||
+          (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.classList.add('app-dark');
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>

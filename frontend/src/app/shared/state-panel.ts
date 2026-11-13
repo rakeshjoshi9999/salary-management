@@ -29,17 +29,13 @@ export type PanelState = 'loading' | 'empty' | 'error';
           }
         </div>
       } @else {
-        <p
-          [class]="
-            state() === 'error' ? 'font-medium text-red-900' : 'font-medium text-surface-900'
-          "
-        >
+        <p [class]="state() === 'error' ? 'font-medium text-danger' : 'font-medium text-ink'">
           {{ message() }}
         </p>
         @if (detail()) {
           <p
             [class]="
-              state() === 'error' ? 'mt-1 text-sm text-red-800' : 'mt-1 text-sm text-surface-600'
+              state() === 'error' ? 'mt-1 text-sm text-danger' : 'mt-1 text-sm text-ink-muted'
             "
           >
             {{ detail() }}
@@ -87,9 +83,9 @@ export class StatePanel {
   protected readonly frame = computed(() => {
     switch (this.state()) {
       case 'error':
-        return 'rounded-md border border-red-200 bg-red-50 p-6 text-center';
+        return 'rounded-md border border-danger-line bg-danger-soft p-6 text-center';
       case 'empty':
-        return 'rounded-md border border-surface-200 bg-surface-0 p-6 text-center';
+        return 'rounded-md border border-line bg-card p-6 text-center';
       default:
         return '';
     }

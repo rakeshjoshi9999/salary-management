@@ -133,7 +133,7 @@ can reach its database.
 - [ ] **8.5** Record ~3-min demo video; link in README
 - [x] **8.6** Read the commit history top to bottom as a reviewer would
 - [ ] **8.7** Reply to the original email with the repo link
-- [ ] **8.8** UI redesign, foundation (ADR-054): Indigo preset over Aura, Inter, refined top bar with a page
+- [x] **8.8** UI redesign, foundation (ADR-054): Indigo preset over Aura, Inter, refined top bar with a page
       header, bottom tabs on phones, dark mode following the OS with a System/Light/Dark toggle, axe checks
 - [ ] **8.9** UI redesign, Insights: bento grid, money in full, the doughnut themed for both modes
 - [ ] **8.10** UI redesign, Catalog: the table in a card, toolbar, active-filter chips, avatars, cards on phones

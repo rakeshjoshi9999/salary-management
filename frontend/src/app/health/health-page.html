@@ -1,12 +1,12 @@
 <section class="mx-auto max-w-2xl px-6 pt-8">
-  <div class="rounded-md border border-surface-200 bg-surface-0 p-6">
+  <div class="rounded-md border border-line bg-card p-6">
     @if (phase() === 'pending') {
       <div data-testid="health-pending" class="flex items-start gap-3">
-        <app-icon name="spinner" class="mt-1 text-surface-500" />
+        <app-icon name="spinner" class="mt-1 text-ink-muted" />
         <div>
-          <p class="font-medium text-surface-900">Checking the API</p>
+          <p class="font-medium text-ink">Checking the API</p>
           <!-- ADR-004: the free instance sleeps, so say so rather than spin silently. -->
-          <p class="mt-1 text-sm text-surface-600">
+          <p class="mt-1 text-sm text-ink-muted">
             The server sleeps after about 15 minutes of inactivity, so this may be waking it. That
             can take up to a minute on the first request.
           </p>
@@ -14,10 +14,10 @@
       </div>
     } @else if (phase() === 'reachable') {
       <div data-testid="health-reachable" class="flex items-start gap-3">
-        <app-icon name="check-circle" class="mt-1 text-green-600" />
+        <app-icon name="check-circle" class="mt-1 text-success" />
         <div>
-          <p class="font-medium text-surface-900">API reachable, database connected</p>
-          <p class="mt-1 text-sm text-surface-600">
+          <p class="font-medium text-ink">API reachable, database connected</p>
+          <p class="mt-1 text-sm text-ink-muted">
             The health status aggregates the datasource check, so it cannot report UP unless the API
             also reached Postgres.
           </p>
@@ -25,10 +25,10 @@
       </div>
     } @else {
       <div data-testid="health-unreachable" class="flex items-start gap-3">
-        <app-icon name="x-circle" class="mt-1 text-red-600" />
+        <app-icon name="x-circle" class="mt-1 text-danger" />
         <div>
-          <p class="font-medium text-surface-900">Could not confirm the API is healthy</p>
-          <p class="mt-1 text-sm text-surface-600">{{ detail() }}</p>
+          <p class="font-medium text-ink">Could not confirm the API is healthy</p>
+          <p class="mt-1 text-sm text-ink-muted">{{ detail() }}</p>
           <button pButton type="button" data-testid="health-retry" class="mt-4" (click)="check()">
             Try again
           </button>
@@ -36,15 +36,15 @@
       </div>
     }
 
-    <p class="mt-6 border-t border-surface-200 pt-4 text-xs text-surface-500">
+    <p class="mt-6 border-t border-line pt-4 text-xs text-ink-muted">
       Environment:
       <code
         data-testid="health-environment"
-        class="rounded bg-surface-100 px-1.5 py-0.5 text-surface-700"
+        class="rounded bg-subtle px-1.5 py-0.5 text-ink-muted"
         >{{ environmentName }}</code
       >
       &middot; API:
-      <code class="rounded bg-surface-100 px-1.5 py-0.5 text-surface-700">{{ apiBaseUrl }}</code>
+      <code class="rounded bg-subtle px-1.5 py-0.5 text-ink-muted">{{ apiBaseUrl }}</code>
     </p>
   </div>
 </section>

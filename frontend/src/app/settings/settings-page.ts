@@ -16,6 +16,7 @@ import { ApiError } from '../core/api-error';
 import { ReferenceStore } from '../core/reference.store';
 import { StatePanel } from '../shared/state-panel';
 import { SettingsService } from './settings.service';
+import { PageHeader } from '../shared/page-header';
 
 /**
  * Settings: the default country the Insights dashboard opens on (ADR-028, UI_DESIGN.md). A stale save
@@ -23,7 +24,7 @@ import { SettingsService } from './settings.service';
  */
 @Component({
   selector: 'app-settings-page',
-  imports: [ButtonModule, SkeletonModule, StatePanel],
+  imports: [PageHeader, ButtonModule, SkeletonModule, StatePanel],
   templateUrl: './settings-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

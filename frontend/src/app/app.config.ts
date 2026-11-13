@@ -3,10 +3,11 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideRouter } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
-import Aura from '@primeuix/themes/aura';
 
 import { routes } from './app.routes';
 import { API_INTERCEPTORS } from './core/api-interceptors';
+import { DARK_CLASS } from './core/theme';
+import { AppPreset } from './core/theme-preset';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,8 +19,11 @@ export const appConfig: ApplicationConfig = {
     MessageService,
     providePrimeNG({
       theme: {
-        preset: Aura,
+        preset: AppPreset,
         options: {
+          // Dark follows the class ThemeService (and index.html, before boot) puts on <html>, not
+          // PrimeNG's default of the OS setting, so the toggle switches components too (ADR-054).
+          darkModeSelector: `.${DARK_CLASS}`,
           // Tailwind emits `@layer theme, base, components, utilities`.
           // Naming primeng here and placing it after base means Tailwind's
           // utilities layer still wins, so a utility class can override a

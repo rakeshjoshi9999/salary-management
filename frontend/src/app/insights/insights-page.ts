@@ -15,6 +15,7 @@ import { MoneyPipe } from '../shared/money.pipe';
 import { StatePanel } from '../shared/state-panel';
 import { DepartmentDoughnut } from './department-doughnut';
 import { InsightsService } from './insights.service';
+import { PageHeader } from '../shared/page-header';
 
 /** India until the HR Manager chooses otherwise (ADR-028), and the fallback if settings fail. */
 const FALLBACK_COUNTRY = 'IN';
@@ -29,6 +30,7 @@ type Loaded =
 @Component({
   selector: 'app-insights-page',
   imports: [
+    PageHeader,
     RouterLink,
     ButtonModule,
     SkeletonModule,

@@ -2,14 +2,19 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 export type IconName =
   | 'settings'
-  | 'menu'
   | 'close'
   | 'plus'
   | 'pencil'
   | 'trash'
   | 'spinner'
   | 'check-circle'
-  | 'x-circle';
+  | 'x-circle'
+  | 'sun'
+  | 'moon'
+  | 'monitor'
+  | 'chart'
+  | 'users'
+  | 'wallet';
 
 /**
  * Inline SVG icons, sized to the surrounding text and coloured by it. Decorative: the control that
@@ -39,9 +44,6 @@ export type IconName =
           />
           <circle cx="12" cy="12" r="3" />
         }
-        @case ('menu') {
-          <path d="M4 6h16M4 12h16M4 18h16" />
-        }
         @case ('close') {
           <path d="M18 6 6 18M6 6l12 12" />
         }
@@ -67,6 +69,34 @@ export type IconName =
         @case ('x-circle') {
           <circle cx="12" cy="12" r="10" />
           <path d="m15 9-6 6M9 9l6 6" />
+        }
+        @case ('sun') {
+          <circle cx="12" cy="12" r="4" />
+          <path
+            d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"
+          />
+        }
+        @case ('moon') {
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+        }
+        @case ('monitor') {
+          <rect width="20" height="14" x="2" y="3" rx="2" />
+          <path d="M8 21h8M12 17v4" />
+        }
+        @case ('chart') {
+          <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+          <path d="M18 17V9M13 17V5M8 17v-3" />
+        }
+        @case ('users') {
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+        }
+        @case ('wallet') {
+          <path
+            d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"
+          />
+          <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
         }
       }
     </svg>

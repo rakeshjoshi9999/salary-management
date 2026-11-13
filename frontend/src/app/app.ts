@@ -1,60 +1,50 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  ElementRef,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { filter } from 'rxjs';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 
 import { ColdStartTracker } from './core/cold-start';
 import { ReferenceStore } from './core/reference.store';
-import { Icon } from './shared/icon';
+import { ThemeMode, ThemeService } from './core/theme';
+import { Icon, IconName } from './shared/icon';
+
+const MODE_LABEL: Record<ThemeMode, string> = { system: 'System', light: 'Light', dark: 'Dark' };
+const MODE_ICON: Record<ThemeMode, IconName> = { system: 'monitor', light: 'sun', dark: 'moon' };
 
 /**
- * The app shell: top bar, phone menu, toasts, and the two app-wide banners (cold start, reference
- * data). Reference data starts loading here, at app start, without blocking any route (ADR-051).
+ * The app shell: top bar with the theme toggle, bottom tabs on phones, toasts, and the two app-wide
+ * banners (cold start, reference data). Reference data starts loading here, at app start, without
+ * blocking any route (ADR-051, ADR-054).
  */
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonModule, ToastModule, Icon],
   templateUrl: './app.html',
-  host: { '(document:keydown.escape)': 'closeMenu()' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
   protected readonly coldStart = inject(ColdStartTracker);
   protected readonly reference = inject(ReferenceStore);
-  protected readonly menuOpen = signal(false);
-
-  private readonly menuButton = viewChild<ElementRef<HTMLButtonElement>>('menuButton');
-
-  /** Escape closes the phone menu and puts focus back on its button. */
-  protected closeMenu(): void {
-    if (this.menuOpen()) {
-      this.menuOpen.set(false);
-      this.menuButton()?.nativeElement.focus();
-    }
-  }
+  protected readonly theme = inject(ThemeService);
 
   protected readonly links = [
-    { path: '/', label: 'Insights', exact: true },
-    { path: '/catalog', label: 'Catalog', exact: false },
+    { path: '/', label: 'Insights', icon: 'chart', exact: true },
+    { path: '/catalog', label: 'Catalog', icon: 'users', exact: false },
   ] as const;
+
+  protected readonly tabs = [
+    ...this.links,
+    { path: '/settings', label: 'Settings', icon: 'settings', exact: false },
+  ] as const;
+
+  protected readonly themeLabel = computed(
+    () =>
+      `Theme: ${MODE_LABEL[this.theme.mode()]}. ` +
+      `Switch to ${MODE_LABEL[this.theme.nextMode()].toLowerCase()}`,
+  );
+  protected readonly themeIcon = computed(() => MODE_ICON[this.theme.mode()]);
 
   constructor() {
     this.reference.load();
-    // Any navigation closes the phone menu, including Back and the title link.
-    inject(Router)
-      .events.pipe(
-        filter((event) => event instanceof NavigationEnd),
-        takeUntilDestroyed(),
-      )
-      .subscribe(() => this.menuOpen.set(false));
   }
 }

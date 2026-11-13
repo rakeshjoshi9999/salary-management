@@ -32,10 +32,8 @@ const COLOURS = ['#2563eb', '#16a34a', '#ea580c', '#9333ea', '#0891b2', '#a16207
           data-testid="doughnut-total"
           class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"
         >
-          <span class="text-xl font-semibold tabular-nums text-surface-900">{{
-            total() | number
-          }}</span>
-          <span class="text-xs text-surface-600">total</span>
+          <span class="text-xl font-semibold tabular-nums text-ink">{{ total() | number }}</span>
+          <span class="text-xs text-ink-muted">total</span>
         </div>
       </div>
       <ul class="w-full flex-1 text-sm" aria-label="Headcount by department">
@@ -46,10 +44,10 @@ const COLOURS = ['#2563eb', '#16a34a', '#ea580c', '#9333ea', '#0891b2', '#a16207
               [style.background-color]="row.colour"
               aria-hidden="true"
             ></span>
-            <span class="flex-1 text-surface-900">{{ row.department }}</span
-            >&ngsp; <span class="tabular-nums text-surface-800">{{ row.headcount | number }}</span
+            <span class="flex-1 text-ink">{{ row.department }}</span
+            >&ngsp; <span class="tabular-nums text-ink">{{ row.headcount | number }}</span
             >&ngsp;
-            <span class="w-10 text-right tabular-nums text-surface-600">{{ row.percent }}%</span>
+            <span class="w-10 text-right tabular-nums text-ink-muted">{{ row.percent }}%</span>
           </li>
         }
       </ul>

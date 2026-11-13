@@ -1,7 +1,7 @@
-<section class="mx-auto max-w-2xl px-4 pt-6">
-  <h2 class="text-xl font-semibold text-surface-900">Settings</h2>
+<section class="mx-auto max-w-2xl px-4">
+  <app-page-header heading="Settings" />
 
-  <div class="mt-4 rounded-md border border-surface-200 bg-surface-0 p-6">
+  <div class="rounded-md border border-line bg-card p-6">
     @if (status() === 'error') {
       <app-state-panel
         data-testid="settings-error"
@@ -18,14 +18,14 @@
       </div>
     } @else {
       <form class="flex flex-col gap-2" (submit)="$event.preventDefault(); save()">
-        <label for="settings-country" class="text-sm font-medium text-surface-800">
+        <label for="settings-country" class="text-sm font-medium text-ink">
           Default country for Insights
         </label>
         <div class="flex flex-col gap-2 sm:flex-row">
           <select
             id="settings-country"
             data-testid="settings-country"
-            class="flex-1 rounded-md border border-surface-300 bg-surface-0 px-2 py-2 text-sm"
+            class="flex-1 rounded-md border border-line-strong bg-card px-2 py-2 text-sm"
             aria-describedby="settings-currency"
             [disabled]="saving()"
             (change)="choose($any($event.target).value)"
@@ -48,7 +48,7 @@
             Save
           </button>
         </div>
-        <p id="settings-currency" data-testid="settings-currency" class="text-sm text-surface-600">
+        <p id="settings-currency" data-testid="settings-currency" class="text-sm text-ink-muted">
           Currency follows the country: {{ currency() }}
         </p>
       </form>
