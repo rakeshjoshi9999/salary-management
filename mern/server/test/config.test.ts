@@ -18,6 +18,22 @@ describe('loadConfig', () => {
     expect(issues).toMatch(/PORT/);
   });
 
+  it('rejects blank values: an empty `PORT=` line is a mistake, not port 0', () => {
+    for (const blank of ['', '   ']) {
+      let error: unknown;
+      try {
+        loadConfig({ MONGODB_URI: blank, PORT: blank });
+      } catch (caught) {
+        error = caught;
+      }
+
+      expect(error).toBeInstanceOf(ConfigError);
+      const issues = (error as ConfigError).issues.join(' | ');
+      expect(issues).toMatch(/MONGODB_URI/);
+      expect(issues).toMatch(/PORT/);
+    }
+  });
+
   it('applies defaults for everything except the database address', () => {
     const config = loadConfig({ MONGODB_URI: 'mongodb://localhost:27017/salary' });
 
