@@ -5,6 +5,7 @@ import express, { type Express, type Router } from 'express';
 import { createAuthRouter } from './auth/routes.js';
 import { createTokenService } from './auth/tokens.js';
 import type { Config } from './config.js';
+import { createInsightsRouter } from './insights/routes.js';
 import { createReferenceRouter } from './reference/routes.js';
 import { createErrorHandler, notFound } from './problem.js';
 
@@ -42,6 +43,7 @@ export function createApp({ config, ping, routes, now = () => new Date() }: AppD
   const tokens = createTokenService(config, now);
   app.use('/auth', createAuthRouter({ config, tokens, now }));
   app.use(createReferenceRouter(tokens));
+  app.use(createInsightsRouter(tokens));
 
   if (routes) {
     app.use(routes);
