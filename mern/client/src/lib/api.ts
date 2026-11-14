@@ -62,3 +62,8 @@ async function toApiError(response: Response): Promise<ApiError> {
   }
   return fallback;
 }
+
+/** Exchanges the refresh cookie for a new access token, once at a time (single-flight, Web Lock). */
+export async function refreshAccessToken(): Promise<string> {
+  throw new Error('not implemented');
+}
