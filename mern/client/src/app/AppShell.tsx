@@ -18,16 +18,16 @@ export function AppShell() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-4 py-3">
           <span className="text-lg font-semibold">Salary Management</span>
-          <nav aria-label="Main" className="flex gap-1">
-            {status === 'authenticated' && (
+          {status === 'authenticated' && (
+            <nav aria-label="Main" className="flex gap-1">
               <NavLink to="/" end className={linkClass}>
+                Insights
+              </NavLink>
+              <NavLink to="/catalog" className={linkClass}>
                 Catalog
               </NavLink>
-            )}
-            <NavLink to="/health" className={linkClass}>
-              Health
-            </NavLink>
-          </nav>
+            </nav>
+          )}
           <div className="flex items-center gap-3 text-sm">
             {user ? (
               <>

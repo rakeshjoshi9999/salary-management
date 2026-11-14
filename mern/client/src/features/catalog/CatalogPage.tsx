@@ -1,5 +1,5 @@
-/** The protected home until the employee catalog exists (decision M4-9). */
-export function HomePage() {
+/** A protected placeholder until the employee catalog arrives (moved off the home page in M5). */
+export function CatalogPage() {
   return (
     <section className="space-y-2">
       <h1 className="text-2xl font-semibold">Catalog</h1>

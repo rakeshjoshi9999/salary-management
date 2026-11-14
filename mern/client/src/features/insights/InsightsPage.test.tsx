@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { routes } from '../../app/routes';
 import { signedInAs } from '../../test/auth';
-import { GERMANY, INDIA, insightsBody, insightsFor } from '../../test/insights';
+import { GERMANY, INDIA, insightsBody, insightsFor, REFERENCE } from '../../test/insights';
 import { problem } from '../../test/problem';
 import { currentUrl, renderRoutes } from '../../test/render';
 import { server } from '../../test/server';
@@ -145,6 +145,23 @@ describe('InsightsPage', () => {
     renderRoutes(routes, '/?country=DE');
 
     expect(await screen.findByText(/no employees in germany yet/i)).toBeInTheDocument();
+  });
+
+  // Added after the step 3 implementation review: a failed reference load left a shared link
+  // (/?country=DE) on "Loading insights…" forever, with no error and no way to retry.
+  it('M5-29b. referenceErrorShowsRetry: a failed country list says so and recovers on retry', async () => {
+    server.use(
+      http.get('/api/reference', () => problem(500, 'INTERNAL_ERROR')),
+      insightsFor('DE', GERMANY),
+    );
+    renderRoutes(routes, '/?country=DE');
+    const user = userEvent.setup();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/couldn.t load the country list/i);
+    server.use(http.get('/api/reference', () => HttpResponse.json(REFERENCE)));
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+
+    expect(await screen.findByText('€61,882.00')).toBeInTheDocument();
   });
 
   it('M5-29. insightsErrorShowsRetry: a failed load explains itself and recovers on retry', async () => {
