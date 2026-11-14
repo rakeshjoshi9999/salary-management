@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { api } from '../lib/api';
 import { getAccessToken } from '../lib/token';
-import { signedInAs } from '../test/auth';
+import { session, signedInAs } from '../test/auth';
 import { problem } from '../test/problem';
 import { currentUrl, renderRoutes } from '../test/render';
 import { server } from '../test/server';
@@ -81,6 +81,42 @@ describe('the app routes with auth', () => {
     expect(logoutCalls).toBe(1);
     expect(queryClient.getQueryData(['salaries'])).toBeUndefined();
     expect(getAccessToken()).toBeNull();
+  });
+
+  // Added after the step 3 implementation review: a refresh that starts while the logout request is in
+  // flight used to put a token back after sign-out (the next reload would then sign the user back in).
+  it('M4-29b. signOutCannotBeUndoneByARefreshStartedDuringLogout: no token survives signing out', async () => {
+    let openLogout = () => {};
+    const logoutGate = new Promise<void>((resolve) => (openLogout = resolve));
+    let refreshCalls = 0;
+    server.use(...signedInAs('HR_MANAGER'));
+    renderRoutes(routes, '/');
+    const banner = await screen.findByRole('banner');
+    await within(banner).findByText(/hr manager/i);
+    server.use(
+      http.post('/api/auth/logout', async () => {
+        await logoutGate;
+        return new HttpResponse(null, { status: 204 });
+      }),
+      // A request sent with a bearer token finds it expired; one sent without a token is just refused.
+      http.get('/api/things', ({ request }) =>
+        request.headers.get('Authorization')
+          ? problem(401, 'TOKEN_EXPIRED')
+          : problem(401, 'UNAUTHENTICATED'),
+      ),
+      http.post('/api/auth/refresh', () => {
+        refreshCalls += 1;
+        return session('t2');
+      }),
+    );
+
+    await userEvent.setup().click(within(banner).getByRole('button', { name: /sign out/i }));
+    await api('/things').catch(() => undefined); // starts while the logout request is still pending
+    openLogout();
+
+    expect(await screen.findByRole('heading', { name: /sign in/i })).toBeInTheDocument();
+    expect(getAccessToken()).toBeNull();
+    expect(refreshCalls).toBe(0);
   });
 
   it('M4-30. expiredSessionMidUseRedirectsWithReason: a refused refresh during use ends at the login page', async () => {

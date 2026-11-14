@@ -1,22 +1,40 @@
-import { redirect, type RouteObject } from 'react-router';
+import type { RouteObject } from 'react-router';
 
+import { AuthRoot } from '../features/auth/AuthProvider';
+import { GuestOnly } from '../features/auth/GuestOnly';
+import { LoginPage } from '../features/auth/LoginPage';
+import { RegisterPage } from '../features/auth/RegisterPage';
+import { RequireAuth } from '../features/auth/RequireAuth';
 import { HealthPage } from '../features/health/HealthPage';
+import { HomePage } from '../features/home/HomePage';
 import { AppShell } from './AppShell';
 import { NotFoundPage } from './NotFoundPage';
 
 /**
- * The route table, shared by `main.tsx` (browser router) and the tests (memory router). Children render
- * in the shell's `<Outlet />`. `/` points at the health page until the catalog exists; a loader redirects
- * before anything renders, where `<Navigate>` would render first and redirect in an effect.
+ * The route table, shared by `main.tsx` (browser router) and the tests (memory router). Layout routes
+ * (no `path`) wrap their children: AuthRoot restores the session, AppShell draws the page, and the
+ * guards decide who gets in. Public: `/health` and not-found. Guest-only: login, register.
  */
 export const routes: RouteObject[] = [
   {
-    path: '/',
-    element: <AppShell />,
+    element: <AuthRoot />,
     children: [
-      { index: true, loader: () => redirect('/health') },
-      { path: 'health', element: <HealthPage /> },
-      { path: '*', element: <NotFoundPage /> },
+      {
+        path: '/',
+        element: <AppShell />,
+        children: [
+          { element: <RequireAuth />, children: [{ index: true, element: <HomePage /> }] },
+          { path: 'health', element: <HealthPage /> },
+          {
+            element: <GuestOnly />,
+            children: [
+              { path: 'login', element: <LoginPage /> },
+              { path: 'register', element: <RegisterPage /> },
+            ],
+          },
+          { path: '*', element: <NotFoundPage /> },
+        ],
+      },
     ],
   },
 ];

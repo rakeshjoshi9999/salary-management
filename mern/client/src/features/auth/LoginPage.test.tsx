@@ -57,6 +57,17 @@ describe('LoginPage', () => {
     },
   );
 
+  // Added after the step 3 implementation review: browsers strip tabs and newlines while parsing a URL,
+  // so a string check passed this value and it resolved to another site.
+  it('M4-17b. ignoresFromThatResolvesOffSite: a from with a tab in it lands on the home page', async () => {
+    const { router } = renderRoutes(routes, `/login?from=${encodeURIComponent('/	/evil.example')}`);
+
+    await signIn('ana@example.com', 'correct horse');
+
+    expect(await screen.findByRole('heading', { name: /catalog/i })).toBeInTheDocument();
+    expect(currentUrl(router)).toBe('/');
+  });
+
   it('M4-18. showsGenericMessageOnInvalidCredentials: one message for any wrong email or password', async () => {
     renderRoutes(routes, '/login');
 

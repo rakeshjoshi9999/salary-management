@@ -1,4 +1,9 @@
-/** Stub until the M4 step 3 implementation. */
+/** The protected home until the employee catalog exists (decision M4-9). */
 export function HomePage() {
-  return null;
+  return (
+    <section className="space-y-2">
+      <h1 className="text-2xl font-semibold">Catalog</h1>
+      <p className="text-slate-600">The employee catalog arrives in the next slice.</p>
+    </section>
+  );
 }

@@ -137,3 +137,8 @@ function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
   }
   return work();
 }
+
+/** Settles once no refresh is in flight. Logout waits on it, so a late refresh cannot restore a token. */
+export async function settledRefresh(): Promise<void> {
+  await inFlight?.catch(() => undefined);
+}
