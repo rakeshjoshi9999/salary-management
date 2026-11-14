@@ -49,6 +49,7 @@ describe('loadConfig', () => {
       jwtAccessSecret: SECRET,
       accessTokenTtlSeconds: 15 * 60,
       refreshTokenTtlSeconds: 7 * 24 * 60 * 60,
+      refreshCookiePath: '/auth',
     });
   });
 
@@ -109,6 +110,7 @@ describe('loadConfig', () => {
       jwtAccessSecret: SECRET,
       accessTokenTtlSeconds: 15 * 60,
       refreshTokenTtlSeconds: 7 * 24 * 60 * 60,
+      refreshCookiePath: '/auth',
     });
   });
 
@@ -125,5 +127,25 @@ describe('loadConfig', () => {
     expect(issuesFor(undefined)).toMatch(/JWT_ACCESS_SECRET/); // missing
     expect(issuesFor('x'.repeat(31))).toMatch(/JWT_ACCESS_SECRET/); // too short to resist guessing
     expect(issuesFor('x'.repeat(32))).toBe('');
+  });
+
+  describe('readsRefreshCookiePathDefaultingToAuth', () => {
+    const base = { MONGODB_URI: 'mongodb://localhost:27017/salary', JWT_ACCESS_SECRET: SECRET };
+
+    it('reads the path the browser uses for the auth routes', () => {
+      expect(loadConfig({ ...base, REFRESH_COOKIE_PATH: '/api/auth' }).refreshCookiePath).toBe(
+        '/api/auth',
+      );
+    });
+
+    it.each([
+      ['relative', 'api/auth'],
+      ['empty', ''],
+      ['blank', '  '],
+    ])('rejects a %s path', (_name, path) => {
+      expect(() => loadConfig({ ...base, REFRESH_COOKIE_PATH: path })).toThrow(
+        /REFRESH_COOKIE_PATH/,
+      );
+    });
   });
 });

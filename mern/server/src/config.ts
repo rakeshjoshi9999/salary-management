@@ -8,6 +8,8 @@ export interface Config {
   jwtAccessSecret: string;
   accessTokenTtlSeconds: number;
   refreshTokenTtlSeconds: number;
+  /** Where the browser sees the auth routes; `/api/auth` behind a proxy that adds `/api` (ADR-M5). */
+  refreshCookiePath?: string;
 }
 
 /** Every problem found in the environment, so one run shows all of them. */

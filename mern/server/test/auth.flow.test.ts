@@ -300,6 +300,29 @@ describe('the auth endpoints', () => {
     });
   });
 
+  describe('the refresh cookie behind a proxy (ADR-M5)', () => {
+    it('setsAndClearsRefreshCookieOnConfiguredPath', async () => {
+      // The browser sees /api/auth/... through the proxy; the cookie must name that path to come back.
+      const proxied = app(testConfig({ refreshCookiePath: '/api/auth' }));
+      await request(proxied)
+        .post('/auth/register')
+        .send({ email: 'ana@example.com', password: PASSWORD });
+
+      const login = await request(proxied)
+        .post('/auth/login')
+        .send({ email: 'ana@example.com', password: PASSWORD });
+      const set = setCookieHeader(login)!;
+      expect(set).toContain('Path=/api/auth;');
+
+      const logout = await request(proxied)
+        .post('/auth/logout')
+        .set('Cookie', withCookie(refreshTokenFrom(login)));
+      const cleared = setCookieHeader(logout)!;
+      expect(cleared).toMatch(/^refreshToken=;/);
+      expect(cleared).toContain('Path=/api/auth;');
+    });
+  });
+
   describe('POST /auth/logout', () => {
     it('logoutRevokesTheFamilyAndClearsTheCookie', async () => {
       const { refreshToken } = await registerAndLogin(app(), 'ana@example.com');
