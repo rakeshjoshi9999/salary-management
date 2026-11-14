@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { routes } from '../../app/routes';
@@ -25,7 +25,6 @@ describe('LoginPage', () => {
           : problem(401, 'INVALID_CREDENTIALS');
       }),
       meAs('VIEWER'),
-      http.get('/api/health', () => HttpResponse.json({ status: 'UP' })),
     );
   });
 
@@ -37,12 +36,12 @@ describe('LoginPage', () => {
   }
 
   it('M4-16. signsInAndReturnsToFrom: after signing in the user lands where they were going', async () => {
-    const { router } = renderRoutes(routes, '/login?from=%2Fhealth');
+    const { router } = renderRoutes(routes, '/login?from=%2Fcatalog');
 
     await signIn('ana@example.com', 'correct horse');
 
-    expect(await screen.findByRole('heading', { name: /server health/i })).toBeInTheDocument();
-    expect(currentUrl(router)).toBe('/health');
+    expect(await screen.findByRole('heading', { name: /catalog/i })).toBeInTheDocument();
+    expect(currentUrl(router)).toBe('/catalog');
   });
 
   it.each(['//evil.example', 'https://evil.example/', '/\\evil.example'])(
@@ -52,7 +51,7 @@ describe('LoginPage', () => {
 
       await signIn('ana@example.com', 'correct horse');
 
-      expect(await screen.findByRole('heading', { name: /catalog/i })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: /insights/i })).toBeInTheDocument();
       expect(currentUrl(router)).toBe('/');
     },
   );
@@ -64,7 +63,7 @@ describe('LoginPage', () => {
 
     await signIn('ana@example.com', 'correct horse');
 
-    expect(await screen.findByRole('heading', { name: /catalog/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /insights/i })).toBeInTheDocument();
     expect(currentUrl(router)).toBe('/');
   });
 
@@ -98,7 +97,7 @@ describe('LoginPage', () => {
 
     const { router } = renderRoutes(routes, '/login');
 
-    expect(await screen.findByRole('heading', { name: /catalog/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /insights/i })).toBeInTheDocument();
     expect(currentUrl(router)).toBe('/');
   });
 });

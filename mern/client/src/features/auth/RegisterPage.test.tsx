@@ -68,7 +68,7 @@ describe('RegisterPage', () => {
 
     await register('new@example.com', 'correct horse');
 
-    expect(await screen.findByRole('heading', { name: /catalog/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /insights/i })).toBeInTheDocument();
     expect(currentUrl(router)).toBe('/');
     // A real login, not a client that just believes the 201: the session must survive the next request.
     expect(logins).toEqual([{ email: 'new@example.com', password: 'correct horse' }]);

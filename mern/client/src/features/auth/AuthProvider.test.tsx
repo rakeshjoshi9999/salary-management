@@ -36,7 +36,7 @@ describe('AuthProvider', () => {
 
     renderRoutes(routes, '/');
 
-    expect(await screen.findByRole('heading', { name: /catalog/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /insights/i })).toBeInTheDocument();
     expect(within(screen.getByRole('banner')).getByText(/hr manager/i)).toBeInTheDocument();
   });
 
@@ -59,7 +59,7 @@ describe('AuthProvider', () => {
 
     renderRoutes(routes, '/', { strict: true });
 
-    expect(await screen.findByRole('heading', { name: /catalog/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /insights/i })).toBeInTheDocument();
     expect(refreshCalls).toBe(1);
   });
 });
