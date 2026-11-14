@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto';
 import type { Express } from 'express';
 import request, { type Response } from 'supertest';
 
+import { createTokenService } from '../../src/auth/tokens.js';
+import type { Role } from '../../src/auth/types.js';
 import type { Config } from '../../src/config.js';
 
 export const SECRET = 'a-test-secret-that-is-at-least-32-characters-long';
@@ -67,4 +69,9 @@ export async function registerAndLogin(app: Express, email: string, password = P
     accessToken: login.body.accessToken as string,
     refreshToken: refreshTokenFrom(login),
   };
+}
+
+/** An `Authorization` header for a signed-in user of `role`, without a database (signs the token directly). */
+export function bearerFor(config: Config, now: () => Date, role: Role = 'VIEWER'): string {
+  return `Bearer ${createTokenService(config, now).signAccessToken({ id: 'u1', role })}`;
 }
