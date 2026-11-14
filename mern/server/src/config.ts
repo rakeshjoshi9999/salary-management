@@ -12,6 +12,9 @@ export interface Config {
   refreshCookiePath?: string;
 }
 
+/** The refresh cookie path when no proxy sits in front of the server. */
+export const DEFAULT_REFRESH_COOKIE_PATH = '/auth';
+
 /** Every problem found in the environment, so one run shows all of them. */
 export class ConfigError extends Error {
   constructor(readonly issues: string[]) {
@@ -48,6 +51,14 @@ const environment = z.object({
   ACCESS_TOKEN_TTL_SECONDS: seconds(15 * 60),
   REFRESH_TOKEN_TTL_SECONDS: seconds(7 * 24 * 60 * 60),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  // A cookie's Path is matched against the URL the browser requested, not the one Express sees. Behind a
+  // proxy that adds /api, the browser asks for /api/auth/..., so the cookie must say /api/auth (ADR-M5).
+  REFRESH_COOKIE_PATH: z
+    .string()
+    .trim()
+    // RFC 6265 path-value: starts with /, no spaces, controls or ';' (they would fail on every login).
+    .regex(/^\/[\x21-\x3A\x3C-\x7E]*$/, 'must be a path starting with /')
+    .default(DEFAULT_REFRESH_COOKIE_PATH),
 });
 
 /** Reads and checks the environment (twelve-factor config); a bad deploy fails at boot, not on a request. */
@@ -66,6 +77,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     JWT_ACCESS_SECRET,
     ACCESS_TOKEN_TTL_SECONDS,
     REFRESH_TOKEN_TTL_SECONDS,
+    REFRESH_COOKIE_PATH,
   } = parsed.data;
   return {
     port: PORT,
@@ -75,5 +87,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     jwtAccessSecret: JWT_ACCESS_SECRET,
     accessTokenTtlSeconds: ACCESS_TOKEN_TTL_SECONDS,
     refreshTokenTtlSeconds: REFRESH_TOKEN_TTL_SECONDS,
+    refreshCookiePath: REFRESH_COOKIE_PATH,
   };
 }

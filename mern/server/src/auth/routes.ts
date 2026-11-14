@@ -1,6 +1,6 @@
 import { Router, type Response } from 'express';
 
-import type { Config } from '../config.js';
+import { DEFAULT_REFRESH_COOKIE_PATH, type Config } from '../config.js';
 import { createAuthService, type Session } from './auth.service.js';
 import { authenticate } from './middleware.js';
 import type { TokenService } from './tokens.js';
@@ -18,11 +18,11 @@ export function createAuthRouter({ config, tokens, now }: AuthRouterDeps): Route
   const service = createAuthService(config, tokens, now);
 
   // `HttpOnly`: JavaScript cannot read it (XSS). `SameSite=Strict`: sent only from our own site (CSRF).
-  // `Path=/auth`: the browser attaches it to these routes only. `Secure`: HTTPS only, in production.
+  // `Path`: the browser attaches it to the auth routes only, as the browser addresses them (ADR-M5). `Secure`: HTTPS only, in production.
   const cookieOptions = {
     httpOnly: true,
     sameSite: 'strict',
-    path: '/auth',
+    path: config.refreshCookiePath ?? DEFAULT_REFRESH_COOKIE_PATH,
     secure: config.nodeEnv === 'production',
   } as const;
 
