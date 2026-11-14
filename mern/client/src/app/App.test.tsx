@@ -1,9 +1,14 @@
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { api } from '../lib/api';
+import { getAccessToken } from '../lib/token';
+import { signedInAs } from '../test/auth';
+import { problem } from '../test/problem';
+import { currentUrl, renderRoutes } from '../test/render';
 import { server } from '../test/server';
-import { renderRoutes } from '../test/render';
 import { routes } from './routes';
 
 /** The route table inside the app shell, rendered at a URL as the browser would. */
@@ -15,7 +20,9 @@ describe('the app routes', () => {
   it('11. renders the shell, with its header and navigation, around the current route', async () => {
     renderRoutes(routes, '/health');
 
-    expect(within(screen.getByRole('banner')).getByText(/salary management/i)).toBeInTheDocument();
+    expect(
+      within(await screen.findByRole('banner')).getByText(/salary management/i),
+    ).toBeInTheDocument();
     const nav = screen.getByRole('navigation');
     expect(within(nav).getByRole('link', { name: /health/i })).toHaveAttribute('href', '/health');
     const main = screen.getByRole('main');
@@ -24,16 +31,73 @@ describe('the app routes', () => {
     ).toBeInTheDocument();
   });
 
-  it('12. shows the health page at the root URL', async () => {
-    renderRoutes(routes, '/');
-
-    expect(await screen.findByRole('heading', { name: /server health/i })).toBeInTheDocument();
-  });
-
   it('13. shows a not-found page with a link home for an unknown URL', async () => {
     renderRoutes(routes, '/nope');
 
     expect(await screen.findByRole('heading', { name: /page not found/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /go home/i })).toHaveAttribute('href', '/');
+  });
+});
+
+/** The app once auth exists: what is public, what is protected, and how a session ends (M4). */
+describe('the app routes with auth', () => {
+  beforeEach(() => {
+    server.use(http.get('/api/health', () => HttpResponse.json({ status: 'UP' })));
+  });
+
+  it('M4-27. rootIsProtectedHome: a signed-in user sees the catalog placeholder at /', async () => {
+    server.use(...signedInAs('VIEWER'));
+
+    renderRoutes(routes, '/');
+
+    expect(await screen.findByRole('heading', { name: /catalog/i })).toBeInTheDocument();
+  });
+
+  it('M4-28. healthStaysPublic: a signed-out user can open the health page', async () => {
+    const { router } = renderRoutes(routes, '/health');
+
+    expect(await screen.findByRole('heading', { name: /server health/i })).toBeInTheDocument();
+    expect(currentUrl(router)).toBe('/health');
+  });
+
+  it('M4-29. headerShowsRoleAndSignsOut: the role is shown, and signing out ends the session', async () => {
+    let logoutCalls = 0;
+    server.use(
+      ...signedInAs('HR_MANAGER'),
+      http.post('/api/auth/logout', () => {
+        logoutCalls += 1;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const { router, queryClient } = renderRoutes(routes, '/');
+    const banner = await screen.findByRole('banner');
+    expect(await within(banner).findByText(/hr manager/i)).toBeInTheDocument();
+    queryClient.setQueryData(['salaries'], ['cached for the previous user']);
+
+    await userEvent.setup().click(within(banner).getByRole('button', { name: /sign out/i }));
+
+    expect(await screen.findByRole('heading', { name: /sign in/i })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/login');
+    expect(logoutCalls).toBe(1);
+    expect(queryClient.getQueryData(['salaries'])).toBeUndefined();
+    expect(getAccessToken()).toBeNull();
+  });
+
+  it('M4-30. expiredSessionMidUseRedirectsWithReason: a refused refresh during use ends at the login page', async () => {
+    server.use(...signedInAs('VIEWER'));
+    const { router, queryClient } = renderRoutes(routes, '/');
+    expect(await screen.findByRole('heading', { name: /catalog/i })).toBeInTheDocument();
+    queryClient.setQueryData(['salaries'], ['cached for this user']);
+    // Later: the access token expires and the refresh cookie is refused (expired or revoked).
+    server.use(
+      http.get('/api/things', () => problem(401, 'TOKEN_EXPIRED')),
+      http.post('/api/auth/refresh', () => problem(401, 'TOKEN_EXPIRED')),
+    );
+
+    await api('/things').catch(() => undefined);
+
+    expect(await screen.findByText(/your session has expired/i)).toBeInTheDocument();
+    expect(currentUrl(router)).toBe('/login?from=%2F&reason=expired');
+    expect(queryClient.getQueryData(['salaries'])).toBeUndefined();
   });
 });

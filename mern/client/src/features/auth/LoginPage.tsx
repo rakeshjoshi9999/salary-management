@@ -1,0 +1,4 @@
+/** Stub until the M4 step 3 implementation. */
+export function LoginPage() {
+  return null;
+}
