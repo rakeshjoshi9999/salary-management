@@ -1,4 +1,5 @@
-import { screen } from '@testing-library/react';
+import { focusManager } from '@tanstack/react-query';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
@@ -53,5 +54,22 @@ describe('HealthPage', () => {
 
     expect(await screen.findByText(/the server is up/i)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  // Added after the implementation review: a failed refetch keeps the last good `data` in TanStack Query.
+  it('14. stops showing the server as up when a background refetch then fails', async () => {
+    server.use(http.get('/api/health', up));
+    renderWithQuery(<HealthPage />);
+    expect(await screen.findByText(/the server is up/i)).toBeInTheDocument();
+
+    server.use(http.get('/api/health', () => HttpResponse.error()));
+    act(() => {
+      // The user leaves the tab and comes back: a stale query refetches on window focus.
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/could not reach the server/i);
+    expect(screen.queryByText(/the server is up/i)).not.toBeInTheDocument();
   });
 });
