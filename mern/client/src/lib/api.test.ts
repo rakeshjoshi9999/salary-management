@@ -309,6 +309,29 @@ describe('api with a session', () => {
     expect(expired).toHaveBeenCalledTimes(1);
   });
 
+  // Added after the step 2 implementation review: every caller awaiting a failed shared refresh used to
+  // signal expiry, so one session end was announced once per waiting request.
+  it('M4-10b. signalsExpiryOnceWhenASharedRefreshFails: three waiting requests, one expiry signal', async () => {
+    let openGate = () => {};
+    const gate = new Promise<void>((resolve) => (openGate = resolve));
+    let refused = 0;
+    server.use(
+      thingsAccept('new', () => {
+        refused += 1;
+        if (refused === 3) openGate();
+      }),
+      http.post('/api/auth/refresh', async () => {
+        await gate;
+        return problem(401, 'REFRESH_TOKEN_REUSED');
+      }),
+    );
+
+    const results = await Promise.allSettled([api('/things'), api('/things'), api('/things')]);
+
+    expect(results.map((result) => result.status)).toEqual(['rejected', 'rejected', 'rejected']);
+    expect(expired).toHaveBeenCalledTimes(1);
+  });
+
   it('M4-11. throwsInvalidResponseForNonJsonSuccess: a 2xx page that is not JSON is an ApiError', async () => {
     // What a missing Vercel rewrite looks like: index.html with status 200.
     server.use(
